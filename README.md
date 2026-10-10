@@ -43,11 +43,12 @@ All demo accounts use the standard password: `password123`
 
 | Role | Name | Email | Password | Key Permissions |
 | :--- | :--- | :--- | :--- | :--- |
-| **Admin** | Sarah Jenkins | `admin@neostats.com` | `password123` | Full system control, user CRUD, create/delete projects |
-| **Project Manager** | Alex Rivera | `pm@neostats.com` | `password123` | Manage assigned projects, tasks CRUD, add/remove members |
-| **Team Member** | David Chen | `dev@neostats.com` | `password123` | Update assigned tasks, change task status, post comments |
-| **Viewer** | Elena Rostova | `viewer@neostats.com` | `password123` | Read-only view; all mutation attempts return HTTP 403 |
-| **Deactivated User** | Marcus Vance | `inactive@neostats.com` | `password123` | Test deactivation enforcement (login returns HTTP 403) |
+| **Admin** | Pooja Sharma | `admin@neostats.com` | `password123` | Full system control, user CRUD, create/delete projects |
+| **Project Manager** | Rohan Verma | `pm@neostats.com` | `password123` | Manage assigned projects, tasks CRUD, add/remove members |
+| **Team Member** | Aditya Kumar | `dev@neostats.com` | `password123` | Update assigned tasks, change task status, post comments |
+| **Designer** | Maya Patel | `designer@neostats.com` | `password123` | Design tasks, UX conflict reviews, comments |
+| **Viewer** | Ananya Iyer | `viewer@neostats.com` | `password123` | Read-only view; all mutation attempts return HTTP 403 |
+| **Deactivated User** | Vikram Malhotra | `inactive@neostats.com` | `password123` | Test deactivation enforcement (login returns HTTP 403) |
 
 ---
 

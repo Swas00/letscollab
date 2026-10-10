@@ -166,7 +166,7 @@ describe("NeoStats Collaborative Platform Core Test Suite", () => {
       const res = await request(app)
         .post(`/api/comments/task/${testTaskId}`)
         .set("Authorization", `Bearer ${devToken}`)
-        .send({ content: "Testing automated comment creation with @Sarah Jenkins" });
+        .send({ content: "Testing automated comment creation with @Pooja Sharma" });
 
       expect(res.status).toBe(201);
       expect(res.body.comment.content).toContain("Testing automated comment");

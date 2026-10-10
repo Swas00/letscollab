@@ -191,8 +191,8 @@ export function CollaborativeEditor({
 
   // Collaboration State
   const [peers, setPeers] = useState<CollaboratorPeer[]>([
-    { id: "peer-mia", name: "Mia Vance", email: "mia@neostats.app", color: "#364573", cursor: { line: 14, ch: 22 } },
-    { id: "peer-alex", name: "Alex Rover", email: "alex@neostats.app", color: "#E65F42", cursor: { line: 28, ch: 10 } },
+    { id: "peer-ananya", name: "Ananya Sharma", email: "ananya@neostats.app", color: "#364573", cursor: { line: 14, ch: 22 } },
+    { id: "peer-rohan", name: "Rohan Verma", email: "rohan@neostats.app", color: "#E65F42", cursor: { line: 28, ch: 10 } },
   ]);
 
   // Editor Interaction States

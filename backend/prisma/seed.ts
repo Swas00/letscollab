@@ -19,7 +19,7 @@ async function main() {
   const admin = await prisma.user.create({
     data: {
       email: "admin@neostats.com",
-      name: "Sarah Jenkins",
+      name: "Pooja Sharma",
       password: hashedPassword,
       role: "ADMIN",
       avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
@@ -30,7 +30,7 @@ async function main() {
   const pm = await prisma.user.create({
     data: {
       email: "pm@neostats.com",
-      name: "Alex Rivera",
+      name: "Rohan Verma",
       password: hashedPassword,
       role: "PROJECT_MANAGER",
       avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
@@ -41,7 +41,7 @@ async function main() {
   const dev = await prisma.user.create({
     data: {
       email: "dev@neostats.com",
-      name: "David Chen",
+      name: "Aditya Kumar",
       password: hashedPassword,
       role: "TEAM_MEMBER",
       avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150",
@@ -63,7 +63,7 @@ async function main() {
   const viewer = await prisma.user.create({
     data: {
       email: "viewer@neostats.com",
-      name: "Elena Rostova",
+      name: "Ananya Iyer",
       password: hashedPassword,
       role: "VIEWER",
       avatarUrl: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150",
@@ -74,7 +74,7 @@ async function main() {
   const inactiveUser = await prisma.user.create({
     data: {
       email: "inactive@neostats.com",
-      name: "Marcus Vance",
+      name: "Vikram Malhotra",
       password: hashedPassword,
       role: "TEAM_MEMBER",
       avatarUrl: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150",
@@ -252,7 +252,7 @@ async function main() {
     data: {
       taskId: task1.id,
       userId: pm.id,
-      content: "@David Chen please benchmark Redis adapter vs default memory store for socket failover.",
+      content: "@Aditya Kumar please benchmark Redis adapter vs default memory store for socket failover.",
     },
   });
 
@@ -312,7 +312,7 @@ async function main() {
       action: "COMMENT_ADDED",
       entityType: "COMMENT",
       entityId: task1.id,
-      metadata: JSON.stringify({ taskTitle: task1.title, snippet: "@David Chen please benchmark Redis adapter..." }),
+      metadata: JSON.stringify({ taskTitle: task1.title, snippet: "@Aditya Kumar please benchmark Redis adapter..." }),
     },
     {
       userId: admin.id,
@@ -335,7 +335,7 @@ async function main() {
       actorId: pm.id,
       type: "TASK_ASSIGNED",
       title: "New Task Assigned",
-      message: "Alex Rivera assigned you to 'Implement WebSocket room clustering & heartbeat'",
+      message: "Rohan Verma assigned you to 'Implement WebSocket room clustering & heartbeat'",
       entityType: "TASK",
       entityId: task1.id,
       isRead: false,
@@ -348,7 +348,7 @@ async function main() {
       actorId: pm.id,
       type: "COMMENT_ADDED",
       title: "Mentioned in Comment",
-      message: "Alex Rivera mentioned you in a comment on task NEO-1",
+      message: "Rohan Verma mentioned you in a comment on task NEO-1",
       entityType: "TASK",
       entityId: task1.id,
       isRead: false,
@@ -361,7 +361,7 @@ async function main() {
       actorId: pm.id,
       type: "TASK_ASSIGNED",
       title: "New Task Assigned",
-      message: "Alex Rivera assigned you to 'Design optimistic concurrency conflict resolution modal'",
+      message: "Rohan Verma assigned you to 'Design optimistic concurrency conflict resolution modal'",
       entityType: "TASK",
       entityId: task2.id,
       isRead: true,
