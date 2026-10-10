@@ -59,10 +59,6 @@ router.post("/task/:taskId", authenticateToken, async (req: AuthRequest, res: Re
   const access = await checkProjectMembership(req.user!.id, req.user!.role, task.projectId);
   if (!access.hasAccess) return res.status(403).json({ error: "Forbidden: Not a member of this project" });
 
-  // Viewer cannot comment
-  if (access.projectRole === "VIEWER" && req.user!.role !== "ADMIN") {
-    return res.status(403).json({ error: "Forbidden: Viewers cannot post comments" });
-  }
 
   const parse = createCommentSchema.safeParse(req.body);
   if (!parse.success) {

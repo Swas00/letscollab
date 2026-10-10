@@ -246,8 +246,6 @@ export function TaskModal({ taskId, onClose, onTaskUpdated, onTaskDeleted }: Tas
   };
 
   if (!taskId) return null;
-
-  const isViewer = user?.role === "VIEWER";
   const viewers = activeViewers[taskId] || [];
 
   return (
@@ -524,29 +522,27 @@ export function TaskModal({ taskId, onClose, onTaskUpdated, onTaskDeleted }: Tas
                 </div>
 
                 {/* New Comment Input */}
-                {!isViewer && (
-                  <form onSubmit={handlePostComment} className="pt-3 border-t border-divider">
-                    <div className="text-[10px] text-muted mb-1 font-medium">
-                      Tip: Use @Name to notify a collaborator
-                    </div>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        placeholder="Add a comment..."
-                        className="flex-1 px-3 py-2 bg-paper border border-divider rounded-xl text-xs text-carbon placeholder-muted focus:outline-none focus:border-coral focus:bg-editor"
-                      />
-                      <Button
-                        type="submit"
-                        variant="secondary"
-                        size="sm"
-                      >
-                        Send
-                      </Button>
-                    </div>
-                  </form>
-                )}
+                <form onSubmit={handlePostComment} className="pt-3 border-t border-divider">
+                  <div className="text-[10px] text-muted mb-1 font-medium">
+                    Tip: Use @Name to notify a collaborator
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      placeholder="Add a comment..."
+                      className="flex-1 px-3 py-2 bg-paper border border-divider rounded-xl text-xs text-carbon placeholder-muted focus:outline-none focus:border-coral focus:bg-editor"
+                    />
+                    <Button
+                      type="submit"
+                      variant="secondary"
+                      size="sm"
+                    >
+                      Send
+                    </Button>
+                  </div>
+                </form>
               </div>
             </div>
           )}

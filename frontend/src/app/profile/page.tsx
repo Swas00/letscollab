@@ -127,14 +127,14 @@ export default function ProfilePage() {
       admin: true,
       pm: true,
       member: true,
-      viewer: false,
+      viewer: true,
     },
     {
       permission: "Post Comments with @mentions",
       admin: true,
       pm: true,
       member: true,
-      viewer: false,
+      viewer: true,
     },
     {
       permission: "Read-only Viewing Access",
