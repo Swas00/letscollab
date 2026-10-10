@@ -62,7 +62,22 @@ export const api = {
         method: "POST",
         body: JSON.stringify(credentials),
       }),
+    register: (data: { name: string; email: string; password: string; role?: string }) =>
+      apiFetch<{ token: string; user: any }>("/auth/register", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
     me: () => apiFetch<{ user: any }>("/auth/me"),
+    updateProfile: (data: { name?: string; avatarUrl?: string }) =>
+      apiFetch<{ user: any }>("/auth/profile", {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    changePassword: (data: { currentPassword: string; newPassword: string }) =>
+      apiFetch<{ message: string }>("/auth/change-password", {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
     demoUsers: () => apiFetch<{ demoUsers: any[] }>("/auth/demo-users"),
   },
   users: {

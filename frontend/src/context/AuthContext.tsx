@@ -17,6 +17,7 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   login: (email: string, password?: string) => Promise<{ success: boolean; error?: string }>;
+  register: (name: string, email: string, password: string, role?: string) => Promise<{ success: boolean; error?: string }>;
   switchUser: (user: User, token?: string) => void;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -69,6 +70,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { success: false, error: res.error || "Login failed" };
   };
 
+  const register = async (name: string, email: string, password: string, role?: string) => {
+    setIsLoading(true);
+    const res = await api.auth.register({ name, email, password, role });
+    setIsLoading(false);
+
+    if (res.data) {
+      setToken(res.data.token);
+      setUser(res.data.user);
+      localStorage.setItem("neostats_token", res.data.token);
+      localStorage.setItem("neostats_user", JSON.stringify(res.data.user));
+      return { success: true };
+    }
+
+    return { success: false, error: res.error || "Registration failed" };
+  };
+
   const switchUser = (newUser: User, newToken?: string) => {
     setUser(newUser);
     localStorage.setItem("neostats_user", JSON.stringify(newUser));
@@ -100,6 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         token,
         isLoading,
         login,
+        register,
         switchUser,
         logout,
         refreshUser,

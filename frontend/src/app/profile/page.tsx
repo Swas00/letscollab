@@ -8,47 +8,102 @@ import {
   User,
   Shield,
   Key,
-  Calendar,
   CheckCircle2,
   XCircle,
+  Save,
+  Lock,
+  AlertCircle,
   FolderKanban,
   CheckSquare,
 } from "lucide-react";
 import { ROLE_CONFIG, formatDate, cn } from "../../lib/utils";
 
 export default function ProfilePage() {
-  const { user, switchUser } = useAuth();
-  const [profileData, setProfileData] = useState<any>(null);
-  const [demoUsers, setDemoUsers] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, refreshUser } = useAuth();
+
+  // Profile Form
+  const [name, setName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileSuccess, setProfileSuccess] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+
+  // Password Form
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  // Active User Projects and Tasks
+  const [userProfileData, setUserProfileData] = useState<any>(null);
 
   useEffect(() => {
-    if (!user) return;
+    if (user) {
+      setName(user.name);
+      setAvatarUrl(user.avatarUrl || "");
 
-    api.users.get(user.id).then((res) => {
-      if (res.data?.user) {
-        setProfileData(res.data.user);
-      }
-      setIsLoading(false);
-    });
+      api.users.get(user.id).then((res) => {
+        if (res.data?.user) {
+          setUserProfileData(res.data.user);
+        }
+      });
+    }
+  }, [user]);
 
-    api.auth.demoUsers().then((res) => {
-      if (res.data?.demoUsers) {
-        setDemoUsers(res.data.demoUsers);
-      }
-    });
-  }, [user?.id]);
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setProfileSaving(true);
+    setProfileSuccess(false);
+    setProfileError(null);
 
-  const handleSwitchDemoUser = async (demoUser: any) => {
-    const res = await api.auth.login({ email: demoUser.email, password: "password123" });
+    const res = await api.auth.updateProfile({ name, avatarUrl });
+    setProfileSaving(false);
+
+    if (res.data?.user) {
+      setProfileSuccess(true);
+      await refreshUser();
+      setTimeout(() => setProfileSuccess(false), 3000);
+    } else {
+      setProfileError(res.error || "Failed to update profile");
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordSaving(true);
+    setPasswordSuccess(false);
+    setPasswordError(null);
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New passwords do not match");
+      setPasswordSaving(false);
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setPasswordError("New password must be at least 6 characters");
+      setPasswordSaving(false);
+      return;
+    }
+
+    const res = await api.auth.changePassword({ currentPassword, newPassword });
+    setPasswordSaving(false);
+
     if (res.data) {
-      switchUser(res.data.user, res.data.token);
+      setPasswordSuccess(true);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setTimeout(() => setPasswordSuccess(false), 3000);
+    } else {
+      setPasswordError(res.error || "Failed to change password");
     }
   };
 
   const roleCfg = user ? ROLE_CONFIG[user.role] : null;
 
-  // RBAC permissions table to showcase server rules
   const permissionsMatrix = [
     {
       permission: "System User Management (Create, Edit, Deactivate)",
@@ -104,10 +159,11 @@ export default function ProfilePage() {
   return (
     <AppLayout>
       <div className="space-y-8 max-w-5xl mx-auto">
-        {/* Profile Card */}
+        {/* Profile Header Card */}
         <div className="p-8 rounded-3xl bg-[#0d0e15] border border-zinc-800/80 shadow-card flex flex-col sm:flex-row items-center sm:items-start gap-6">
           <img
             src={
+              avatarUrl ||
               user?.avatarUrl ||
               `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || "User"}`
             }
@@ -148,54 +204,161 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* 1-Click Role Switcher on Profile */}
-        <div className="p-6 rounded-3xl bg-[#0d0e15] border border-zinc-800/80 shadow-card space-y-4">
-          <div>
-            <h3 className="text-sm font-bold text-white">Interactive Persona Switcher</h3>
-            <p className="text-xs text-zinc-400">
-              Instantly toggle between all four defined roles to test server permission boundaries:
-            </p>
+        {/* Edit Profile & Password Two-Column Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Edit Profile Information */}
+          <div className="p-6 rounded-3xl bg-[#0d0e15] border border-zinc-800/80 shadow-card space-y-4">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <User className="w-4 h-4 text-indigo-400" />
+              <span>Personal Details</span>
+            </h3>
+
+            {profileSuccess && (
+              <div className="p-3 bg-emerald-950/40 border border-emerald-900/60 rounded-xl flex items-center gap-2 text-xs text-emerald-300">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>Profile updated successfully!</span>
+              </div>
+            )}
+
+            {profileError && (
+              <div className="p-3 bg-rose-950/40 border border-rose-900/60 rounded-xl flex items-center gap-2 text-xs text-rose-300">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{profileError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleUpdateProfile} className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-zinc-300 block mb-1">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-zinc-700/80 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-zinc-300 block mb-1">
+                  Avatar Image URL
+                </label>
+                <input
+                  type="url"
+                  value={avatarUrl}
+                  onChange={(e) => setAvatarUrl(e.target.value)}
+                  placeholder="https://..."
+                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-zinc-700/80 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-zinc-400 block mb-1">
+                  Email Address (Read-Only)
+                </label>
+                <input
+                  type="email"
+                  disabled
+                  value={user?.email || ""}
+                  className="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-zinc-500 cursor-not-allowed"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={profileSaving}
+                className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold rounded-xl shadow-lg shadow-indigo-600/30 transition"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>{profileSaving ? "Saving..." : "Save Profile"}</span>
+              </button>
+            </form>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {demoUsers.map((dUser) => {
-              const isCurrent = user?.id === dUser.id;
+          {/* Change Password */}
+          <div className="p-6 rounded-3xl bg-[#0d0e15] border border-zinc-800/80 shadow-card space-y-4">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <Lock className="w-4 h-4 text-indigo-400" />
+              <span>Change Password</span>
+            </h3>
 
-              return (
-                <button
-                  key={dUser.id}
-                  onClick={() => handleSwitchDemoUser(dUser)}
-                  className={cn(
-                    "p-3 rounded-2xl text-left border transition flex items-center gap-3",
-                    isCurrent
-                      ? "bg-indigo-600/20 border-indigo-500 text-white shadow-sm"
-                      : "bg-zinc-900/60 border-zinc-800 hover:border-zinc-700 text-zinc-300"
-                  )}
-                >
-                  <img
-                    src={
-                      dUser.avatarUrl ||
-                      `https://api.dicebear.com/7.x/avataaars/svg?seed=${dUser.name}`
-                    }
-                    alt={dUser.name}
-                    className="w-8 h-8 rounded-full object-cover"
-                  />
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold truncate">{dUser.name}</p>
-                    <span className="text-[10px] text-zinc-400 font-mono">{dUser.role}</span>
-                  </div>
-                </button>
-              );
-            })}
+            {passwordSuccess && (
+              <div className="p-3 bg-emerald-950/40 border border-emerald-900/60 rounded-xl flex items-center gap-2 text-xs text-emerald-300">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>Password changed successfully!</span>
+              </div>
+            )}
+
+            {passwordError && (
+              <div className="p-3 bg-rose-950/40 border border-rose-900/60 rounded-xl flex items-center gap-2 text-xs text-rose-300">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{passwordError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-zinc-300 block mb-1">
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-zinc-700/80 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-zinc-300 block mb-1">
+                  New Password (min. 6 chars)
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-zinc-700/80 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-zinc-300 block mb-1">
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-zinc-700/80 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={passwordSaving}
+                className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold rounded-xl shadow-lg shadow-indigo-600/30 transition"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span>{passwordSaving ? "Updating..." : "Update Password"}</span>
+              </button>
+            </form>
           </div>
         </div>
 
-        {/* RBAC Server-Enforced Permissions Matrix */}
+        {/* RBAC Server Permissions Matrix */}
         <div className="p-6 rounded-3xl bg-[#0d0e15] border border-zinc-800/80 shadow-card space-y-4">
           <div>
-            <h3 className="text-sm font-bold text-white">System RBAC Permissions Matrix</h3>
+            <h3 className="text-sm font-bold text-white">System Role Governance Matrix</h3>
             <p className="text-xs text-zinc-400">
-              Enforced on all API endpoints directly by Express middleware:
+              Role permissions enforced on every API mutation by server middleware:
             </p>
           </div>
 

@@ -77,7 +77,7 @@ export default function UsersAdminPage() {
             <strong className="text-rose-400">{user.role}</strong>.
           </p>
           <div className="pt-2 text-xs text-zinc-500">
-            Use the top-right &quot;Switch Role Demo&quot; button to test as Sarah Jenkins (Admin).
+            Please contact your organization administrator if you require elevated permissions.
           </div>
         </div>
       </AppLayout>
