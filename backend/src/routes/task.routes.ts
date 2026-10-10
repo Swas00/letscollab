@@ -115,9 +115,9 @@ router.post("/project/:projectId", authenticateToken, async (req: AuthRequest, r
   if (access.notFound) return res.status(404).json({ error: "Project not found" });
   if (!access.hasAccess) return res.status(403).json({ error: "Forbidden: Not a member of this project" });
 
-  // Only Admin or PM can create tasks
-  if (!access.isManager && req.user!.role !== "ADMIN") {
-    return res.status(403).json({ error: "Forbidden: Only Project Managers or Admins can create tasks" });
+  // Viewers cannot create tasks
+  if (access.projectRole === "VIEWER" && req.user!.role !== "ADMIN") {
+    return res.status(403).json({ error: "Forbidden: Viewers have read-only access" });
   }
 
   const parse = createTaskSchema.safeParse(req.body);
@@ -203,18 +203,12 @@ router.put("/:id", authenticateToken, async (req: AuthRequest, res: Response) =>
   const access = await checkProjectMembership(req.user!.id, req.user!.role, currentTask.projectId);
   if (!access.hasAccess) return res.status(403).json({ error: "Forbidden: Not a member of this project" });
 
-  // Viewers cannot edit anything
+  // Viewers cannot edit tasks
   if (access.projectRole === "VIEWER" && req.user!.role !== "ADMIN") {
     return res.status(403).json({ error: "Forbidden: Viewers have read-only access" });
   }
 
-  // Team members can update tasks assigned to them or change status
-  const isAssignee = currentTask.assigneeId === req.user!.id;
-  const isManagerOrAdmin = access.isManager || req.user!.role === "ADMIN";
-
-  if (!isManagerOrAdmin && !isAssignee) {
-    return res.status(403).json({ error: "Forbidden: Team members can only edit their assigned tasks" });
-  }
+  // All team members, assignees, project managers, and admins have full edit access to tasks
 
   const parse = updateTaskSchema.safeParse(req.body);
   if (!parse.success) {

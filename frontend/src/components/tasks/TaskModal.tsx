@@ -8,6 +8,8 @@ import {
   MessageSquare,
   Eye,
   AlertCircle,
+  CheckCircle2,
+  RotateCcw,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useSocket } from "../../context/SocketContext";
@@ -15,6 +17,7 @@ import { api } from "../../lib/api";
 import { ConflictModal } from "./ConflictModal";
 import {
   formatRelativeTime,
+  cn,
 } from "../../lib/utils";
 import { Button } from "../ui/Button";
 
@@ -144,6 +147,49 @@ export function TaskModal({ taskId, onClose, onTaskUpdated, onTaskDeleted }: Tas
     }
   };
 
+  const handleQuickStatus = async (targetStatus: string) => {
+    if (!task) return;
+    setIsSaving(true);
+    setErrorMsg(null);
+
+    const payload = {
+      title,
+      description,
+      status: targetStatus,
+      priority,
+      assigneeId: assigneeId || null,
+      dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+      tags,
+      estimatedHours: estimatedHours === "" ? null : Number(estimatedHours),
+      version: task.version,
+    };
+
+    const res = await api.tasks.update(task.id, payload);
+    setIsSaving(false);
+
+    if (res.status === 409) {
+      const conflictData = res.data as any;
+      setConflictState({
+        isOpen: true,
+        serverTask: conflictData?.serverTask || {},
+        localChanges: payload,
+        serverVersion: conflictData?.currentVersion || task.version + 1,
+        clientVersion: task.version,
+      });
+      return;
+    }
+
+    if (res.data?.task) {
+      setTask(res.data.task);
+      setStatus(res.data.task.status);
+      setConflictState((prev) => ({ ...prev, isOpen: false }));
+      if (onTaskUpdated) onTaskUpdated(res.data.task);
+      onClose();
+    } else {
+      setErrorMsg(res.error || "Failed to update task status");
+    }
+  };
+
   const handleReloadServer = () => {
     if (conflictState.serverTask) {
       const st = conflictState.serverTask;
@@ -222,6 +268,28 @@ export function TaskModal({ taskId, onClose, onTaskUpdated, onTaskDeleted }: Tas
                   >
                     version {task.version}
                   </span>
+                  <button
+                    onClick={() => handleQuickStatus(task.status === "DONE" ? "IN_PROGRESS" : "DONE")}
+                    title={task.status === "DONE" ? "Click to Reopen Task" : "Click to Mark Task as Done"}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all duration-140 hover:-translate-y-0.5 active:scale-95 border",
+                      task.status === "DONE"
+                        ? "bg-moss text-carbon border-[#b8cbb4] hover:bg-[#c9dbc5]"
+                        : "bg-paper text-carbon border-divider hover:border-coral hover:text-coral"
+                    )}
+                  >
+                    {task.status === "DONE" ? (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5 text-carbon" />
+                        <span>Completed ✓</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5 text-coral" />
+                        <span>Mark Done</span>
+                      </>
+                    )}
+                  </button>
                 </>
               )}
               {viewers.length > 0 && (
@@ -272,8 +340,7 @@ export function TaskModal({ taskId, onClose, onTaskUpdated, onTaskDeleted }: Tas
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    disabled={isViewer}
-                    className="w-full px-3.5 py-2.5 bg-paper border border-divider rounded-xl text-carbon font-bold text-base focus:outline-none focus:border-coral focus:bg-editor transition disabled:opacity-60"
+                    className="w-full px-3.5 py-2.5 bg-paper border border-divider rounded-xl text-carbon font-bold text-base focus:outline-none focus:border-coral focus:bg-editor transition"
                   />
                 </div>
 
@@ -284,8 +351,7 @@ export function TaskModal({ taskId, onClose, onTaskUpdated, onTaskDeleted }: Tas
                     <select
                       value={status}
                       onChange={(e) => setStatus(e.target.value)}
-                      disabled={isViewer}
-                      className="w-full px-3 py-2 bg-paper border border-divider rounded-xl text-xs text-carbon focus:outline-none focus:border-coral focus:bg-editor disabled:opacity-60 font-medium"
+                      className="w-full px-3 py-2 bg-paper border border-divider rounded-xl text-xs text-carbon focus:outline-none focus:border-coral focus:bg-editor font-medium"
                     >
                       <option value="BACKLOG">Backlog</option>
                       <option value="TODO">To Do</option>
@@ -300,8 +366,7 @@ export function TaskModal({ taskId, onClose, onTaskUpdated, onTaskDeleted }: Tas
                     <select
                       value={priority}
                       onChange={(e) => setPriority(e.target.value)}
-                      disabled={isViewer}
-                      className="w-full px-3 py-2 bg-paper border border-divider rounded-xl text-xs text-carbon focus:outline-none focus:border-coral focus:bg-editor disabled:opacity-60 font-medium"
+                      className="w-full px-3 py-2 bg-paper border border-divider rounded-xl text-xs text-carbon focus:outline-none focus:border-coral focus:bg-editor font-medium"
                     >
                       <option value="LOW">Low</option>
                       <option value="MEDIUM">Medium</option>
@@ -318,8 +383,7 @@ export function TaskModal({ taskId, onClose, onTaskUpdated, onTaskDeleted }: Tas
                     <select
                       value={assigneeId || ""}
                       onChange={(e) => setAssigneeId(e.target.value || null)}
-                      disabled={isViewer}
-                      className="w-full px-3 py-2 bg-paper border border-divider rounded-xl text-xs text-carbon focus:outline-none focus:border-coral focus:bg-editor disabled:opacity-60 font-medium"
+                      className="w-full px-3 py-2 bg-paper border border-divider rounded-xl text-xs text-carbon focus:outline-none focus:border-coral focus:bg-editor font-medium"
                     >
                       <option value="">Unassigned</option>
                       {projectMembers.map((m) => (
@@ -336,8 +400,7 @@ export function TaskModal({ taskId, onClose, onTaskUpdated, onTaskDeleted }: Tas
                       type="date"
                       value={dueDate}
                       onChange={(e) => setDueDate(e.target.value)}
-                      disabled={isViewer}
-                      className="w-full px-3 py-2 bg-paper border border-divider rounded-xl text-xs text-carbon focus:outline-none focus:border-coral focus:bg-editor disabled:opacity-60 font-medium"
+                      className="w-full px-3 py-2 bg-paper border border-divider rounded-xl text-xs text-carbon focus:outline-none focus:border-coral focus:bg-editor font-medium"
                     />
                   </div>
 
@@ -348,9 +411,8 @@ export function TaskModal({ taskId, onClose, onTaskUpdated, onTaskDeleted }: Tas
                       step="0.5"
                       value={estimatedHours}
                       onChange={(e) => setEstimatedHours(e.target.value ? Number(e.target.value) : "")}
-                      disabled={isViewer}
                       placeholder="e.g. 8"
-                      className="w-full px-3 py-2 bg-paper border border-divider rounded-xl text-xs text-carbon focus:outline-none focus:border-coral focus:bg-editor disabled:opacity-60 font-medium"
+                      className="w-full px-3 py-2 bg-paper border border-divider rounded-xl text-xs text-carbon focus:outline-none focus:border-coral focus:bg-editor font-medium"
                     />
                   </div>
                 </div>
@@ -362,9 +424,8 @@ export function TaskModal({ taskId, onClose, onTaskUpdated, onTaskDeleted }: Tas
                     type="text"
                     value={tags}
                     onChange={(e) => setTags(e.target.value)}
-                    disabled={isViewer}
                     placeholder="Backend, API, Security"
-                    className="w-full px-3 py-2 bg-paper border border-divider rounded-xl text-xs text-carbon focus:outline-none focus:border-coral focus:bg-editor disabled:opacity-60"
+                    className="w-full px-3 py-2 bg-paper border border-divider rounded-xl text-xs text-carbon focus:outline-none focus:border-coral focus:bg-editor"
                   />
                 </div>
 
@@ -375,14 +436,13 @@ export function TaskModal({ taskId, onClose, onTaskUpdated, onTaskDeleted }: Tas
                     rows={4}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    disabled={isViewer}
                     placeholder="Provide details and specifications..."
-                    className="w-full px-3.5 py-2.5 bg-paper border border-divider rounded-xl text-xs text-carbon focus:outline-none focus:border-coral focus:bg-editor disabled:opacity-60 font-normal"
+                    className="w-full px-3.5 py-2.5 bg-paper border border-divider rounded-xl text-xs text-carbon focus:outline-none focus:border-coral focus:bg-editor font-normal"
                   />
                 </div>
 
-                {/* Save Button */}
-                {!isViewer && (
+                {/* Save and Complete Buttons */}
+                <div className="flex flex-wrap items-center gap-3 pt-2">
                   <Button
                     onClick={() => handleSave(false)}
                     variant="primary"
@@ -392,7 +452,16 @@ export function TaskModal({ taskId, onClose, onTaskUpdated, onTaskDeleted }: Tas
                   >
                     Save Changes
                   </Button>
-                )}
+                  <Button
+                    onClick={() => handleQuickStatus(task?.status === "DONE" ? "IN_PROGRESS" : "DONE")}
+                    variant="secondary"
+                    size="md"
+                    isLoading={isSaving}
+                    icon={task?.status === "DONE" ? <RotateCcw className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4 text-coral" />}
+                  >
+                    {task?.status === "DONE" ? "Reopen Task" : "Mark as Completed"}
+                  </Button>
+                </div>
               </div>
 
               {/* Right Column: Comments & Real-time Collaboration */}

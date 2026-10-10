@@ -17,6 +17,7 @@ import {
   List,
   AlertCircle,
   X,
+  CheckCircle2,
 } from "lucide-react";
 import { STATUS_CONFIG, PRIORITY_CONFIG, formatDate, cn } from "../../../../lib/utils";
 import { Button } from "../../../../components/ui/Button";
@@ -203,10 +204,7 @@ export default function ProjectTasksPage() {
     return true;
   });
 
-  const canCreate =
-    user?.role === "ADMIN" ||
-    userAccess?.isManager ||
-    userAccess?.projectRole === "PROJECT_MANAGER";
+  const canCreate = user?.role !== "VIEWER";
 
   return (
     <AppLayout>
@@ -337,7 +335,24 @@ export default function ProjectTasksPage() {
                         className="hover:bg-paper cursor-pointer transition"
                       >
                         <td className="py-3 px-4 font-mono font-bold text-coral">
-                          {project?.key}-{t.taskNumber}
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStatusChange(t.id, t.status === "DONE" ? "TODO" : "DONE", t.version);
+                              }}
+                              title={t.status === "DONE" ? "Click to Reopen Task" : "Click to Mark Task as Completed"}
+                              className={cn(
+                                "p-1 rounded-full border transition-all duration-140 hover:scale-110 active:scale-95",
+                                t.status === "DONE"
+                                  ? "bg-moss border-[#b0c7ac] text-carbon shadow-xs"
+                                  : "bg-paper border-divider text-muted hover:text-coral hover:border-coral"
+                              )}
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                            </button>
+                            <span>{project?.key}-{t.taskNumber}</span>
+                          </div>
                         </td>
                         <td className="py-3 px-4 font-bold text-carbon">{t.title}</td>
                         <td className="py-3 px-4">

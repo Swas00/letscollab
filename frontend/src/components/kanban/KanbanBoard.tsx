@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { MessageSquare, Calendar, ArrowRight, ArrowLeft } from "lucide-react";
+import { MessageSquare, Calendar, ArrowRight, ArrowLeft, CheckCircle2, RotateCcw } from "lucide-react";
 import { STATUS_CONFIG, PRIORITY_CONFIG, formatDate, cn } from "../../lib/utils";
 
 const COLUMNS: { key: string; label: string }[] = [
@@ -167,7 +167,7 @@ export function KanbanBoard({
                     {canEdit && (
                       <div
                         onClick={(e) => e.stopPropagation()}
-                        className="mt-3 pt-2 border-t border-divider flex items-center justify-between"
+                        className="mt-3 pt-2 border-t border-divider flex items-center justify-between gap-1"
                       >
                         {prev ? (
                           <button
@@ -178,7 +178,27 @@ export function KanbanBoard({
                             <ArrowLeft className="w-3.5 h-3.5" />
                           </button>
                         ) : (
-                          <div />
+                          <div className="w-5" />
+                        )}
+
+                        {task.status !== "DONE" ? (
+                          <button
+                            onClick={() => onStatusChange(task.id, "DONE", task.version)}
+                            title="Complete and mark task as Done"
+                            className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-carbon hover:text-carbon bg-moss/80 hover:bg-moss rounded-md border border-[#bfd2bc] transition-all duration-140 hover:-translate-y-0.5 active:scale-95 shadow-xs"
+                          >
+                            <CheckCircle2 className="w-3 h-3 text-[#396336]" />
+                            <span>Mark Done</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => onStatusChange(task.id, "TODO", task.version)}
+                            title="Reopen task"
+                            className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-muted hover:text-carbon bg-paper hover:bg-[#e8e4d8] rounded-md border border-divider transition-all duration-140 hover:-translate-y-0.5 active:scale-95 shadow-xs"
+                          >
+                            <RotateCcw className="w-3 h-3 text-muted" />
+                            <span>Reopen</span>
+                          </button>
                         )}
 
                         {next ? (
@@ -190,7 +210,7 @@ export function KanbanBoard({
                             <ArrowRight className="w-3.5 h-3.5" />
                           </button>
                         ) : (
-                          <div />
+                          <div className="w-5" />
                         )}
                       </div>
                     )}
