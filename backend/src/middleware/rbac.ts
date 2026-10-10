@@ -42,8 +42,8 @@ export async function checkProjectMembership(userId: string, userRole: string, p
     return { hasAccess: false, notFound: true };
   }
 
-  const isManager = project.managerId === userId;
   const member = project.members[0];
+  const isManager = project.managerId === userId || userRole === "PROJECT_MANAGER" || member?.role === "PROJECT_MANAGER";
 
   if (!isManager && !member) {
     return { hasAccess: false, notFound: false };

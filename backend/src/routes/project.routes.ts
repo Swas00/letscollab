@@ -263,8 +263,8 @@ router.patch("/:id/archive", authenticateToken, requireProjectManager(), async (
   return res.json({ project: updated, message: `Project ${newStatus.toLowerCase()}` });
 });
 
-// Delete project (Admin only)
-router.delete("/:id", authenticateToken, requireSystemRole("ADMIN"), async (req: AuthRequest, res: Response) => {
+// Delete project (Admin or Project Manager)
+router.delete("/:id", authenticateToken, requireProjectManager(), async (req: AuthRequest, res: Response) => {
   const project = await prisma.project.findUnique({ where: { id: req.params.id } });
   if (!project) return res.status(404).json({ error: "Project not found" });
 

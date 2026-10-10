@@ -15,6 +15,7 @@ import {
   Users,
   X,
   AlertCircle,
+  Trash2,
 } from "lucide-react";
 import { PRIORITY_CONFIG, cn } from "../../lib/utils";
 import { Button } from "../../components/ui/Button";
@@ -126,6 +127,20 @@ export default function ProjectsPage() {
     }
   };
 
+  const handleDeleteProject = async (projectId: string, projectName: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!window.confirm(`Are you sure you want to permanently delete "${projectName}"? This action cannot be undone and will delete all tasks, comments, and members.`)) {
+      return;
+    }
+    const res = await api.projects.delete(projectId);
+    if (!res.error) {
+      fetchProjects();
+    } else {
+      alert(res.error || "Failed to delete project");
+    }
+  };
+
   const isAdmin = user?.role === "ADMIN";
 
   return (
@@ -232,14 +247,23 @@ export default function ProjectsPage() {
                           {prio.label}
                         </span>
 
-                        {(isAdmin || user?.role === "PROJECT_MANAGER") && (
-                          <button
-                            onClick={(e) => handleToggleArchive(proj.id, e)}
-                            title={isArchived ? "Restore Project" : "Archive Project"}
-                            className="p-1.5 text-muted hover:text-coral rounded-lg hover:bg-paper transition"
-                          >
-                            <Archive className="w-3.5 h-3.5" />
-                          </button>
+                        {(isAdmin || user?.role === "PROJECT_MANAGER" || proj.managerId === user?.id || proj.members?.some((m: any) => m.userId === user?.id && m.role === "PROJECT_MANAGER")) && (
+                          <div className="flex items-center gap-0.5">
+                            <button
+                              onClick={(e) => handleToggleArchive(proj.id, e)}
+                              title={isArchived ? "Restore Project" : "Archive Project"}
+                              className="p-1.5 text-muted hover:text-coral rounded-lg hover:bg-paper transition"
+                            >
+                              <Archive className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={(e) => handleDeleteProject(proj.id, proj.name, e)}
+                              title="Delete Project"
+                              className="p-1.5 text-muted hover:text-red-500 rounded-lg hover:bg-red-500/10 transition"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>

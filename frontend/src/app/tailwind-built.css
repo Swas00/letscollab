@@ -2962,6 +2962,10 @@ code, pre, kbd, .font-mono {
   border-color: rgb(104 109 100 / var(--tw-border-opacity, 1));
 }
 
+.hover\:border-red-500\/30:hover{
+  border-color: rgb(239 68 68 / 0.3);
+}
+
 .hover\:bg-\[\#353a34\]:hover{
   --tw-bg-opacity: 1;
   background-color: rgb(53 58 52 / var(--tw-bg-opacity, 1));
@@ -3036,6 +3040,10 @@ code, pre, kbd, .font-mono {
   background-color: rgb(216 221 245 / 0.4);
 }
 
+.hover\:bg-red-500\/10:hover{
+  background-color: rgb(239 68 68 / 0.1);
+}
+
 .hover\:text-\[\#d34628\]:hover{
   --tw-text-opacity: 1;
   color: rgb(211 70 40 / var(--tw-text-opacity, 1));
@@ -3054,6 +3062,11 @@ code, pre, kbd, .font-mono {
 .hover\:text-paper:hover{
   --tw-text-opacity: 1;
   color: rgb(242 239 230 / var(--tw-text-opacity, 1));
+}
+
+.hover\:text-red-500:hover{
+  --tw-text-opacity: 1;
+  color: rgb(239 68 68 / var(--tw-text-opacity, 1));
 }
 
 .hover\:underline:hover{

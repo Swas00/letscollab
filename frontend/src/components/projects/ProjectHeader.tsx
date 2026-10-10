@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   FolderKanban,
   CheckSquare,
@@ -11,8 +11,11 @@ import {
   Shield,
   Code2,
   ArrowLeft,
+  Trash2,
 } from "lucide-react";
 import { PRIORITY_CONFIG, cn } from "../../lib/utils";
+import { useAuth } from "../../context/AuthContext";
+import { api } from "../../lib/api";
 
 interface ProjectHeaderProps {
   project: any;
@@ -21,7 +24,34 @@ interface ProjectHeaderProps {
 
 export function ProjectHeader({ project, userAccess }: ProjectHeaderProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user } = useAuth();
+  const [isDeleting, setIsDeleting] = useState(false);
   if (!project) return null;
+
+  const canDelete =
+    user?.role === "ADMIN" ||
+    user?.role === "PROJECT_MANAGER" ||
+    userAccess?.isManager ||
+    project.managerId === user?.id;
+
+  const handleDeleteProject = async () => {
+    if (
+      !window.confirm(
+        `Are you sure you want to permanently delete "${project.name}"? This action cannot be undone and will delete all tasks, comments, and members.`
+      )
+    ) {
+      return;
+    }
+    setIsDeleting(true);
+    const res = await api.projects.delete(project.id);
+    if (!res.error) {
+      router.push("/projects");
+    } else {
+      alert(res.error || "Failed to delete project");
+      setIsDeleting(false);
+    }
+  };
 
   const tabs = [
     { label: "Overview", href: `/projects/${project.id}`, icon: FolderKanban, exact: true },
@@ -76,13 +106,27 @@ export function ProjectHeader({ project, userAccess }: ProjectHeaderProps) {
           </p>
         </div>
 
-        {userAccess && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-editor border border-divider text-xs">
-            <Shield className="w-3.5 h-3.5 text-coral" />
-            <span className="text-muted">Your Project Role:</span>
-            <span className="font-bold text-carbon">{userAccess.projectRole}</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2.5">
+          {userAccess && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-editor border border-divider text-xs">
+              <Shield className="w-3.5 h-3.5 text-coral" />
+              <span className="text-muted">Your Project Role:</span>
+              <span className="font-bold text-carbon">{userAccess.projectRole}</span>
+            </div>
+          )}
+
+          {canDelete && (
+            <button
+              onClick={handleDeleteProject}
+              disabled={isDeleting}
+              title="Delete Project (Admin & PM only)"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-editor hover:bg-red-500/10 border border-divider hover:border-red-500/30 text-xs font-bold text-muted hover:text-red-500 transition shadow-xs disabled:opacity-50"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>{isDeleting ? "Deleting..." : "Delete Project"}</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Navigation Tabs */}

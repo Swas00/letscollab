@@ -111,6 +111,49 @@ describe("LetsCollab Collaborative Platform Core Test Suite", () => {
       expect(res.status).toBe(403);
       expect(res.body.error).toMatch(/Only Project Managers or Admins/i);
     });
+
+    it("Team Member attempting unauthorized project deletion is rejected with HTTP 403", async () => {
+      const res = await request(app)
+        .delete(`/api/projects/${testProjectId}`)
+        .set("Authorization", `Bearer ${devToken}`);
+
+      expect(res.status).toBe(403);
+      expect(res.body.error).toMatch(/Only Project Managers or Admins/i);
+    });
+
+    it("Viewer attempting unauthorized project deletion is rejected with HTTP 403", async () => {
+      const res = await request(app)
+        .delete(`/api/projects/${testProjectId}`)
+        .set("Authorization", `Bearer ${viewerToken}`);
+
+      expect(res.status).toBe(403);
+      expect(res.body.error).toMatch(/Only Project Managers or Admins/i);
+    });
+
+    it("Project Manager can delete a project", async () => {
+      const createRes = await request(app)
+        .post("/api/projects")
+        .set("Authorization", `Bearer ${pmToken}`)
+        .send({
+          name: "Temporary Project For Deletion Test",
+          key: "DELPM",
+          priority: "LOW",
+        });
+      expect(createRes.status).toBe(201);
+      const tempId = createRes.body.project.id;
+
+      const deleteRes = await request(app)
+        .delete(`/api/projects/${tempId}`)
+        .set("Authorization", `Bearer ${pmToken}`);
+
+      expect(deleteRes.status).toBe(200);
+      expect(deleteRes.body.message).toMatch(/deleted successfully/i);
+
+      const verifyRes = await request(app)
+        .get(`/api/projects/${tempId}`)
+        .set("Authorization", `Bearer ${pmToken}`);
+      expect(verifyRes.status).toBe(404);
+    });
   });
 
   describe("3. Concurrent Updates & Conflict Detection (OCC)", () => {
