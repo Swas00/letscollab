@@ -49,3 +49,37 @@ body {
   background-color: #D8DDF5;
   color: #232722;
 }
+
+@keyframes subtleDrift {
+  0%, 100% {
+    transform: scale(1.03) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: scale(1.05) translate3d(0, -8px, 0);
+  }
+}
+
+@keyframes rippleExpand {
+  0% {
+    width: 0px;
+    height: 0px;
+    opacity: 0.9;
+    border-width: 2px;
+  }
+  100% {
+    width: 280px;
+    height: 280px;
+    opacity: 0;
+    border-width: 1px;
+  }
+}
+
+.animate-subtle-drift {
+  animation: subtleDrift 14s ease-in-out infinite;
+}
+
+.animate-ripple-expand {
+  border-style: solid;
+  animation: rippleExpand 1.6s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+

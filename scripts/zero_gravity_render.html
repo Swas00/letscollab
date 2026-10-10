@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Zero-Gravity Video Render</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #181B17; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; }
+    canvas { width: 1280px; height: 720px; display: block; }
+  </style>
+</head>
+<body>
+  <canvas id="stage" width="1280" height="720"></canvas>
+
+  <script>
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    const W = 1280;
+    const H = 720;
+
+    const bgImg = new Image();
+    bgImg.src = '/zero-gravity-hero.jpg';
+
+    // Particles
+    const particles = Array.from({ length: 50 }, (_, i) => ({
+      x: (i * 27) % W,
+      y: (i * 37) % H,
+      vx: (Math.sin(i) * 0.4),
+      vy: -0.2 - (i % 5) * 0.15,
+      size: 1.5 + (i % 4) * 1.2,
+      alpha: 0.2 + (i % 5) * 0.15,
+      phase: i * 0.7,
+      color: i % 3 === 0 ? '#E65F42' : i % 3 === 1 ? '#00E5FF' : '#D9E7D5'
+    }));
+
+    // Cursors
+    const cursors = [
+      {
+        name: 'Alex',
+        color: '#E65F42',
+        path: (t) => ({
+          x: 480 + Math.sin(t * 1.2) * 140 + Math.cos(t * 0.6) * 60,
+          y: 340 + Math.cos(t * 1.2) * 90 + Math.sin(t * 0.4) * 40
+        }),
+        clicks: [1.2, 4.2]
+      },
+      {
+        name: 'Mia',
+        color: '#00E5FF',
+        path: (t) => ({
+          x: 820 + Math.cos(t * 1.0) * 130 + Math.sin(t * 0.8) * 50,
+          y: 280 + Math.sin(t * 1.1) * 80 + Math.cos(t * 0.5) * 40
+        }),
+        clicks: [2.5, 5.5]
+      },
+      {
+        name: 'Liam',
+        color: '#A78BFA',
+        path: (t) => ({
+          x: 640 + Math.sin(t * 0.9 + 2) * 160,
+          y: 480 + Math.cos(t * 0.9 + 1) * 70
+        }),
+        clicks: [3.4]
+      }
+    ];
+
+    // Ripple collection
+    const ripples = [];
+
+    function triggerRipple(x, y, color) {
+      ripples.push({ x, y, color, r: 0, maxR: 180, alpha: 0.9, width: 3 });
+      ripples.push({ x, y, color: '#FFFFFF', r: 0, maxR: 120, alpha: 0.7, width: 1.5 });
+    }
+
+    // Data Nodes
+    const nodes = [
+      { x: 320, y: 220, label: 'CRDT Sync', rate: '0.2ms' },
+      { x: 560, y: 180, label: 'Vector State', rate: 'v1.4' },
+      { x: 780, y: 210, label: 'Task Bus', rate: '60fps' },
+      { x: 960, y: 290, label: 'Graph DB', rate: '99.9%' },
+      { x: 720, y: 440, label: 'Live Presence', rate: '3 users' },
+      { x: 420, y: 430, label: 'Event Engine', rate: 'Active' }
+    ];
+
+    const connections = [
+      [0, 1], [1, 2], [2, 3], [1, 4], [4, 5], [5, 0], [2, 4]
+    ];
+
+    // Isometric Card Drawer
+    function drawIsometricCard(x, y, w, h, title, subtitle, color, t, floatOffset) {
+      const fy = y + Math.sin(t * 1.5 + floatOffset) * 12;
+      const fx = x + Math.cos(t * 0.9 + floatOffset) * 6;
+
+      ctx.save();
+      ctx.translate(fx, fy);
+
+      // Card shadow
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+      ctx.shadowBlur = 24;
+      ctx.shadowOffsetY = 16;
+
+      // Card background
+      ctx.fillStyle = 'rgba(28, 32, 28, 0.82)';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.2;
+
+      ctx.beginPath();
+      ctx.roundRect(-w/2, -h/2, w, h, 10);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.shadowColor = 'transparent';
+
+      // Gloss top reflection
+      const grad = ctx.createLinearGradient(-w/2, -h/2, -w/2, 0);
+      grad.addColorStop(0, 'rgba(255, 255, 255, 0.12)');
+      grad.addColorStop(1, 'rgba(255, 255, 255, 0.0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.roundRect(-w/2, -h/2, w, h/2, [10, 10, 0, 0]);
+      ctx.fill();
+
+      // Node dot
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(-w/2 + 16, -h/2 + 20, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Title & subtitle
+      ctx.font = '600 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillStyle = '#F2EFE6';
+      ctx.fillText(title, -w/2 + 28, -h/2 + 24);
+
+      ctx.font = '400 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillStyle = '#A0A59C';
+      ctx.fillText(subtitle, -w/2 + 16, -h/2 + 46);
+
+      // Status pill
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.beginPath();
+      ctx.roundRect(w/2 - 58, -h/2 + 12, 46, 16, 8);
+      ctx.fill();
+      ctx.font = '600 9px monospace';
+      ctx.fillStyle = color;
+      ctx.fillText('ACTIVE', w/2 - 48, -h/2 + 23);
+
+      ctx.restore();
+    }
+
+    // Cursor renderer
+    function drawCursor(x, y, name, color, clickScale) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(clickScale, clickScale);
+
+      // Glow behind cursor
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 12;
+
+      // Cursor SVG arrow path
+      ctx.fillStyle = color;
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 1.5;
+
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, 16);
+      ctx.lineTo(4.5, 12);
+      ctx.lineTo(8.5, 19);
+      ctx.lineTo(11, 17.5);
+      ctx.lineTo(7, 10.5);
+      ctx.lineTo(13, 10.5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+
+      // Name badge
+      ctx.font = '700 10px -apple-system, BlinkMacSystemFont, sans-serif';
+      const textWidth = ctx.measureText(name).width;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.roundRect(14, 12, textWidth + 12, 18, 4);
+      ctx.fill();
+
+      ctx.fillStyle = '#181B17';
+      ctx.fillText(name, 20, 25);
+
+      ctx.restore();
+    }
+
+    let startTime = null;
+    const DURATION = 6.0; // 6 second seamless loop
+
+    function renderFrame(time) {
+      if (!startTime) startTime = time;
+      const elapsed = (time - startTime) / 1000;
+      const loopTime = elapsed % DURATION;
+
+      ctx.clearRect(0, 0, W, H);
+
+      // 1. Draw Background Image with subtle floating drift
+      if (bgImg.complete && bgImg.naturalWidth > 0) {
+        const bgZoom = 1.04;
+        const driftX = Math.sin(loopTime * 0.6) * 12;
+        const driftY = Math.cos(loopTime * 0.5) * 8;
+        ctx.drawImage(bgImg, -20 + driftX, -15 + driftY, W * bgZoom, H * bgZoom);
+      } else {
+        // Fallback gradient
+        const grad = ctx.createRadialGradient(W/2, H/2, 50, W/2, H/2, 700);
+        grad.addColorStop(0, '#282E26');
+        grad.addColorStop(1, '#151815');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      // Dark gradient ambient vignette to integrate cleanly into landing page
+      const vig = ctx.createRadialGradient(W/2, H/2, 200, W/2, H/2, 720);
+      vig.addColorStop(0, 'rgba(24, 27, 23, 0.35)');
+      vig.addColorStop(0.75, 'rgba(24, 27, 23, 0.7)');
+      vig.addColorStop(1, 'rgba(24, 27, 23, 0.95)');
+      ctx.fillStyle = vig;
+      ctx.fillRect(0, 0, W, H);
+
+      // 2. Draw Connected Data Network
+      ctx.save();
+      connections.forEach(([i, j]) => {
+        const n1 = nodes[i];
+        const n2 = nodes[j];
+        const yOff1 = Math.sin(loopTime * 1.4 + i) * 6;
+        const yOff2 = Math.sin(loopTime * 1.4 + j) * 6;
+
+        ctx.strokeStyle = 'rgba(217, 231, 213, 0.18)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 6]);
+        ctx.beginPath();
+        ctx.moveTo(n1.x, n1.y + yOff1);
+        ctx.lineTo(n2.x, n2.y + yOff2);
+        ctx.stroke();
+
+        // Moving pulse packet
+        const packetProgress = ((loopTime * 0.7 + i * 0.3) % 1);
+        const px = n1.x + (n2.x - n1.x) * packetProgress;
+        const py = (n1.y + yOff1) + ((n2.y + yOff2) - (n1.y + yOff1)) * packetProgress;
+
+        ctx.shadowColor = '#00E5FF';
+        ctx.shadowBlur = 8;
+        ctx.fillStyle = '#00E5FF';
+        ctx.beginPath();
+        ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      });
+      ctx.setLineDash([]);
+      ctx.restore();
+
+      // 3. Draw Weightless Floating Geometric Modular UI Cards
+      drawIsometricCard(340, 240, 190, 68, 'CRDT Engine v2', 'Real-time state vector', '#D9E7D5', loopTime, 0);
+      drawIsometricCard(940, 260, 210, 68, 'Zero-G Pipeline', 'Latency < 1.4ms synced', '#00E5FF', loopTime, 1.8);
+      drawIsometricCard(480, 500, 200, 68, 'Collaborative Board', '3 active cursors in flow', '#E65F42', loopTime, 3.4);
+      drawIsometricCard(820, 480, 190, 68, 'Task Matrix', 'Decentralized consensus', '#A78BFA', loopTime, 5.1);
+
+      // 4. Update & Draw Particles (weightless floating motes)
+      particles.forEach((p) => {
+        p.y += p.vy;
+        p.x += p.vx + Math.sin(loopTime * 1.2 + p.phase) * 0.3;
+        if (p.y < 0) { p.y = H; p.x = Math.random() * W; }
+
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.alpha * (0.6 + 0.4 * Math.sin(loopTime * 2 + p.phase));
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1.0;
+
+      // Check click events for ripples
+      cursors.forEach(c => {
+        c.clicks.forEach(clickTime => {
+          if (Math.abs(loopTime - clickTime) < 0.02) {
+            const pos = c.path(loopTime);
+            triggerRipple(pos.x, pos.y, c.color);
+          }
+        });
+      });
+
+      // 5. Update & Draw Luminous Ripples
+      for (let i = ripples.length - 1; i >= 0; i--) {
+        const r = ripples[i];
+        r.r += 3.2;
+        r.alpha -= 0.015;
+
+        if (r.alpha <= 0 || r.r >= r.maxR) {
+          ripples.splice(i, 1);
+          continue;
+        }
+
+        ctx.save();
+        ctx.strokeStyle = r.color;
+        ctx.lineWidth = r.width;
+        ctx.globalAlpha = Math.max(0, r.alpha);
+        ctx.shadowColor = r.color;
+        ctx.shadowBlur = 14;
+
+        ctx.beginPath();
+        // Isometric ellipse ripple
+        ctx.ellipse(r.x, r.y, r.r, r.r * 0.55, -Math.PI / 12, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      // 6. Draw Collaborative Cursors
+      cursors.forEach(c => {
+        const pos = c.path(loopTime);
+        let clickScale = 1.0;
+        c.clicks.forEach(clickTime => {
+          const diff = Math.abs(loopTime - clickTime);
+          if (diff < 0.2) {
+            clickScale = 0.85 + (diff / 0.2) * 0.15;
+          }
+        });
+        drawCursor(pos.x, pos.y, c.name, c.color, clickScale);
+      });
+    }
+
+    // Recorder Engine
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    window.videoReady = false;
+    window.videoDataUrl = null;
+
+    bgImg.onload = () => {
+      console.log('Background image loaded, starting recording...');
+      startRecording();
+    };
+
+    function startRecording() {
+      const stream = canvas.captureStream(60); // 60 FPS capture
+      const options = { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 6000000 };
+
+      try {
+        mediaRecorder = new MediaRecorder(stream, options);
+      } catch (e) {
+        console.warn('vp9 failed, using default webm', e);
+        mediaRecorder = new MediaRecorder(stream, { videoBitsPerSecond: 6000000 });
+      }
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          recordedChunks.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        console.log('Recorder stopped. Processing blob...');
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          window.videoDataUrl = reader.result;
+          window.videoReady = true;
+          console.log('Video ready! Size in bytes:', blob.size);
+        };
+        reader.readAsDataURL(blob);
+      };
+
+      mediaRecorder.start();
+
+      let frameCount = 0;
+      const targetFrames = 360; // 6 seconds at 60 fps
+      const dt = 1000 / 60;
+      let virtualTime = 0;
+
+      function step() {
+        renderFrame(virtualTime);
+        virtualTime += dt;
+        frameCount++;
+
+        if (frameCount < targetFrames) {
+          requestAnimationFrame(step);
+        } else {
+          console.log('Finished 360 frames. Stopping recorder...');
+          mediaRecorder.stop();
+        }
+      }
+
+      requestAnimationFrame(step);
+    }
+  </script>
+</body>
+</html>

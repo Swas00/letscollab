@@ -13,6 +13,7 @@ import {
   BarChart3,
   Terminal,
 } from "lucide-react";
+import ZeroGravityVideoBackground from "@/components/hero/ZeroGravityVideoBackground";
 
 export default function HomePage() {
   return (
@@ -54,45 +55,51 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Hero Section */}
+      {/* Hero Section with Integrated Zero-Gravity Video Background */}
       <main className="flex-1">
-        <section className="relative pt-20 pb-16 px-6 max-w-6xl mx-auto text-center space-y-8">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-editor border border-divider text-carbon text-xs font-semibold shadow-sm">
-            <Sparkles className="w-3.5 h-3.5 text-coral" />
-            <span>Next-Generation Real-Time Collaborative Workspace</span>
-          </div>
+        <section className="relative overflow-hidden pt-16 pb-24 px-6 min-h-[92vh] flex flex-col justify-center items-center">
+          {/* Zero-Gravity Video Background */}
+          <ZeroGravityVideoBackground />
 
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.1] max-w-4xl mx-auto text-carbon">
-            The collaborative project hub built for{" "}
-            <span className="text-coral underline decoration-periwinkle decoration-wavy decoration-2">
-              high-velocity teams.
-            </span>
-          </h1>
+          <div className="relative z-10 max-w-5xl mx-auto text-center space-y-8 pt-4">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-editor/95 backdrop-blur-md border border-divider text-carbon text-xs font-semibold shadow-md">
+              <Sparkles className="w-3.5 h-3.5 text-coral animate-pulse" />
+              <span>Next-Generation Real-Time Collaborative Workspace</span>
+            </div>
 
-          <p className="text-muted text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-            Collaborate across projects and sprint tasks with sub-10ms WebSocket sync, optimistic
-            concurrency conflict prevention, and strict server-enforced role governance.
-          </p>
+            <div className="p-8 sm:p-12 rounded-3xl bg-editor/90 backdrop-blur-xl border border-divider shadow-2xl space-y-6">
+              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.1] max-w-4xl mx-auto text-carbon">
+                The collaborative project hub built for{" "}
+                <span className="text-coral underline decoration-periwinkle decoration-wavy decoration-2">
+                  high-velocity teams.
+                </span>
+              </h1>
 
-          <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
-            <Link
-              href="/register"
-              className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-coral hover:bg-[#d34628] text-white font-bold text-sm shadow-lg shadow-coral/25 transition hover:scale-105"
-            >
-              <span>Start Free Trial</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-            <Link
-              href="/login"
-              className="px-6 py-3.5 rounded-xl bg-editor hover:bg-paper text-carbon font-semibold text-sm border border-divider transition shadow-sm"
-            >
-              Sign In to Existing Team
-            </Link>
-          </div>
+              <p className="text-muted text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
+                Collaborate across projects and sprint tasks with sub-10ms WebSocket sync, optimistic
+                concurrency conflict prevention, and strict server-enforced role governance.
+              </p>
 
-          {/* Interactive UI Mockup Card */}
-          <div className="pt-10 max-w-5xl mx-auto">
-            <div className="relative rounded-3xl p-3 bg-editor border border-divider shadow-2xl overflow-hidden text-left">
+              <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
+                <Link
+                  href="/register"
+                  className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-coral hover:bg-[#d34628] text-white font-bold text-sm shadow-lg shadow-coral/25 transition hover:scale-105"
+                >
+                  <span>Start Free Trial</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+                <Link
+                  href="/login"
+                  className="px-6 py-3.5 rounded-xl bg-paper hover:bg-white text-carbon font-semibold text-sm border border-divider transition shadow-sm"
+                >
+                  Sign In to Existing Team
+                </Link>
+              </div>
+            </div>
+
+            {/* Interactive UI Mockup Card with Weightless Float */}
+            <div className="pt-6 max-w-5xl mx-auto">
+              <div className="relative rounded-3xl p-3 bg-editor/95 backdrop-blur-xl border border-divider shadow-2xl overflow-hidden text-left hover:-translate-y-1 transition duration-500">
               <div className="bg-paper rounded-2xl p-6 text-left space-y-4 border border-divider">
                 {/* Window header */}
                 <div className="flex items-center justify-between pb-4 border-b border-divider">
@@ -156,7 +163,8 @@ export default function HomePage() {
               </div>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
         {/* Features Grid */}
         <section id="features" className="py-20 px-6 max-w-6xl mx-auto border-t border-divider space-y-12">
