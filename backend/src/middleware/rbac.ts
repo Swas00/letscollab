@@ -35,6 +35,9 @@ export async function checkProjectMembership(userId: string, userRole: string, p
       members: {
         where: { userId },
       },
+      tasks: {
+        where: { assigneeId: userId },
+      },
     },
   });
 
@@ -42,18 +45,28 @@ export async function checkProjectMembership(userId: string, userRole: string, p
     return { hasAccess: false, notFound: true };
   }
 
+  const isCreator = project.creatorId === userId;
+  const isLeadManager = project.managerId === userId;
   const member = project.members[0];
-  const isManager = project.managerId === userId || userRole === "PROJECT_MANAGER" || member?.role === "PROJECT_MANAGER";
+  const hasAssignedTask = project.tasks.length > 0;
 
-  if (!isManager && !member) {
+  // Access is only granted to Admin, the creator, or assigned users (lead manager, member, or task assignee)
+  const hasAccess = isCreator || isLeadManager || !!member || hasAssignedTask;
+  if (!hasAccess) {
     return { hasAccess: false, notFound: false };
   }
 
-  const effectiveRole = isManager ? "PROJECT_MANAGER" : member ? member.role : "VIEWER";
+  const isManager = isCreator || isLeadManager || member?.role === "PROJECT_MANAGER";
+  const effectiveRole = isManager
+    ? "PROJECT_MANAGER"
+    : member
+    ? member.role
+    : "TEAM_MEMBER";
+
   return {
     hasAccess: true,
     projectRole: effectiveRole,
-    isManager: isManager || effectiveRole === "PROJECT_MANAGER",
+    isManager,
   };
 }
 

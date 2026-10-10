@@ -154,6 +154,55 @@ describe("LetsCollab Collaborative Platform Core Test Suite", () => {
         .set("Authorization", `Bearer ${pmToken}`);
       expect(verifyRes.status).toBe(404);
     });
+
+    it("Projects are displayed only to assigned users, the creator, and admins", async () => {
+      const devUser = await prisma.user.findUnique({ where: { email: "dev@neostats.com" } });
+      const createRes = await request(app)
+        .post("/api/projects")
+        .set("Authorization", `Bearer ${pmToken}`)
+        .send({
+          name: "Confidential Project",
+          key: "CONFID",
+          priority: "HIGH",
+          memberIds: [devUser!.id],
+        });
+      expect(createRes.status).toBe(201);
+      const confId = createRes.body.project.id;
+
+      // Creator (PM) sees it
+      const pmList = await request(app)
+        .get("/api/projects")
+        .set("Authorization", `Bearer ${pmToken}`);
+      expect(pmList.body.projects.some((p: any) => p.id === confId)).toBe(true);
+
+      // Admin sees it
+      const adminList = await request(app)
+        .get("/api/projects")
+        .set("Authorization", `Bearer ${adminToken}`);
+      expect(adminList.body.projects.some((p: any) => p.id === confId)).toBe(true);
+
+      // Assigned team member (Dev) sees it
+      const devList = await request(app)
+        .get("/api/projects")
+        .set("Authorization", `Bearer ${devToken}`);
+      expect(devList.body.projects.some((p: any) => p.id === confId)).toBe(true);
+
+      // Unassigned user (Viewer) does NOT see it in project list
+      const viewerList = await request(app)
+        .get("/api/projects")
+        .set("Authorization", `Bearer ${viewerToken}`);
+      expect(viewerList.body.projects.some((p: any) => p.id === confId)).toBe(false);
+
+      // Unassigned user attempting direct GET /api/projects/:id is rejected with 403 Forbidden
+      const viewerDirectGet = await request(app)
+        .get(`/api/projects/${confId}`)
+        .set("Authorization", `Bearer ${viewerToken}`);
+      expect(viewerDirectGet.status).toBe(403);
+      expect(viewerDirectGet.body.error).toMatch(/Forbidden/i);
+
+      // Clean up
+      await prisma.project.delete({ where: { id: confId } });
+    });
   });
 
   describe("3. Concurrent Updates & Conflict Detection (OCC)", () => {

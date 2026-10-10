@@ -15,6 +15,7 @@ const createProjectSchema = z.object({
   description: z.string().optional(),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).default("MEDIUM"),
   managerId: z.string().optional(),
+  memberIds: z.array(z.string()).optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
 });
@@ -38,7 +39,7 @@ const updateMemberRoleSchema = z.object({
   role: z.enum(["PROJECT_MANAGER", "TEAM_MEMBER", "VIEWER"]),
 });
 
-// List projects (Admin sees all; others see projects they are members of or manage)
+// List projects (Admin sees all; others see only projects they created or are assigned to)
 router.get("/", authenticateToken, async (req: AuthRequest, res: Response) => {
   const { status, search } = req.query;
 
@@ -46,8 +47,10 @@ router.get("/", authenticateToken, async (req: AuthRequest, res: Response) => {
 
   if (req.user?.role !== "ADMIN") {
     whereClause.OR = [
+      { creatorId: req.user?.id },
       { managerId: req.user?.id },
       { members: { some: { userId: req.user?.id } } },
+      { tasks: { some: { assigneeId: req.user?.id } } },
     ];
   }
 
@@ -62,6 +65,9 @@ router.get("/", authenticateToken, async (req: AuthRequest, res: Response) => {
   const projects = await prisma.project.findMany({
     where: whereClause,
     include: {
+      creator: {
+        select: { id: true, name: true, email: true, avatarUrl: true },
+      },
       manager: {
         select: { id: true, name: true, email: true, avatarUrl: true },
       },
@@ -103,6 +109,19 @@ router.post("/", authenticateToken, async (req: AuthRequest, res: Response) => {
   }
 
   const managerId = parse.data.managerId || req.user?.id;
+  const memberIds = parse.data.memberIds || [];
+
+  const initialMembers: { userId: string; role: string }[] = [
+    { userId: req.user!.id, role: "PROJECT_MANAGER" },
+  ];
+  if (managerId && managerId !== req.user?.id) {
+    initialMembers.push({ userId: managerId, role: "PROJECT_MANAGER" });
+  }
+  for (const mId of memberIds) {
+    if (mId !== req.user?.id && mId !== managerId) {
+      initialMembers.push({ userId: mId, role: "TEAM_MEMBER" });
+    }
+  }
 
   const project = await prisma.project.create({
     data: {
@@ -111,19 +130,16 @@ router.post("/", authenticateToken, async (req: AuthRequest, res: Response) => {
       description: parse.data.description,
       priority: parse.data.priority,
       status: "ACTIVE",
+      creatorId: req.user!.id,
       managerId,
       startDate: parse.data.startDate ? new Date(parse.data.startDate) : null,
       endDate: parse.data.endDate ? new Date(parse.data.endDate) : null,
       members: {
-        create: [
-          { userId: req.user!.id, role: "PROJECT_MANAGER" },
-          ...(managerId && managerId !== req.user?.id
-            ? [{ userId: managerId, role: "PROJECT_MANAGER" }]
-            : []),
-        ],
+        create: initialMembers,
       },
     },
     include: {
+      creator: { select: { id: true, name: true, email: true, avatarUrl: true } },
       manager: { select: { id: true, name: true, email: true, avatarUrl: true } },
       members: {
         include: {
@@ -164,6 +180,9 @@ router.get("/:id", authenticateToken, requireProjectAccess(), async (req: AuthRe
   const project = await prisma.project.findUnique({
     where: { id: req.params.id },
     include: {
+      creator: {
+        select: { id: true, name: true, email: true, avatarUrl: true },
+      },
       manager: {
         select: { id: true, name: true, email: true, avatarUrl: true },
       },

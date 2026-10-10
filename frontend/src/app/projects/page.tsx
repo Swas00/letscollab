@@ -37,6 +37,7 @@ export default function ProjectsPage() {
   const [priority, setPriority] = useState("MEDIUM");
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [managerId, setManagerId] = useState("");
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
@@ -67,28 +68,51 @@ export default function ProjectsPage() {
     }
   }, [user]);
 
-  // Real-time project updates via socket
+  // Real-time project updates via socket (strictly respecting assignment and creator)
   useEffect(() => {
     if (!socket) return;
 
     const handleProjectCreated = (newProj: any) => {
-      setProjects((prev) => [newProj, ...prev]);
+      const isCreator = newProj.creatorId === user?.id || newProj.creator?.id === user?.id;
+      const isAssigned =
+        newProj.managerId === user?.id ||
+        newProj.members?.some((m: any) => m.userId === user?.id || m.user?.id === user?.id);
+      if (user?.role === "ADMIN" || isCreator || isAssigned) {
+        setProjects((prev) => {
+          if (prev.some((p) => p.id === newProj.id)) return prev;
+          return [newProj, ...prev];
+        });
+      }
     };
 
     const handleProjectUpdated = (upProj: any) => {
-      setProjects((prev) =>
-        prev.map((p) => (p.id === upProj.id ? { ...p, ...upProj } : p))
-      );
+      const isCreator = upProj.creatorId === user?.id || upProj.creator?.id === user?.id;
+      const isAssigned =
+        upProj.managerId === user?.id ||
+        upProj.members?.some((m: any) => m.userId === user?.id || m.user?.id === user?.id);
+      if (user?.role === "ADMIN" || isCreator || isAssigned) {
+        setProjects((prev) =>
+          prev.map((p) => (p.id === upProj.id ? { ...p, ...upProj } : p))
+        );
+      } else {
+        setProjects((prev) => prev.filter((p) => p.id !== upProj.id));
+      }
+    };
+
+    const handleProjectDeleted = ({ projectId }: { projectId: string }) => {
+      setProjects((prev) => prev.filter((p) => p.id !== projectId));
     };
 
     socket.on("project:created", handleProjectCreated);
     socket.on("project:updated", handleProjectUpdated);
+    socket.on("project:deleted", handleProjectDeleted);
 
     return () => {
       socket.off("project:created", handleProjectCreated);
       socket.off("project:updated", handleProjectUpdated);
+      socket.off("project:deleted", handleProjectDeleted);
     };
-  }, [socket]);
+  }, [socket, user?.id, user?.role]);
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,6 +125,7 @@ export default function ProjectsPage() {
       description,
       priority,
       managerId: managerId || undefined,
+      memberIds: selectedMemberIds,
     };
 
     const res = await api.projects.create(payload);
@@ -112,6 +137,7 @@ export default function ProjectsPage() {
       setKey("");
       setDescription("");
       setManagerId("");
+      setSelectedMemberIds([]);
       fetchProjects();
     } else {
       setModalError(res.error || "Failed to create project");
@@ -142,6 +168,17 @@ export default function ProjectsPage() {
   };
 
   const isAdmin = user?.role === "ADMIN";
+
+  // Filter projects so only the assigned users, the creator, and admins see the project
+  const displayedProjects = projects.filter((proj) => {
+    if (isAdmin) return true;
+    const isCreator = proj.creatorId === user?.id || proj.creator?.id === user?.id;
+    const isAssigned =
+      proj.managerId === user?.id ||
+      proj.members?.some((m: any) => m.userId === user?.id || m.user?.id === user?.id) ||
+      proj.tasks?.some((t: any) => t.assigneeId === user?.id);
+    return isCreator || isAssigned;
+  });
 
   return (
     <AppLayout>
@@ -211,7 +248,7 @@ export default function ProjectsPage() {
           <div className="p-12 text-center text-sm text-muted">Loading projects...</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((proj) => {
+            {displayedProjects.map((proj) => {
               const prio = PRIORITY_CONFIG[proj.priority] || PRIORITY_CONFIG.MEDIUM;
               const isArchived = proj.status === "ARCHIVED";
 
@@ -285,6 +322,11 @@ export default function ProjectsPage() {
                         <span className="font-semibold text-carbon">
                           {proj.manager?.name || "Unassigned"}
                         </span>
+                        {proj.creator?.name && proj.creator?.name !== proj.manager?.name && (
+                          <span className="text-[10px] text-muted block mt-0.5">
+                            Created by: {proj.creator.name}
+                          </span>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-1.5">
@@ -312,7 +354,7 @@ export default function ProjectsPage() {
           </div>
         )}
 
-        {projects.length === 0 && !isLoading && (
+        {displayedProjects.length === 0 && !isLoading && (
           <div className="p-16 text-center rounded-3xl bg-editor border border-dashed border-divider text-muted space-y-3 shadow-sm">
             <FolderKanban className="w-8 h-8 mx-auto text-muted" />
             <p className="text-sm font-bold text-carbon">No projects found</p>
@@ -422,6 +464,43 @@ export default function ProjectsPage() {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-carbon block mb-1">
+                  Assign Team Members (Who can see & work on this project)
+                </label>
+                <div className="max-h-32 overflow-y-auto space-y-1.5 p-2 bg-paper border border-divider rounded-xl">
+                  {allUsers
+                    .filter((u) => u.id !== user?.id && u.id !== managerId)
+                    .map((u) => {
+                      const isChecked = selectedMemberIds.includes(u.id);
+                      return (
+                        <label
+                          key={u.id}
+                          className="flex items-center gap-2.5 p-1.5 rounded-lg hover:bg-editor cursor-pointer text-xs transition"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedMemberIds((prev) => [...prev, u.id]);
+                              } else {
+                                setSelectedMemberIds((prev) => prev.filter((id) => id !== u.id));
+                              }
+                            }}
+                            className="rounded border-divider text-coral focus:ring-coral/20"
+                          />
+                          <span className="font-semibold text-carbon">{u.name}</span>
+                          <span className="text-[10px] text-muted font-mono">({u.role})</span>
+                        </label>
+                      );
+                    })}
+                  {allUsers.filter((u) => u.id !== user?.id && u.id !== managerId).length === 0 && (
+                    <p className="text-[11px] text-muted p-1">No other users available to assign.</p>
+                  )}
+                </div>
               </div>
 
               <div>

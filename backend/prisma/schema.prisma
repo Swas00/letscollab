@@ -19,6 +19,7 @@ model User {
   updatedAt       DateTime         @updatedAt
 
   managedProjects Project[]        @relation("ProjectManager")
+  createdProjects Project[]        @relation("ProjectCreator")
   memberships     ProjectMember[]
   assignedTasks   Task[]           @relation("AssignedTasks")
   createdTasks    Task[]           @relation("CreatedTasks")
@@ -35,6 +36,8 @@ model Project {
   description String?
   status      String          @default("ACTIVE") // ACTIVE, COMPLETED, ARCHIVED
   priority    String          @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  creatorId   String?
+  creator     User?           @relation("ProjectCreator", fields: [creatorId], references: [id], onDelete: SetNull)
   managerId   String?
   manager     User?           @relation("ProjectManager", fields: [managerId], references: [id], onDelete: SetNull)
   startDate   DateTime?
