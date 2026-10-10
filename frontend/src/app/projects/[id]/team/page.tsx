@@ -10,13 +10,11 @@ import { api } from "../../../../lib/api";
 import {
   UserPlus,
   Trash2,
-  Shield,
   Users,
   AlertCircle,
   X,
-  CheckCircle2,
 } from "lucide-react";
-import { ROLE_CONFIG, formatDate, cn } from "../../../../lib/utils";
+import { formatDate } from "../../../../lib/utils";
 
 export default function ProjectTeamPage() {
   const params = useParams();
@@ -111,36 +109,34 @@ export default function ProjectTeamPage() {
     userAccess?.isManager ||
     userAccess?.projectRole === "PROJECT_MANAGER";
 
-  const handleAddMember = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedUserId) return;
-    setIsSubmitting(true);
-    setModalError(null);
-
-    const res = await api.projects.addMember(projectId, {
-      userId: selectedUserId,
-      role: selectedRole,
-    });
-    setIsSubmitting(false);
-
+  const handleRoleChange = async (targetUserId: string, newRole: string) => {
+    const res = await api.projects.updateMemberRole(projectId, targetUserId, newRole);
     if (res.data?.member) {
-      const newMember = res.data.member;
-      setIsAddOpen(false);
-      setSelectedUserId("");
-      setMembers((prev) => [...prev, newMember]);
+      setMembers((prev) =>
+        prev.map((m) => (m.userId === targetUserId ? { ...m, role: newRole } : m))
+      );
     } else {
-      setModalError(res.error || "Failed to add member");
+      setErrorMsg(res.error || "Failed to update member role");
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: string) => {
-    const res = await api.projects.updateMemberRole(projectId, userId, newRole);
+  const handleAddMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUserId) return;
+
+    setIsSubmitting(true);
+    setModalError(null);
+
+    const res = await api.projects.addMember(projectId, selectedUserId, selectedRole);
+    setIsSubmitting(false);
+
     if (res.data?.member) {
-      setMembers((prev) =>
-        prev.map((m) => (m.userId === userId ? { ...m, role: newRole } : m))
-      );
+      setIsAddOpen(false);
+      setSelectedUserId("");
+      setSelectedRole("TEAM_MEMBER");
+      setMembers((prev) => [...prev, res.data.member]);
     } else {
-      setErrorMsg(res.error || "Failed to update role");
+      setModalError(res.error || "Failed to add member");
     }
   };
 
@@ -155,7 +151,6 @@ export default function ProjectTeamPage() {
     }
   };
 
-  // Filter available users who aren't already members
   const availableUsers = allUsers.filter(
     (u) => !members.some((m) => m.userId === u.id)
   );
@@ -166,13 +161,13 @@ export default function ProjectTeamPage() {
         <ProjectHeader project={project} userAccess={userAccess} />
 
         {/* Header Toolbar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-[#0d0e15] border border-zinc-800/80 rounded-2xl">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-editor border border-divider rounded-2xl shadow-sm">
           <div>
-            <h2 className="text-sm font-bold text-white flex items-center gap-2">
-              <Users className="w-4 h-4 text-indigo-400" />
+            <h2 className="text-sm font-bold text-carbon flex items-center gap-2">
+              <Users className="w-4 h-4 text-coral" />
               Project Members ({members.length})
             </h2>
-            <p className="text-xs text-zinc-400 mt-0.5">
+            <p className="text-xs text-muted mt-0.5">
               Control project-level roles and team access permissions.
             </p>
           </div>
@@ -180,7 +175,7 @@ export default function ProjectTeamPage() {
           {canManageTeam && (
             <button
               onClick={() => setIsAddOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl shadow-lg shadow-indigo-600/30 transition"
+              className="flex items-center gap-2 px-4 py-2 bg-coral hover:bg-[#d34628] text-white text-xs font-bold rounded-xl shadow-md shadow-coral/20 transition"
             >
               <UserPlus className="w-4 h-4" />
               <span>Add Member</span>
@@ -189,17 +184,17 @@ export default function ProjectTeamPage() {
         </div>
 
         {errorMsg && (
-          <div className="p-3 bg-rose-950/40 border border-rose-900/60 rounded-xl flex items-center gap-2 text-xs text-rose-300">
+          <div className="p-3 bg-coral/15 border border-coral/30 rounded-xl flex items-center gap-2 text-xs text-coral font-medium">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{errorMsg}</span>
           </div>
         )}
 
         {/* Team Table */}
-        <div className="bg-[#0d0e15] border border-zinc-800/80 rounded-3xl overflow-hidden shadow-card">
+        <div className="bg-editor border border-divider rounded-3xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-zinc-950/80 text-zinc-400 uppercase font-mono border-b border-zinc-800">
+              <thead className="bg-paper text-muted uppercase font-mono border-b border-divider">
                 <tr>
                   <th className="py-3 px-4">Member</th>
                   <th className="py-3 px-4">System Role</th>
@@ -208,9 +203,9 @@ export default function ProjectTeamPage() {
                   {canManageTeam && <th className="py-3 px-4 text-right">Actions</th>}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-800/60">
+              <tbody className="divide-y divide-divider">
                 {members.map((member) => (
-                  <tr key={member.id} className="hover:bg-zinc-900/40 transition">
+                  <tr key={member.id} className="hover:bg-paper transition">
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-3">
                         <img
@@ -219,17 +214,17 @@ export default function ProjectTeamPage() {
                             `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.user.name}`
                           }
                           alt={member.user.name}
-                          className="w-8 h-8 rounded-full object-cover bg-zinc-800 border border-zinc-700"
+                          className="w-8 h-8 rounded-full object-cover bg-paper border border-divider"
                         />
                         <div>
-                          <p className="font-semibold text-white">{member.user.name}</p>
-                          <p className="text-[11px] text-zinc-500">{member.user.email}</p>
+                          <p className="font-bold text-carbon">{member.user.name}</p>
+                          <p className="text-[11px] text-muted">{member.user.email}</p>
                         </div>
                       </div>
                     </td>
 
                     <td className="py-3.5 px-4">
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-paper border border-divider text-muted font-medium">
                         {member.user.role}
                       </span>
                     </td>
@@ -239,20 +234,20 @@ export default function ProjectTeamPage() {
                         <select
                           value={member.role}
                           onChange={(e) => handleRoleChange(member.userId, e.target.value)}
-                          className="px-2.5 py-1.5 bg-zinc-900 border border-zinc-700/80 rounded-lg text-xs text-zinc-200 focus:outline-none focus:border-indigo-500"
+                          className="px-2.5 py-1.5 bg-paper border border-divider rounded-lg text-xs text-carbon focus:outline-none focus:border-coral font-medium"
                         >
                           <option value="PROJECT_MANAGER">Project Manager</option>
                           <option value="TEAM_MEMBER">Team Member</option>
                           <option value="VIEWER">Viewer</option>
                         </select>
                       ) : (
-                        <span className="text-xs font-semibold text-zinc-300">
+                        <span className="text-xs font-bold text-carbon">
                           {member.role}
                         </span>
                       )}
                     </td>
 
-                    <td className="py-3.5 px-4 text-zinc-400">
+                    <td className="py-3.5 px-4 text-muted">
                       {formatDate(member.joinedAt)}
                     </td>
 
@@ -261,7 +256,7 @@ export default function ProjectTeamPage() {
                         <button
                           onClick={() => handleRemoveMember(member.userId)}
                           title="Remove Member"
-                          className="p-1.5 text-zinc-500 hover:text-rose-400 hover:bg-zinc-900 rounded-lg transition"
+                          className="p-1.5 text-muted hover:text-coral hover:bg-paper rounded-lg transition"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -277,23 +272,23 @@ export default function ProjectTeamPage() {
 
       {/* Add Member Modal */}
       {isAddOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-[#0d0e15] border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden p-6 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-indigo-400" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-carbon/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-editor border border-divider rounded-3xl shadow-2xl overflow-hidden p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-divider">
+              <h2 className="text-base font-bold text-carbon flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-coral" />
                 Add Team Member
               </h2>
               <button
                 onClick={() => setIsAddOpen(false)}
-                className="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition"
+                className="p-1.5 text-muted hover:text-carbon rounded-lg hover:bg-paper transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {modalError && (
-              <div className="p-3 bg-rose-950/40 border border-rose-900/60 rounded-xl flex items-center gap-2 text-xs text-rose-300">
+              <div className="p-3 bg-coral/15 border border-coral/30 rounded-xl flex items-center gap-2 text-xs text-coral font-medium">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{modalError}</span>
               </div>
@@ -301,34 +296,32 @@ export default function ProjectTeamPage() {
 
             <form onSubmit={handleAddMember} className="space-y-4">
               <div>
-                <label className="text-xs font-medium text-zinc-300 block mb-1">Select User</label>
+                <label className="text-xs font-bold text-carbon block mb-1">Select User</label>
                 <select
                   required
                   value={selectedUserId}
                   onChange={(e) => setSelectedUserId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-zinc-700/80 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 bg-paper border border-divider rounded-xl text-xs text-carbon focus:outline-none focus:border-coral font-medium"
                 >
                   <option value="">Choose a user...</option>
                   {availableUsers.map((u) => (
                     <option key={u.id} value={u.id}>
-                      {u.name} ({u.email} - {u.role})
+                      {u.name} ({u.email})
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="text-xs font-medium text-zinc-300 block mb-1">
-                  Assign Project-Level Role
-                </label>
+                <label className="text-xs font-bold text-carbon block mb-1">Project Role</label>
                 <select
                   value={selectedRole}
                   onChange={(e) => setSelectedRole(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-zinc-700/80 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 bg-paper border border-divider rounded-xl text-xs text-carbon focus:outline-none focus:border-coral font-medium"
                 >
                   <option value="PROJECT_MANAGER">Project Manager</option>
                   <option value="TEAM_MEMBER">Team Member</option>
-                  <option value="VIEWER">Viewer</option>
+                  <option value="VIEWER">Viewer (Read Only)</option>
                 </select>
               </div>
 
@@ -336,14 +329,14 @@ export default function ProjectTeamPage() {
                 <button
                   type="button"
                   onClick={() => setIsAddOpen(false)}
-                  className="px-4 py-2 text-xs text-zinc-400 hover:text-white transition"
+                  className="px-4 py-2 text-xs font-medium text-muted hover:text-carbon transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold rounded-xl transition shadow-md shadow-indigo-600/30"
+                  disabled={isSubmitting || !selectedUserId}
+                  className="px-5 py-2.5 bg-coral hover:bg-[#d34628] disabled:opacity-50 text-white text-xs font-bold rounded-xl transition shadow-md shadow-coral/20"
                 >
                   {isSubmitting ? "Adding..." : "Add to Project"}
                 </button>

@@ -8,10 +8,6 @@ import {
   Bell,
   CheckCheck,
   Check,
-  AlertTriangle,
-  MessageSquare,
-  UserPlus,
-  ArrowRight,
 } from "lucide-react";
 import { formatRelativeTime, cn } from "../../lib/utils";
 
@@ -80,14 +76,14 @@ export default function NotificationsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2.5">
-              <h1 className="text-2xl font-black text-white tracking-tight">Notifications</h1>
+              <h1 className="text-2xl font-black text-carbon tracking-tight">Notifications</h1>
               {unreadCount > 0 && (
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 font-bold">
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-coral text-white font-bold">
                   {unreadCount} unread
                 </span>
               )}
             </div>
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-muted">
               Task assignments, status changes, mentions, and project updates.
             </p>
           </div>
@@ -96,9 +92,9 @@ export default function NotificationsPage() {
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllRead}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 text-xs font-semibold text-zinc-300 transition"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-editor hover:bg-paper border border-divider text-xs font-bold text-carbon transition shadow-sm"
               >
-                <CheckCheck className="w-4 h-4 text-emerald-400" />
+                <CheckCheck className="w-4 h-4 text-coral" />
                 <span>Mark All Read</span>
               </button>
             )}
@@ -106,14 +102,14 @@ export default function NotificationsPage() {
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex items-center gap-2 p-1.5 bg-[#0d0e15] border border-zinc-800/80 rounded-2xl w-fit">
+        <div className="flex items-center gap-2 p-1.5 bg-editor border border-divider rounded-2xl w-fit shadow-sm">
           <button
             onClick={() => setFilter("ALL")}
             className={cn(
-              "px-3 py-1.5 rounded-xl text-xs font-semibold transition",
+              "px-3 py-1.5 rounded-xl text-xs font-bold transition",
               filter === "ALL"
-                ? "bg-indigo-600 text-white shadow-sm"
-                : "text-zinc-400 hover:text-zinc-200"
+                ? "bg-carbon text-paper shadow-sm"
+                : "text-muted hover:text-carbon"
             )}
           >
             All Notifications
@@ -121,10 +117,10 @@ export default function NotificationsPage() {
           <button
             onClick={() => setFilter("UNREAD")}
             className={cn(
-              "px-3 py-1.5 rounded-xl text-xs font-semibold transition",
+              "px-3 py-1.5 rounded-xl text-xs font-bold transition",
               filter === "UNREAD"
-                ? "bg-indigo-600 text-white shadow-sm"
-                : "text-zinc-400 hover:text-zinc-200"
+                ? "bg-carbon text-paper shadow-sm"
+                : "text-muted hover:text-carbon"
             )}
           >
             Unread Only ({unreadCount})
@@ -132,9 +128,9 @@ export default function NotificationsPage() {
         </div>
 
         {/* Notifications List */}
-        <div className="bg-[#0d0e15] border border-zinc-800/80 rounded-3xl p-4 shadow-card">
+        <div className="bg-editor border border-divider rounded-3xl p-4 shadow-sm">
           {isLoading ? (
-            <div className="p-12 text-center text-xs text-zinc-500">Loading notifications...</div>
+            <div className="p-12 text-center text-xs text-muted">Loading notifications...</div>
           ) : (
             <div className="space-y-2.5">
               {displayedNotifs.map((notif) => (
@@ -144,8 +140,8 @@ export default function NotificationsPage() {
                   className={cn(
                     "p-4 rounded-2xl border transition flex items-start justify-between gap-4 cursor-pointer",
                     notif.isRead
-                      ? "bg-zinc-900/40 border-zinc-800/60 opacity-80 hover:opacity-100"
-                      : "bg-indigo-950/20 border-indigo-900/50 hover:bg-indigo-950/30 shadow-sm"
+                      ? "bg-paper border-divider opacity-85 hover:opacity-100"
+                      : "bg-periwinkle/30 border-[#bec5ea] hover:bg-periwinkle/40 shadow-sm"
                   )}
                 >
                   <div className="flex items-start gap-3.5">
@@ -155,18 +151,18 @@ export default function NotificationsPage() {
                         `https://api.dicebear.com/7.x/avataaars/svg?seed=${notif.actor?.name || "NeoStats"}`
                       }
                       alt={notif.actor?.name || "Actor"}
-                      className="w-8 h-8 rounded-full object-cover bg-zinc-800 border border-zinc-700 shrink-0 mt-0.5"
+                      className="w-8 h-8 rounded-full object-cover bg-paper border border-divider shrink-0 mt-0.5"
                     />
 
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-white">{notif.title}</span>
+                        <span className="text-xs font-bold text-carbon">{notif.title}</span>
                         {!notif.isRead && (
-                          <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                          <span className="w-2 h-2 rounded-full bg-coral animate-pulse" />
                         )}
                       </div>
-                      <p className="text-xs text-zinc-300 leading-relaxed">{notif.message}</p>
-                      <span className="text-[10px] font-mono text-zinc-500 block pt-1">
+                      <p className="text-xs text-carbon leading-relaxed">{notif.message}</p>
+                      <span className="text-[10px] font-mono text-muted block pt-1">
                         {formatRelativeTime(notif.createdAt)}
                       </span>
                     </div>
@@ -179,7 +175,7 @@ export default function NotificationsPage() {
                         handleMarkAsRead(notif.id);
                       }}
                       title="Mark as read"
-                      className="p-1.5 text-zinc-400 hover:text-emerald-400 hover:bg-zinc-800 rounded-lg transition"
+                      className="p-1.5 text-muted hover:text-coral hover:bg-paper rounded-lg transition"
                     >
                       <Check className="w-4 h-4" />
                     </button>
@@ -188,8 +184,8 @@ export default function NotificationsPage() {
               ))}
 
               {displayedNotifs.length === 0 && (
-                <div className="p-16 text-center text-xs text-zinc-500 italic space-y-2">
-                  <Bell className="w-8 h-8 mx-auto text-zinc-600" />
+                <div className="p-16 text-center text-xs text-muted italic space-y-2">
+                  <Bell className="w-8 h-8 mx-auto text-muted" />
                   <p>No notifications to display.</p>
                 </div>
               )}

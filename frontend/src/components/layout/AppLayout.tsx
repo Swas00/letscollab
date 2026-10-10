@@ -8,14 +8,11 @@ import {
   FolderKanban,
   Users,
   Bell,
-  UserCheck,
   LogOut,
   ChevronDown,
   Layers,
   X,
-  Search,
   Settings,
-  Shield,
   User as UserIcon,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
@@ -31,7 +28,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const [demoUsers, setDemoUsers] = useState<any[]>([]);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     api.auth.demoUsers().then((res) => {
@@ -66,32 +62,32 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   ];
 
   return (
-    <div className="min-h-screen bg-[#090a0f] text-zinc-100 flex flex-col md:flex-row antialiased selection:bg-indigo-500/30 selection:text-indigo-200">
+    <div className="min-h-screen bg-paper text-carbon flex flex-col md:flex-row antialiased selection:bg-periwinkle selection:text-carbon">
       {/* Toast Notification Container */}
       <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className="pointer-events-auto p-4 rounded-xl border border-zinc-700/80 bg-zinc-900/95 backdrop-blur-md shadow-2xl text-zinc-100 flex items-start justify-between gap-3 animate-in slide-in-from-top-3 fade-in duration-300"
+            className="pointer-events-auto p-4 rounded-xl border border-divider bg-editor shadow-2xl text-carbon flex items-start justify-between gap-3 animate-in slide-in-from-top-3 fade-in duration-300"
           >
             <div className="flex items-start gap-2.5">
               <span
                 className={cn(
-                  "w-2 h-2 rounded-full mt-1.5 shrink-0",
-                  toast.type === "success" && "bg-emerald-400 shadow-sm shadow-emerald-400/50",
-                  toast.type === "warning" && "bg-amber-400 shadow-sm shadow-amber-400/50",
-                  toast.type === "conflict" && "bg-rose-400 shadow-sm shadow-rose-400/50",
-                  toast.type === "info" && "bg-indigo-400 shadow-sm shadow-indigo-400/50"
+                  "w-2.5 h-2.5 rounded-full mt-1.5 shrink-0",
+                  toast.type === "success" && "bg-moss border border-[#3B5A38]",
+                  toast.type === "warning" && "bg-coral/80",
+                  toast.type === "conflict" && "bg-coral",
+                  toast.type === "info" && "bg-periwinkle border border-[#364573]"
                 )}
               />
               <div>
-                <p className="text-sm font-semibold text-white">{toast.title}</p>
-                <p className="text-xs text-zinc-400 mt-0.5 line-clamp-2">{toast.message}</p>
+                <p className="text-sm font-bold text-carbon">{toast.title}</p>
+                <p className="text-xs text-muted mt-0.5 line-clamp-2">{toast.message}</p>
               </div>
             </div>
             <button
               onClick={() => removeToast(toast.id)}
-              className="text-zinc-500 hover:text-zinc-300 transition"
+              className="text-muted hover:text-carbon transition"
             >
               <X className="w-4 h-4" />
             </button>
@@ -100,19 +96,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Sidebar Navigation */}
-      <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r border-zinc-800/80 bg-[#0d0e15] flex flex-col justify-between shrink-0">
+      <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r border-divider bg-editor flex flex-col justify-between shrink-0 shadow-sm">
         <div>
           {/* Logo & App Title */}
-          <div className="p-5 border-b border-zinc-800/60 flex items-center justify-between">
+          <div className="p-5 border-b border-divider flex items-center justify-between">
             <Link href="/dashboard" className="flex items-center gap-3 group">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/30 group-hover:scale-105 transition-transform duration-200">
-                <Layers className="w-5 h-5" />
+              <div className="w-9 h-9 rounded-xl bg-coral flex items-center justify-center text-white shadow-md shadow-coral/20 group-hover:scale-105 transition-transform duration-200">
+                <Layers className="w-5 h-5 text-white" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="font-extrabold text-lg tracking-tight text-white">NeoStats</span>
+                  <span className="font-extrabold text-lg tracking-tight text-carbon">NeoStats</span>
                 </div>
-                <span className="text-[11px] text-zinc-400 block -mt-0.5">Project Workspace</span>
+                <span className="text-[11px] text-muted block -mt-0.5 font-medium">Project Workspace</span>
               </div>
             </Link>
           </div>
@@ -133,21 +129,21 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   className={cn(
                     "flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150",
                     isActive
-                      ? "bg-indigo-600/15 text-indigo-300 border border-indigo-500/30 shadow-sm"
-                      : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                      ? "bg-carbon text-paper font-semibold shadow-sm"
+                      : "text-muted hover:text-carbon hover:bg-paper"
                   )}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className={cn("w-4 h-4", isActive ? "text-indigo-400" : "text-zinc-400")} />
+                    <Icon className={cn("w-4 h-4", isActive ? "text-paper" : "text-muted")} />
                     <span>{item.label}</span>
                   </div>
                   {item.badge && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-mono">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-paper border border-divider text-muted font-mono font-medium">
                       {item.badge}
                     </span>
                   )}
                   {item.count !== undefined && item.count > 0 && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-rose-500 text-white font-bold">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-coral text-white font-bold">
                       {item.count}
                     </span>
                   )}
@@ -158,23 +154,23 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* User Card in Sidebar Footer */}
-        <div className="p-3 border-t border-zinc-800/80 bg-zinc-950/40">
+        <div className="p-3 border-t border-divider bg-paper/60">
           {user ? (
-            <div className="p-2.5 rounded-xl bg-zinc-900/80 border border-zinc-800 flex items-center justify-between">
+            <div className="p-2.5 rounded-xl bg-editor border border-divider flex items-center justify-between shadow-sm">
               <Link href="/profile" className="flex items-center gap-2.5 min-w-0 group">
                 <img
                   src={user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
                   alt={user.name}
-                  className="w-8 h-8 rounded-full bg-zinc-800 object-cover border border-zinc-700"
+                  className="w-8 h-8 rounded-full bg-paper object-cover border border-divider"
                 />
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold text-white group-hover:text-indigo-300 transition truncate">
+                  <p className="text-xs font-bold text-carbon group-hover:text-coral transition truncate">
                     {user.name}
                   </p>
                   <span
                     className={cn(
                       "inline-block text-[10px] font-medium px-1.5 py-0.2 rounded border mt-0.5",
-                      ROLE_CONFIG[user.role]?.badge || "bg-zinc-800 text-zinc-400 border-zinc-700"
+                      ROLE_CONFIG[user.role]?.badge || "bg-paper text-muted border-divider"
                     )}
                   >
                     {ROLE_CONFIG[user.role]?.label || user.role}
@@ -185,7 +181,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <button
                 onClick={logout}
                 title="Sign Out"
-                className="p-1.5 text-zinc-500 hover:text-rose-400 rounded-lg hover:bg-zinc-800 transition"
+                className="p-1.5 text-muted hover:text-coral rounded-lg hover:bg-paper transition"
               >
                 <LogOut className="w-4 h-4" />
               </button>
@@ -193,7 +189,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           ) : (
             <Link
               href="/login"
-              className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl transition shadow-md"
+              className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-coral hover:bg-[#d34628] text-white text-xs font-semibold rounded-xl transition shadow-md"
             >
               Sign In
             </Link>
@@ -204,17 +200,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Navbar */}
-        <header className="h-16 border-b border-zinc-800/80 bg-[#0d0e15]/90 backdrop-blur-md px-6 flex items-center justify-between shrink-0">
+        <header className="h-16 border-b border-divider bg-editor/90 backdrop-blur-md px-6 flex items-center justify-between shrink-0 shadow-sm">
           {/* Real-time Status Badge & Breadcrumb */}
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-paper border border-divider text-xs">
               <span
                 className={cn(
                   "w-2 h-2 rounded-full",
-                  isConnected ? "bg-emerald-400 animate-pulse" : "bg-amber-400"
+                  isConnected ? "bg-moss border border-[#3B5A38]" : "bg-coral animate-pulse"
                 )}
               />
-              <span className="text-zinc-400 font-mono text-[11px]">
+              <span className="text-muted font-mono text-[11px] font-medium">
                 {isConnected ? "Real-time Live Sync" : "Reconnecting..."}
               </span>
             </div>
@@ -225,12 +221,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             {/* Notification Bell */}
             <Link
               href="/notifications"
-              className="relative p-2 text-zinc-400 hover:text-white rounded-xl hover:bg-zinc-800 transition"
+              className="relative p-2 text-muted hover:text-carbon rounded-xl hover:bg-paper transition"
               title="Notifications"
             >
               <Bell className="w-4 h-4" />
               {unreadCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-[#0d0e15]" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-coral ring-2 ring-editor" />
               )}
             </Link>
 
@@ -239,28 +235,28 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <div className="relative">
                 <button
                   onClick={() => setShowUserDropdown(!showUserDropdown)}
-                  className="flex items-center gap-2.5 p-1.5 pr-2.5 rounded-xl hover:bg-zinc-850 border border-zinc-800/80 bg-zinc-900 transition"
+                  className="flex items-center gap-2.5 p-1.5 pr-2.5 rounded-xl hover:bg-paper border border-divider bg-editor transition shadow-sm"
                 >
                   <img
                     src={user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
                     alt={user.name}
-                    className="w-6 h-6 rounded-full object-cover bg-zinc-800"
+                    className="w-6 h-6 rounded-full object-cover bg-paper border border-divider"
                   />
-                  <span className="text-xs font-semibold text-zinc-200 hidden sm:inline">
+                  <span className="text-xs font-bold text-carbon hidden sm:inline">
                     {user.name.split(" ")[0]}
                   </span>
-                  <ChevronDown className="w-3.5 h-3.5 text-zinc-500" />
+                  <ChevronDown className="w-3.5 h-3.5 text-muted" />
                 </button>
 
                 {showUserDropdown && (
-                  <div className="absolute right-0 mt-2 w-64 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                    <div className="px-3 py-2 border-b border-zinc-800">
-                      <p className="text-xs font-bold text-white">{user.name}</p>
-                      <p className="text-[11px] text-zinc-400 truncate">{user.email}</p>
+                  <div className="absolute right-0 mt-2 w-64 bg-editor border border-divider rounded-2xl shadow-xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <div className="px-3 py-2 border-b border-divider">
+                      <p className="text-xs font-bold text-carbon">{user.name}</p>
+                      <p className="text-[11px] text-muted truncate">{user.email}</p>
                       <span
                         className={cn(
                           "inline-block text-[9px] px-1.5 py-0.2 rounded border font-mono mt-1",
-                          ROLE_CONFIG[user.role]?.badge || "bg-zinc-800 text-zinc-400"
+                          ROLE_CONFIG[user.role]?.badge || "bg-paper text-muted border-divider"
                         )}
                       >
                         {user.role}
@@ -271,26 +267,26 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       <Link
                         href="/profile"
                         onClick={() => setShowUserDropdown(false)}
-                        className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-zinc-300 hover:text-white hover:bg-zinc-800 transition"
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-muted hover:text-carbon hover:bg-paper transition"
                       >
-                        <UserIcon className="w-3.5 h-3.5 text-zinc-400" />
+                        <UserIcon className="w-3.5 h-3.5 text-muted" />
                         <span>Profile & Settings</span>
                       </Link>
 
                       <Link
                         href="/projects"
                         onClick={() => setShowUserDropdown(false)}
-                        className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-zinc-300 hover:text-white hover:bg-zinc-800 transition"
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-muted hover:text-carbon hover:bg-paper transition"
                       >
-                        <FolderKanban className="w-3.5 h-3.5 text-zinc-400" />
+                        <FolderKanban className="w-3.5 h-3.5 text-muted" />
                         <span>My Projects</span>
                       </Link>
                     </div>
 
                     {/* Switch Account Option */}
                     {demoUsers.length > 1 && (
-                      <div className="pt-1 border-t border-zinc-800">
-                        <div className="px-3 py-1 text-[10px] font-semibold text-zinc-500 uppercase">
+                      <div className="pt-1 border-t border-divider">
+                        <div className="px-3 py-1 text-[10px] font-bold text-muted uppercase tracking-wider">
                           Switch Active Account
                         </div>
                         <div className="max-h-36 overflow-y-auto space-y-0.5">
@@ -300,10 +296,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                               <button
                                 key={otherUser.id}
                                 onClick={() => handleSwitchAccount(otherUser)}
-                                className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-left text-xs text-zinc-400 hover:text-white hover:bg-zinc-800/80 transition"
+                                className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-left text-xs text-muted hover:text-carbon hover:bg-paper transition"
                               >
-                                <span className="truncate">{otherUser.name}</span>
-                                <span className="text-[9px] font-mono text-zinc-500">
+                                <span className="truncate font-medium">{otherUser.name}</span>
+                                <span className="text-[9px] font-mono text-muted">
                                   {otherUser.role}
                                 </span>
                               </button>
@@ -312,13 +308,13 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                       </div>
                     )}
 
-                    <div className="pt-1 border-t border-zinc-800">
+                    <div className="pt-1 border-t border-divider">
                       <button
                         onClick={() => {
                           setShowUserDropdown(false);
                           logout();
                         }}
-                        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-rose-400 hover:bg-rose-950/40 transition"
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-coral hover:bg-coral/10 transition font-medium"
                       >
                         <LogOut className="w-3.5 h-3.5" />
                         <span>Sign Out</span>
@@ -332,7 +328,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Page Main Content */}
-        <main className="flex-1 overflow-y-auto p-6 md:p-8">{children}</main>
+        <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-paper">{children}</main>
       </div>
     </div>
   );

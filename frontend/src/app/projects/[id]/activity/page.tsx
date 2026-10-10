@@ -6,7 +6,7 @@ import { AppLayout } from "../../../../components/layout/AppLayout";
 import { ProjectHeader } from "../../../../components/projects/ProjectHeader";
 import { useSocket } from "../../../../context/SocketContext";
 import { api } from "../../../../lib/api";
-import { Activity, Clock, Shield, Terminal } from "lucide-react";
+import { Activity } from "lucide-react";
 import { formatRelativeTime } from "../../../../lib/utils";
 
 export default function ProjectActivityPage() {
@@ -69,20 +69,20 @@ export default function ProjectActivityPage() {
       <div className="space-y-6 max-w-7xl mx-auto">
         <ProjectHeader project={project} userAccess={userAccess} />
 
-        <div className="flex items-center justify-between p-4 bg-[#0d0e15] border border-zinc-800/80 rounded-2xl">
+        <div className="flex items-center justify-between p-4 bg-editor border border-divider rounded-2xl shadow-sm">
           <div className="flex items-center gap-2">
-            <Activity className="w-4 h-4 text-emerald-400" />
-            <h2 className="text-sm font-bold text-white">Project Audit Trail</h2>
+            <Activity className="w-4 h-4 text-coral" />
+            <h2 className="text-sm font-bold text-carbon">Project Audit Trail</h2>
           </div>
-          <span className="text-[11px] font-mono text-zinc-400">
+          <span className="text-[11px] font-mono text-muted">
             {activities.length} recorded events
           </span>
         </div>
 
         {/* Timeline Feed */}
-        <div className="bg-[#0d0e15] border border-zinc-800/80 rounded-3xl p-6 shadow-card">
+        <div className="bg-editor border border-divider rounded-3xl p-6 shadow-sm">
           {isLoading ? (
-            <div className="p-12 text-center text-xs text-zinc-500">Loading audit records...</div>
+            <div className="p-12 text-center text-xs text-muted">Loading audit records...</div>
           ) : (
             <div className="space-y-4">
               {activities.map((act) => {
@@ -98,7 +98,7 @@ export default function ProjectActivityPage() {
                 return (
                   <div
                     key={act.id}
-                    className="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800/60 flex items-start gap-4 text-xs"
+                    className="p-4 rounded-2xl bg-paper border border-divider flex items-start gap-4 text-xs shadow-sm"
                   >
                     <img
                       src={
@@ -106,29 +106,29 @@ export default function ProjectActivityPage() {
                         `https://api.dicebear.com/7.x/avataaars/svg?seed=${act.user?.name || "System"}`
                       }
                       alt={act.user?.name || "User"}
-                      className="w-8 h-8 rounded-full object-cover bg-zinc-800 border border-zinc-700 shrink-0 mt-0.5"
+                      className="w-8 h-8 rounded-full object-cover bg-editor border border-divider shrink-0 mt-0.5"
                     />
 
                     <div className="flex-1 min-w-0 space-y-1">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-white">{act.user?.name || "System"}</span>
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-indigo-400 border border-zinc-700">
+                          <span className="font-bold text-carbon">{act.user?.name || "System"}</span>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-editor text-coral border border-divider font-semibold">
                             {act.action}
                           </span>
                         </div>
-                        <span className="text-[11px] text-zinc-500 font-mono">
+                        <span className="text-[11px] text-muted font-mono">
                           {formatRelativeTime(act.createdAt)}
                         </span>
                       </div>
 
-                      <p className="text-zinc-400">
+                      <p className="text-muted">
                         Affected {act.entityType.toLowerCase()}:{" "}
-                        <span className="font-mono text-zinc-300">{act.entityId}</span>
+                        <span className="font-mono text-carbon font-semibold">{act.entityId}</span>
                       </p>
 
                       {parsedMeta && (
-                        <div className="mt-2 p-2.5 rounded-xl bg-zinc-950/80 border border-zinc-800/80 font-mono text-[11px] text-zinc-300 overflow-x-auto">
+                        <div className="mt-2 p-2.5 rounded-xl bg-editor border border-divider font-mono text-[11px] text-carbon overflow-x-auto">
                           {typeof parsedMeta === "object" ? (
                             <pre className="whitespace-pre-wrap">
                               {JSON.stringify(parsedMeta, null, 2)}
@@ -144,7 +144,7 @@ export default function ProjectActivityPage() {
               })}
 
               {activities.length === 0 && (
-                <div className="py-12 text-center text-xs text-zinc-500 italic">
+                <div className="py-12 text-center text-xs text-muted italic">
                   No activity recorded for this project yet.
                 </div>
               )}

@@ -22,11 +22,11 @@ export function DashboardCharts({ statusData, priorityData }: DashboardChartsPro
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Tasks by Status Chart */}
-      <div className="p-5 rounded-2xl bg-[#0d0e15] border border-zinc-800/80 shadow-card">
+      <div className="p-5 rounded-2xl bg-editor border border-divider shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-sm font-semibold text-white">Tasks by Status</h3>
-            <p className="text-xs text-zinc-400">Current distribution across workflow stages</p>
+            <h3 className="text-sm font-bold text-carbon">Tasks by Status</h3>
+            <p className="text-xs text-muted">Current distribution across workflow stages</p>
           </div>
         </div>
 
@@ -35,25 +35,26 @@ export function DashboardCharts({ statusData, priorityData }: DashboardChartsPro
             <BarChart data={statusData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <XAxis
                 dataKey="name"
-                stroke="#71717a"
+                stroke="#686D64"
                 fontSize={11}
                 tickLine={false}
-                axisLine={{ stroke: "#27272a" }}
+                axisLine={{ stroke: "#DAD8CE" }}
               />
               <YAxis
-                stroke="#71717a"
+                stroke="#686D64"
                 fontSize={11}
                 tickLine={false}
-                axisLine={{ stroke: "#27272a" }}
+                axisLine={{ stroke: "#DAD8CE" }}
                 allowDecimals={false}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#18181b",
-                  border: "1px solid #3f3f46",
+                  backgroundColor: "#FCFBF7",
+                  border: "1px solid #DAD8CE",
                   borderRadius: "0.75rem",
                   fontSize: "12px",
-                  color: "#f4f4f5",
+                  color: "#232722",
+                  boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.05)",
                 }}
               />
               <Bar dataKey="count" radius={[6, 6, 0, 0]}>
@@ -67,11 +68,11 @@ export function DashboardCharts({ statusData, priorityData }: DashboardChartsPro
       </div>
 
       {/* Tasks by Priority Distribution */}
-      <div className="p-5 rounded-2xl bg-[#0d0e15] border border-zinc-800/80 shadow-card">
+      <div className="p-5 rounded-2xl bg-editor border border-divider shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-sm font-semibold text-white">Priority Breakdown</h3>
-            <p className="text-xs text-zinc-400">Risk and urgency allocation</p>
+            <h3 className="text-sm font-bold text-carbon">Priority Breakdown</h3>
+            <p className="text-xs text-muted">Risk and urgency allocation</p>
           </div>
         </div>
 
@@ -80,11 +81,12 @@ export function DashboardCharts({ statusData, priorityData }: DashboardChartsPro
             <PieChart>
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "#18181b",
-                  border: "1px solid #3f3f46",
+                  backgroundColor: "#FCFBF7",
+                  border: "1px solid #DAD8CE",
                   borderRadius: "0.75rem",
                   fontSize: "12px",
-                  color: "#f4f4f5",
+                  color: "#232722",
+                  boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.05)",
                 }}
               />
               <Pie
@@ -108,7 +110,7 @@ export function DashboardCharts({ statusData, priorityData }: DashboardChartsPro
         {/* Legend */}
         <div className="flex items-center justify-center gap-4 mt-2">
           {priorityData.map((item) => (
-            <div key={item.name} className="flex items-center gap-1.5 text-xs text-zinc-400">
+            <div key={item.name} className="flex items-center gap-1.5 text-xs text-muted font-medium">
               <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
               <span>{item.name} ({item.count})</span>
             </div>

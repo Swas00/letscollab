@@ -18,7 +18,7 @@ export default function StandaloneTaskPage() {
       <div className="max-w-4xl mx-auto space-y-4">
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-2 text-xs text-zinc-400 hover:text-white transition"
+          className="inline-flex items-center gap-2 text-xs text-muted hover:text-carbon transition font-medium"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Dashboard</span>

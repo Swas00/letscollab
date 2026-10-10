@@ -16,11 +16,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
-      <body className="bg-[#090a0f] text-zinc-100 min-h-screen">
+      <body className="bg-paper text-carbon min-h-screen">
         <AuthProvider>
           <SocketProvider>{children}</SocketProvider>
         </AuthProvider>

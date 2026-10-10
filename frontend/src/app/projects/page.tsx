@@ -12,14 +12,11 @@ import {
   Search,
   Archive,
   ArrowRight,
-  Calendar,
-  CheckCircle2,
   Users,
-  Shield,
   X,
   AlertCircle,
 } from "lucide-react";
-import { PRIORITY_CONFIG, formatDate, cn } from "../../lib/utils";
+import { PRIORITY_CONFIG, cn } from "../../lib/utils";
 
 export default function ProjectsPage() {
   const { user } = useAuth();
@@ -98,7 +95,7 @@ export default function ProjectsPage() {
 
     const payload = {
       name,
-      key: key.toUpperCase().trim(),
+      key,
       description,
       priority,
       managerId: managerId || undefined,
@@ -112,6 +109,7 @@ export default function ProjectsPage() {
       setName("");
       setKey("");
       setDescription("");
+      setManagerId("");
       fetchProjects();
     } else {
       setModalError(res.error || "Failed to create project");
@@ -135,8 +133,8 @@ export default function ProjectsPage() {
         {/* Header Row */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-black text-white tracking-tight">Projects</h1>
-            <p className="text-xs text-zinc-400 mt-1">
+            <h1 className="text-2xl font-black text-carbon tracking-tight">Projects</h1>
+            <p className="text-xs text-muted mt-1">
               Collaborative workspaces, team assignments, and milestone tracking.
             </p>
           </div>
@@ -144,7 +142,7 @@ export default function ProjectsPage() {
           {isAdmin && (
             <button
               onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/30 transition"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-coral hover:bg-[#d34628] text-white text-xs font-bold shadow-md shadow-coral/20 transition"
             >
               <Plus className="w-4 h-4" />
               <span>Create Project</span>
@@ -153,7 +151,7 @@ export default function ProjectsPage() {
         </div>
 
         {/* Filters & Search Toolbar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-[#0d0e15] border border-zinc-800/80 rounded-2xl">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-editor border border-divider rounded-2xl shadow-sm">
           {/* Status Tabs */}
           <div className="flex items-center gap-1 w-full sm:w-auto overflow-x-auto">
             {["ALL", "ACTIVE", "COMPLETED", "ARCHIVED"].map((tab) => (
@@ -161,10 +159,10 @@ export default function ProjectsPage() {
                 key={tab}
                 onClick={() => setStatusFilter(tab)}
                 className={cn(
-                  "px-3 py-1.5 rounded-xl text-xs font-semibold transition shrink-0",
+                  "px-3 py-1.5 rounded-xl text-xs font-bold transition shrink-0",
                   statusFilter === tab
-                    ? "bg-indigo-600 text-white shadow-sm"
-                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                    ? "bg-carbon text-paper shadow-sm"
+                    : "text-muted hover:text-carbon hover:bg-paper"
                 )}
               >
                 {tab === "ALL" ? "All Projects" : tab.charAt(0) + tab.slice(1).toLowerCase()}
@@ -180,20 +178,20 @@ export default function ProjectsPage() {
             }}
             className="relative w-full sm:w-72"
           >
-            <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-2.5" />
+            <Search className="w-4 h-4 text-muted absolute left-3 top-2.5" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search projects..."
-              className="w-full pl-9 pr-3 py-2 bg-zinc-900 border border-zinc-700/80 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+              className="w-full pl-9 pr-3 py-2 bg-paper border border-divider rounded-xl text-xs text-carbon placeholder-muted focus:outline-none focus:border-coral focus:bg-editor"
             />
           </form>
         </div>
 
         {/* Project Cards Grid */}
         {isLoading ? (
-          <div className="p-12 text-center text-sm text-zinc-500">Loading projects...</div>
+          <div className="p-12 text-center text-sm text-muted">Loading projects...</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {projects.map((proj) => {
@@ -204,17 +202,17 @@ export default function ProjectsPage() {
                 <Link
                   key={proj.id}
                   href={`/projects/${proj.id}`}
-                  className="group p-6 rounded-3xl bg-[#0d0e15] hover:bg-[#12131d] border border-zinc-800/80 hover:border-indigo-500/50 transition-all duration-200 flex flex-col justify-between shadow-card hover:shadow-glow"
+                  className="group p-6 rounded-3xl bg-editor hover:bg-[#FAF8F2] border border-divider hover:border-coral transition-all duration-200 flex flex-col justify-between shadow-sm hover:shadow-md"
                 >
                   <div className="space-y-4">
                     {/* Top Row: Key & Priority & Status */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono font-black text-indigo-400 px-2 py-0.5 rounded-md bg-indigo-950/60 border border-indigo-800/50">
+                        <span className="text-xs font-mono font-black text-coral px-2 py-0.5 rounded-md bg-coral/15 border border-coral/30">
                           {proj.key}
                         </span>
                         {isArchived && (
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-paper text-muted border border-divider font-medium">
                             Archived
                           </span>
                         )}
@@ -236,7 +234,7 @@ export default function ProjectsPage() {
                           <button
                             onClick={(e) => handleToggleArchive(proj.id, e)}
                             title={isArchived ? "Restore Project" : "Archive Project"}
-                            className="p-1.5 text-zinc-500 hover:text-amber-400 rounded-lg hover:bg-zinc-800 transition"
+                            className="p-1.5 text-muted hover:text-coral rounded-lg hover:bg-paper transition"
                           >
                             <Archive className="w-3.5 h-3.5" />
                           </button>
@@ -246,26 +244,26 @@ export default function ProjectsPage() {
 
                     {/* Name & Description */}
                     <div>
-                      <h3 className="text-base font-bold text-white group-hover:text-indigo-200 transition">
+                      <h3 className="text-base font-bold text-carbon group-hover:text-coral transition">
                         {proj.name}
                       </h3>
-                      <p className="text-xs text-zinc-400 mt-1 line-clamp-2 leading-relaxed">
+                      <p className="text-xs text-muted mt-1 line-clamp-2 leading-relaxed">
                         {proj.description || "No project description provided."}
                       </p>
                     </div>
 
                     {/* Manager & Members */}
-                    <div className="flex items-center justify-between text-xs text-zinc-400 pt-2 border-t border-zinc-800/60">
+                    <div className="flex items-center justify-between text-xs text-muted pt-2 border-t border-divider">
                       <div>
-                        <span className="text-[10px] text-zinc-500 block">Lead Manager:</span>
-                        <span className="font-semibold text-zinc-300">
+                        <span className="text-[10px] text-muted block">Lead Manager:</span>
+                        <span className="font-semibold text-carbon">
                           {proj.manager?.name || "Unassigned"}
                         </span>
                       </div>
 
                       <div className="flex items-center gap-1.5">
-                        <Users className="w-3.5 h-3.5 text-zinc-500" />
-                        <span className="text-xs font-mono text-zinc-300">
+                        <Users className="w-3.5 h-3.5 text-muted" />
+                        <span className="text-xs font-mono text-carbon font-medium">
                           {proj._count?.members || proj.members?.length || 0} members
                         </span>
                       </div>
@@ -273,12 +271,12 @@ export default function ProjectsPage() {
                   </div>
 
                   {/* Card Footer: Total Tasks & Open Link */}
-                  <div className="mt-6 pt-4 border-t border-zinc-800/60 flex items-center justify-between">
-                    <span className="text-xs text-zinc-400">
-                      <strong className="text-white font-mono">{proj._count?.tasks || 0}</strong> tasks
+                  <div className="mt-6 pt-4 border-t border-divider flex items-center justify-between">
+                    <span className="text-xs text-muted">
+                      <strong className="text-carbon font-mono">{proj._count?.tasks || 0}</strong> tasks
                     </span>
 
-                    <span className="flex items-center gap-1 text-xs text-indigo-400 font-semibold group-hover:translate-x-1 transition-transform">
+                    <span className="flex items-center gap-1 text-xs text-coral font-bold group-hover:translate-x-1 transition-transform">
                       Open Board <ArrowRight className="w-3.5 h-3.5" />
                     </span>
                   </div>
@@ -289,13 +287,13 @@ export default function ProjectsPage() {
         )}
 
         {projects.length === 0 && !isLoading && (
-          <div className="p-16 text-center rounded-3xl bg-[#0d0e15] border border-dashed border-zinc-800 text-zinc-500 space-y-3">
-            <FolderKanban className="w-8 h-8 mx-auto text-zinc-600" />
-            <p className="text-sm font-medium">No projects found</p>
+          <div className="p-16 text-center rounded-3xl bg-editor border border-dashed border-divider text-muted space-y-3 shadow-sm">
+            <FolderKanban className="w-8 h-8 mx-auto text-muted" />
+            <p className="text-sm font-bold text-carbon">No projects found</p>
             {isAdmin && (
               <button
                 onClick={() => setIsModalOpen(true)}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl transition"
+                className="px-4 py-2 bg-coral hover:bg-[#d34628] text-white text-xs font-bold rounded-xl transition shadow-md shadow-coral/20"
               >
                 Create your first project
               </button>
@@ -306,23 +304,23 @@ export default function ProjectsPage() {
 
       {/* Create Project Modal (Admin Only) */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-lg bg-[#0d0e15] border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden p-6 space-y-5">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <Plus className="w-5 h-5 text-indigo-400" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-carbon/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-lg bg-editor border border-divider rounded-3xl shadow-2xl overflow-hidden p-6 space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-divider">
+              <h2 className="text-lg font-bold text-carbon flex items-center gap-2">
+                <Plus className="w-5 h-5 text-coral" />
                 Create New Project
               </h2>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition"
+                className="p-1.5 text-muted hover:text-carbon rounded-lg hover:bg-paper transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {modalError && (
-              <div className="p-3 bg-rose-950/40 border border-rose-900/60 rounded-xl flex items-center gap-2 text-xs text-rose-300">
+              <div className="p-3 bg-coral/15 border border-coral/30 rounded-xl flex items-center gap-2 text-xs text-coral font-medium">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{modalError}</span>
               </div>
@@ -330,7 +328,7 @@ export default function ProjectsPage() {
 
             <form onSubmit={handleCreateProject} className="space-y-4">
               <div>
-                <label className="text-xs font-medium text-zinc-300 block mb-1">Project Name</label>
+                <label className="text-xs font-bold text-carbon block mb-1">Project Name</label>
                 <input
                   type="text"
                   required
@@ -347,13 +345,13 @@ export default function ProjectsPage() {
                     }
                   }}
                   placeholder="e.g. NeoFlow Cloud Platform"
-                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-zinc-700/80 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 bg-paper border border-divider rounded-xl text-xs text-carbon placeholder-muted focus:outline-none focus:border-coral focus:bg-editor"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-medium text-zinc-300 block mb-1">
+                  <label className="text-xs font-bold text-carbon block mb-1">
                     Key Prefix (2-5 letters)
                   </label>
                   <input
@@ -363,16 +361,16 @@ export default function ProjectsPage() {
                     value={key}
                     onChange={(e) => setKey(e.target.value.toUpperCase())}
                     placeholder="NEO"
-                    className="w-full px-3.5 py-2.5 bg-zinc-900 border border-zinc-700/80 rounded-xl text-xs font-mono font-bold text-indigo-400 focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3.5 py-2.5 bg-paper border border-divider rounded-xl text-xs font-mono font-bold text-coral focus:outline-none focus:border-coral focus:bg-editor"
                   />
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-zinc-300 block mb-1">Priority</label>
+                  <label className="text-xs font-bold text-carbon block mb-1">Priority</label>
                   <select
                     value={priority}
                     onChange={(e) => setPriority(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-zinc-900 border border-zinc-700/80 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3.5 py-2.5 bg-paper border border-divider rounded-xl text-xs text-carbon focus:outline-none focus:border-coral focus:bg-editor font-medium"
                   >
                     <option value="LOW">Low</option>
                     <option value="MEDIUM">Medium</option>
@@ -383,13 +381,13 @@ export default function ProjectsPage() {
               </div>
 
               <div>
-                <label className="text-xs font-medium text-zinc-300 block mb-1">
+                <label className="text-xs font-bold text-carbon block mb-1">
                   Assign Project Manager
                 </label>
                 <select
                   value={managerId}
                   onChange={(e) => setManagerId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-zinc-700/80 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 bg-paper border border-divider rounded-xl text-xs text-carbon focus:outline-none focus:border-coral focus:bg-editor font-medium"
                 >
                   <option value="">Select Project Manager</option>
                   {allUsers.map((u) => (
@@ -401,13 +399,13 @@ export default function ProjectsPage() {
               </div>
 
               <div>
-                <label className="text-xs font-medium text-zinc-300 block mb-1">Description</label>
+                <label className="text-xs font-bold text-carbon block mb-1">Description</label>
                 <textarea
                   rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Goals, deliverables, and scope..."
-                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-zinc-700/80 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 bg-paper border border-divider rounded-xl text-xs text-carbon placeholder-muted focus:outline-none focus:border-coral focus:bg-editor"
                 />
               </div>
 
@@ -415,14 +413,14 @@ export default function ProjectsPage() {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-xs text-zinc-400 hover:text-white transition"
+                  className="px-4 py-2 text-xs font-medium text-muted hover:text-carbon transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold rounded-xl transition shadow-md shadow-indigo-600/30"
+                  className="px-5 py-2.5 bg-coral hover:bg-[#d34628] disabled:opacity-50 text-white text-xs font-bold rounded-xl transition shadow-md shadow-coral/20"
                 >
                   {isSubmitting ? "Creating..." : "Create Project"}
                 </button>

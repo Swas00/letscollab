@@ -14,7 +14,6 @@ import {
   Edit2,
   X,
   AlertCircle,
-  Lock,
 } from "lucide-react";
 import { ROLE_CONFIG, formatDate, cn } from "../../lib/utils";
 
@@ -67,16 +66,16 @@ export default function UsersAdminPage() {
   if (user && user.role !== "ADMIN") {
     return (
       <AppLayout>
-        <div className="p-16 max-w-lg mx-auto text-center space-y-4 rounded-3xl bg-zinc-900 border border-zinc-800">
-          <div className="w-12 h-12 rounded-2xl bg-rose-950/60 border border-rose-800/50 flex items-center justify-center text-rose-400 mx-auto">
+        <div className="p-16 max-w-lg mx-auto text-center space-y-4 rounded-3xl bg-editor border border-divider shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-coral/15 border border-coral/30 flex items-center justify-center text-coral mx-auto">
             <ShieldAlert className="w-6 h-6" />
           </div>
-          <h2 className="text-lg font-bold text-white">HTTP 403: Forbidden</h2>
-          <p className="text-xs text-zinc-400 leading-relaxed">
+          <h2 className="text-lg font-black text-carbon">HTTP 403: Forbidden</h2>
+          <p className="text-xs text-muted leading-relaxed">
             User administration is restricted to System Administrators. Your current role is{" "}
-            <strong className="text-rose-400">{user.role}</strong>.
+            <strong className="text-coral">{user.role}</strong>.
           </p>
-          <div className="pt-2 text-xs text-zinc-500">
+          <div className="pt-2 text-xs text-muted">
             Please contact your organization administrator if you require elevated permissions.
           </div>
         </div>
@@ -99,6 +98,8 @@ export default function UsersAdminPage() {
       setIsCreateOpen(false);
       setNewName("");
       setNewEmail("");
+      setNewPassword("password123");
+      setNewRole("TEAM_MEMBER");
       fetchUsers();
     } else {
       setCreateError(res.error || "Failed to create user");
@@ -125,14 +126,17 @@ export default function UsersAdminPage() {
   };
 
   const handleToggleStatus = async (targetUser: any) => {
-    const nextStatus = !targetUser.isActive;
-    const res = await api.users.toggleStatus(targetUser.id, nextStatus);
-    if (!res.error) {
-      setUsersList((prev) =>
-        prev.map((u) => (u.id === targetUser.id ? { ...u, isActive: nextStatus } : u))
-      );
+    const action = targetUser.isActive ? "deactivate" : "activate";
+    if (!confirm(`Are you sure you want to ${action} ${targetUser.name}?`)) return;
+
+    const res = await api.users.update(targetUser.id, {
+      isActive: !targetUser.isActive,
+    });
+
+    if (res.data?.user) {
+      fetchUsers();
     } else {
-      setErrorMsg(res.error);
+      setErrorMsg(res.error || `Failed to ${action} user`);
     }
   };
 
@@ -143,19 +147,19 @@ export default function UsersAdminPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-black text-white tracking-tight">User Management</h1>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800">
+              <h1 className="text-2xl font-black text-carbon tracking-tight">User Administration</h1>
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-coral text-white">
                 Admin Exclusive
               </span>
             </div>
-            <p className="text-xs text-zinc-400 mt-1">
+            <p className="text-xs text-muted mt-1">
               Create, modify, and activate/deactivate platform accounts.
             </p>
           </div>
 
           <button
             onClick={() => setIsCreateOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/30 transition"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-coral hover:bg-[#d34628] text-white text-xs font-bold shadow-md shadow-coral/20 transition"
           >
             <UserPlus className="w-4 h-4" />
             <span>Create User</span>
@@ -163,7 +167,7 @@ export default function UsersAdminPage() {
         </div>
 
         {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-[#0d0e15] border border-zinc-800/80 rounded-2xl">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-editor border border-divider rounded-2xl shadow-sm">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -171,20 +175,20 @@ export default function UsersAdminPage() {
             }}
             className="relative w-full sm:w-72"
           >
-            <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-2.5" />
+            <Search className="w-4 h-4 text-muted absolute left-3 top-2.5" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name or email..."
-              className="w-full pl-9 pr-3 py-2 bg-zinc-900 border border-zinc-700/80 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+              className="w-full pl-9 pr-3 py-2 bg-paper border border-divider rounded-xl text-xs text-carbon placeholder-muted focus:outline-none focus:border-coral focus:bg-editor"
             />
           </form>
 
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="px-3 py-2 bg-zinc-900 border border-zinc-700/80 rounded-xl text-xs text-zinc-300 focus:outline-none focus:border-indigo-500"
+            className="px-3 py-2 bg-paper border border-divider rounded-xl text-xs text-carbon focus:outline-none focus:border-coral focus:bg-editor font-medium"
           >
             <option value="ALL">All Roles</option>
             <option value="ADMIN">Admin</option>
@@ -195,17 +199,17 @@ export default function UsersAdminPage() {
         </div>
 
         {errorMsg && (
-          <div className="p-3 bg-rose-950/40 border border-rose-900/60 rounded-xl flex items-center gap-2 text-xs text-rose-300">
+          <div className="p-3 bg-coral/15 border border-coral/30 rounded-xl flex items-center gap-2 text-xs text-coral font-medium">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{errorMsg}</span>
           </div>
         )}
 
         {/* User Table */}
-        <div className="bg-[#0d0e15] border border-zinc-800/80 rounded-3xl overflow-hidden shadow-card">
+        <div className="bg-editor border border-divider rounded-3xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-zinc-950/80 text-zinc-400 uppercase font-mono border-b border-zinc-800">
+              <thead className="bg-paper text-muted uppercase font-mono border-b border-divider">
                 <tr>
                   <th className="py-3 px-4">User</th>
                   <th className="py-3 px-4">Role</th>
@@ -215,12 +219,12 @@ export default function UsersAdminPage() {
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-800/60">
+              <tbody className="divide-y divide-divider">
                 {usersList.map((u) => {
                   const roleCfg = ROLE_CONFIG[u.role];
 
                   return (
-                    <tr key={u.id} className="hover:bg-zinc-900/40 transition">
+                    <tr key={u.id} className="hover:bg-paper transition">
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
                           <img
@@ -229,11 +233,11 @@ export default function UsersAdminPage() {
                               `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.name}`
                             }
                             alt={u.name}
-                            className="w-8 h-8 rounded-full object-cover bg-zinc-800 border border-zinc-700"
+                            className="w-8 h-8 rounded-full object-cover bg-paper border border-divider"
                           />
                           <div>
-                            <p className="font-semibold text-white">{u.name}</p>
-                            <p className="text-[11px] text-zinc-500">{u.email}</p>
+                            <p className="font-bold text-carbon">{u.name}</p>
+                            <p className="text-[11px] text-muted">{u.email}</p>
                           </div>
                         </div>
                       </td>
@@ -242,7 +246,7 @@ export default function UsersAdminPage() {
                         <span
                           className={cn(
                             "text-[10px] font-medium px-2 py-0.5 rounded-full border",
-                            roleCfg?.badge || "bg-zinc-800 text-zinc-400"
+                            roleCfg?.badge || "bg-paper text-muted border-divider"
                           )}
                         >
                           {roleCfg?.label || u.role}
@@ -251,23 +255,23 @@ export default function UsersAdminPage() {
 
                       <td className="py-3.5 px-4">
                         {u.isActive ? (
-                          <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+                          <span className="flex items-center gap-1.5 text-[#254622] font-bold">
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             <span>Active</span>
                           </span>
                         ) : (
-                          <span className="flex items-center gap-1.5 text-rose-400 font-semibold">
+                          <span className="flex items-center gap-1.5 text-coral font-bold">
                             <XCircle className="w-3.5 h-3.5" />
                             <span>Deactivated</span>
                           </span>
                         )}
                       </td>
 
-                      <td className="py-3.5 px-4 font-mono text-zinc-300">
+                      <td className="py-3.5 px-4 font-mono text-carbon font-semibold">
                         {u._count?.assignedTasks || 0} tasks
                       </td>
 
-                      <td className="py-3.5 px-4 text-zinc-400">
+                      <td className="py-3.5 px-4 text-muted">
                         {formatDate(u.createdAt)}
                       </td>
 
@@ -280,7 +284,7 @@ export default function UsersAdminPage() {
                               setEditEmail(u.email);
                               setEditRole(u.role);
                             }}
-                            className="p-1.5 text-zinc-400 hover:text-indigo-400 hover:bg-zinc-800 rounded-lg transition"
+                            className="p-1.5 text-muted hover:text-coral hover:bg-paper rounded-lg transition"
                             title="Edit User"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
@@ -290,10 +294,10 @@ export default function UsersAdminPage() {
                             <button
                               onClick={() => handleToggleStatus(u)}
                               className={cn(
-                                "px-2.5 py-1 rounded-lg text-[10px] font-semibold transition border",
+                                "px-2.5 py-1 rounded-lg text-[10px] font-bold transition border",
                                 u.isActive
-                                  ? "border-rose-800/60 bg-rose-950/40 text-rose-300 hover:bg-rose-900/60"
-                                  : "border-emerald-800/60 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/60"
+                                  ? "border-coral/50 bg-coral/10 text-coral hover:bg-coral/20"
+                                  : "border-[#b5cea8] bg-moss/50 text-[#254622] hover:bg-moss"
                               )}
                             >
                               {u.isActive ? "Deactivate" : "Activate"}
@@ -312,23 +316,23 @@ export default function UsersAdminPage() {
 
       {/* Create User Modal */}
       {isCreateOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-[#0d0e15] border border-zinc-800 rounded-3xl shadow-2xl p-6 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-indigo-400" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-carbon/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-editor border border-divider rounded-3xl shadow-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-divider">
+              <h2 className="text-base font-bold text-carbon flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-coral" />
                 Create New User
               </h2>
               <button
                 onClick={() => setIsCreateOpen(false)}
-                className="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition"
+                className="p-1.5 text-muted hover:text-carbon rounded-lg hover:bg-paper transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {createError && (
-              <div className="p-3 bg-rose-950/40 border border-rose-900/60 rounded-xl flex items-center gap-2 text-xs text-rose-300">
+              <div className="p-3 bg-coral/15 border border-coral/30 rounded-xl flex items-center gap-2 text-xs text-coral font-medium">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{createError}</span>
               </div>
@@ -336,46 +340,46 @@ export default function UsersAdminPage() {
 
             <form onSubmit={handleCreateUser} className="space-y-4">
               <div>
-                <label className="text-xs font-medium text-zinc-300 block mb-1">Full Name</label>
+                <label className="text-xs font-bold text-carbon block mb-1">Full Name</label>
                 <input
                   type="text"
                   required
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="e.g. Rachel Green"
-                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-zinc-700/80 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 bg-paper border border-divider rounded-xl text-xs text-carbon placeholder-muted focus:outline-none focus:border-coral focus:bg-editor"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-zinc-300 block mb-1">Email</label>
+                <label className="text-xs font-bold text-carbon block mb-1">Email</label>
                 <input
                   type="email"
                   required
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
                   placeholder="rachel@neostats.com"
-                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-zinc-700/80 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 bg-paper border border-divider rounded-xl text-xs text-carbon placeholder-muted focus:outline-none focus:border-coral focus:bg-editor"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-zinc-300 block mb-1">Password</label>
+                <label className="text-xs font-bold text-carbon block mb-1">Password</label>
                 <input
                   type="password"
                   required
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-zinc-700/80 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 bg-paper border border-divider rounded-xl text-xs text-carbon placeholder-muted focus:outline-none focus:border-coral focus:bg-editor"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-zinc-300 block mb-1">System Role</label>
+                <label className="text-xs font-bold text-carbon block mb-1">System Role</label>
                 <select
                   value={newRole}
                   onChange={(e) => setNewRole(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-zinc-700/80 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 bg-paper border border-divider rounded-xl text-xs text-carbon focus:outline-none focus:border-coral focus:bg-editor font-medium"
                 >
                   <option value="ADMIN">Admin</option>
                   <option value="PROJECT_MANAGER">Project Manager</option>
@@ -388,13 +392,13 @@ export default function UsersAdminPage() {
                 <button
                   type="button"
                   onClick={() => setIsCreateOpen(false)}
-                  className="px-4 py-2 text-xs text-zinc-400 hover:text-white transition"
+                  className="px-4 py-2 text-xs font-medium text-muted hover:text-carbon transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl transition shadow-md shadow-indigo-600/30"
+                  className="px-5 py-2.5 bg-coral hover:bg-[#d34628] text-white text-xs font-bold rounded-xl transition shadow-md shadow-coral/20"
                 >
                   Create User
                 </button>
@@ -406,23 +410,23 @@ export default function UsersAdminPage() {
 
       {/* Edit User Modal */}
       {editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-[#0d0e15] border border-zinc-800 rounded-3xl shadow-2xl p-6 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
-                <Edit2 className="w-5 h-5 text-indigo-400" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-carbon/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-editor border border-divider rounded-3xl shadow-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-divider">
+              <h2 className="text-base font-bold text-carbon flex items-center gap-2">
+                <Edit2 className="w-5 h-5 text-coral" />
                 Edit User
               </h2>
               <button
                 onClick={() => setEditingUser(null)}
-                className="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition"
+                className="p-1.5 text-muted hover:text-carbon rounded-lg hover:bg-paper transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {editError && (
-              <div className="p-3 bg-rose-950/40 border border-rose-900/60 rounded-xl flex items-center gap-2 text-xs text-rose-300">
+              <div className="p-3 bg-coral/15 border border-coral/30 rounded-xl flex items-center gap-2 text-xs text-coral font-medium">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{editError}</span>
               </div>
@@ -430,33 +434,33 @@ export default function UsersAdminPage() {
 
             <form onSubmit={handleUpdateUser} className="space-y-4">
               <div>
-                <label className="text-xs font-medium text-zinc-300 block mb-1">Full Name</label>
+                <label className="text-xs font-bold text-carbon block mb-1">Full Name</label>
                 <input
                   type="text"
                   required
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-zinc-700/80 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 bg-paper border border-divider rounded-xl text-xs text-carbon placeholder-muted focus:outline-none focus:border-coral focus:bg-editor"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-zinc-300 block mb-1">Email</label>
+                <label className="text-xs font-bold text-carbon block mb-1">Email</label>
                 <input
                   type="email"
                   required
                   value={editEmail}
                   onChange={(e) => setEditEmail(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-zinc-700/80 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 bg-paper border border-divider rounded-xl text-xs text-carbon placeholder-muted focus:outline-none focus:border-coral focus:bg-editor"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-medium text-zinc-300 block mb-1">System Role</label>
+                <label className="text-xs font-bold text-carbon block mb-1">System Role</label>
                 <select
                   value={editRole}
                   onChange={(e) => setEditRole(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-zinc-900 border border-zinc-700/80 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3.5 py-2.5 bg-paper border border-divider rounded-xl text-xs text-carbon focus:outline-none focus:border-coral focus:bg-editor font-medium"
                 >
                   <option value="ADMIN">Admin</option>
                   <option value="PROJECT_MANAGER">Project Manager</option>
@@ -469,13 +473,13 @@ export default function UsersAdminPage() {
                 <button
                   type="button"
                   onClick={() => setEditingUser(null)}
-                  className="px-4 py-2 text-xs text-zinc-400 hover:text-white transition"
+                  className="px-4 py-2 text-xs font-medium text-muted hover:text-carbon transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl transition shadow-md shadow-indigo-600/30"
+                  className="px-5 py-2.5 bg-coral hover:bg-[#d34628] text-white text-xs font-bold rounded-xl transition shadow-md shadow-coral/20"
                 >
                   Save Changes
                 </button>
