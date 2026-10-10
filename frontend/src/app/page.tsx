@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { CollaborativeEditor } from "../components/editor/CollaborativeEditor";
 import { Button } from "../components/ui/Button";
+import BackgroundCarousel from "../components/hero/BackgroundCarousel";
 
 export default function HomePage() {
   return (
@@ -41,11 +42,15 @@ export default function HomePage() {
           </Link>
 
           {/* Desktop Nav Links */}
-          <nav className="hidden md:flex items-center gap-8 text-xs font-semibold text-muted">
+          <nav className="hidden md:flex items-center gap-7 text-xs font-semibold text-muted">
             <a href="#editor" className="hover:text-carbon transition-colors duration-140">Code Workspace</a>
             <a href="#features" className="hover:text-carbon transition-colors duration-140">Capabilities</a>
             <a href="#workflow" className="hover:text-carbon transition-colors duration-140">Architecture</a>
             <a href="#governance" className="hover:text-carbon transition-colors duration-140">Governance</a>
+            <Link href="/carousel" className="hover:text-coral transition-colors duration-140 flex items-center gap-1.5 font-mono text-[11px] text-coral font-bold bg-coral/10 hover:bg-coral/20 px-2 py-0.5 rounded-full border border-coral/25">
+              <span>Zero-G Motion</span>
+              <span className="text-[9px] bg-coral text-white px-1 rounded font-bold">20F</span>
+            </Link>
           </nav>
 
           <div className="flex items-center gap-2.5">
@@ -63,48 +68,53 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Hero Section */}
+      {/* Hero Section with Auto-Playing 20-Frame Carousel Background */}
       <main className="flex-1">
-        <section className="pt-16 pb-12 px-6 max-w-7xl mx-auto text-center space-y-6">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-editor border border-divider text-carbon text-xs font-mono shadow-xs">
-            <span className="w-2 h-2 rounded-full bg-[#3B5A38]" />
-            <span>Real-Time Multi-Developer Coding Platform</span>
-            <span className="text-muted">•</span>
-            <span className="text-coral font-bold">Sub-10ms Sync</span>
-          </div>
+        <section className="relative overflow-hidden pt-16 pb-16 px-6 min-h-[92vh] flex flex-col justify-center items-center">
+          {/* Full-Width & Full-Height 20-Frame Auto-Playing Responsive Slideshow Background */}
+          <BackgroundCarousel className="absolute inset-0" />
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.15] max-w-4xl mx-auto text-carbon">
-            The real-time collaborative code editor built for{" "}
-            <span className="text-coral underline decoration-periwinkle decoration-wavy decoration-2">
-              high-velocity teams.
-            </span>
-          </h1>
-
-          <p className="text-muted text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
-            Multiple developers writing, debugging, and reviewing code in the same workspace with
-            live collaborator presence, vector clock synchronization, integrated terminal execution, and zero artificial delays.
-          </p>
-
-          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-            <Link href="/register">
-              <Button variant="primary" size="lg" withArrow>
-                Open Collaborative Workspace
-              </Button>
-            </Link>
-            <Link href="/login">
-              <Button variant="secondary" size="lg">
-                Sign In to Existing Project
-              </Button>
-            </Link>
-          </div>
-
-          {/* Interactive Live Collaborative Editor Showcase */}
-          <div id="editor" className="pt-8 max-w-6xl mx-auto text-left">
-            <div className="mb-2 flex items-center justify-between text-xs font-mono text-muted px-1">
-              <span>LIVE INTERACTIVE WORKSPACE (TRY TYPING, RUNNING & FORMATTING)</span>
-              <span>⌘K for Command Palette</span>
+          <div className="relative z-10 max-w-7xl mx-auto text-center space-y-6 w-full">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-editor/95 backdrop-blur-md border border-divider text-carbon text-xs font-mono shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-[#3B5A38]" />
+              <span>Real-Time Multi-Developer Coding Platform</span>
+              <span className="text-muted">•</span>
+              <span className="text-coral font-bold">Sub-10ms Sync</span>
             </div>
-            <CollaborativeEditor projectId="landing-demo" />
+
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.15] max-w-4xl mx-auto text-carbon">
+              The real-time collaborative code editor built for{" "}
+              <span className="text-coral underline decoration-periwinkle decoration-wavy decoration-2">
+                high-velocity teams.
+              </span>
+            </h1>
+
+            <p className="text-muted text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
+              Multiple developers writing, debugging, and reviewing code in the same workspace with
+              live collaborator presence, vector clock synchronization, integrated terminal execution, and zero artificial delays.
+            </p>
+
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <Link href="/register">
+                <Button variant="primary" size="lg" withArrow>
+                  Open Collaborative Workspace
+                </Button>
+              </Link>
+              <Link href="/login">
+                <Button variant="secondary" size="lg">
+                  Sign In to Existing Project
+                </Button>
+              </Link>
+            </div>
+
+            {/* Interactive Live Collaborative Editor Showcase */}
+            <div id="editor" className="pt-8 max-w-6xl mx-auto text-left">
+              <div className="mb-2 flex items-center justify-between text-xs font-mono text-muted px-1">
+                <span>LIVE INTERACTIVE WORKSPACE (TRY TYPING, RUNNING & FORMATTING)</span>
+                <span>⌘K for Command Palette</span>
+              </div>
+              <CollaborativeEditor projectId="landing-demo" />
+            </div>
           </div>
         </section>
 
