@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   Layers,
@@ -12,228 +14,168 @@ import {
   Sparkles,
   BarChart3,
   Terminal,
+  Code2,
+  Play,
+  Check,
+  Search,
 } from "lucide-react";
-import ZeroGravityVideoBackground from "@/components/hero/ZeroGravityVideoBackground";
+import { CollaborativeEditor } from "../components/editor/CollaborativeEditor";
+import { Button } from "../components/ui/Button";
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-paper text-carbon flex flex-col justify-between selection:bg-periwinkle selection:text-carbon overflow-x-hidden">
+    <div className="min-h-screen bg-paper text-carbon flex flex-col justify-between selection:bg-periwinkle selection:text-carbon overflow-x-hidden font-sans">
       {/* Navigation Bar */}
-      <header className="sticky top-0 z-40 w-full border-b border-divider bg-editor/90 backdrop-blur-md shadow-sm">
+      <header className="sticky top-0 z-40 w-full border-b border-divider bg-editor/95 backdrop-blur-md shadow-xs">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 rounded-xl bg-coral flex items-center justify-center text-white shadow-md shadow-coral/20 group-hover:scale-105 transition-transform">
-              <Layers className="w-5 h-5 text-white" />
+            <div className="w-8 h-8 rounded-lg bg-coral flex items-center justify-center text-white shadow-xs transition-transform duration-150 group-hover:scale-105">
+              <Code2 className="w-4 h-4 text-white" />
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-xl tracking-tight text-carbon">NeoStats</span>
+              <span className="font-extrabold text-lg tracking-tight text-carbon">NeoStats</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-moss border border-[#b5cea8] text-[#254622] font-semibold">
+                v1.4 • CRDT
+              </span>
             </div>
           </Link>
 
           {/* Desktop Nav Links */}
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted">
-            <a href="#features" className="hover:text-carbon transition">Capabilities</a>
-            <a href="#workflow" className="hover:text-carbon transition">Workflow</a>
-            <a href="#governance" className="hover:text-carbon transition">Governance</a>
+          <nav className="hidden md:flex items-center gap-8 text-xs font-semibold text-muted">
+            <a href="#editor" className="hover:text-carbon transition-colors duration-140">Code Workspace</a>
+            <a href="#features" className="hover:text-carbon transition-colors duration-140">Capabilities</a>
+            <a href="#workflow" className="hover:text-carbon transition-colors duration-140">Architecture</a>
+            <a href="#governance" className="hover:text-carbon transition-colors duration-140">Governance</a>
           </nav>
 
-          <div className="flex items-center gap-3">
-            <Link
-              href="/login"
-              className="px-4 py-2 rounded-xl text-xs font-bold text-muted hover:text-carbon hover:bg-paper transition"
-            >
-              Sign In
+          <div className="flex items-center gap-2.5">
+            <Link href="/login">
+              <Button variant="ghost" size="sm">
+                Sign In
+              </Button>
             </Link>
-            <Link
-              href="/register"
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-coral hover:bg-[#d34628] text-white text-xs font-bold shadow-md shadow-coral/20 transition hover:scale-105"
-            >
-              <span>Get Started</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+            <Link href="/register">
+              <Button variant="primary" size="sm" withArrow>
+                Get Started
+              </Button>
             </Link>
           </div>
         </div>
       </header>
 
-      {/* Hero Section with Integrated Zero-Gravity Video Background */}
+      {/* Hero Section */}
       <main className="flex-1">
-        <section className="relative overflow-hidden pt-16 pb-24 px-6 min-h-[92vh] flex flex-col justify-center items-center">
-          {/* Zero-Gravity Video Background */}
-          <ZeroGravityVideoBackground />
-
-          <div className="relative z-10 max-w-5xl mx-auto text-center space-y-8 pt-4">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-editor/95 backdrop-blur-md border border-divider text-carbon text-xs font-semibold shadow-md">
-              <Sparkles className="w-3.5 h-3.5 text-coral animate-pulse" />
-              <span>Next-Generation Real-Time Collaborative Workspace</span>
-            </div>
-
-            <div className="p-8 sm:p-12 rounded-3xl bg-editor/90 backdrop-blur-xl border border-divider shadow-2xl space-y-6">
-              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.1] max-w-4xl mx-auto text-carbon">
-                The collaborative project hub built for{" "}
-                <span className="text-coral underline decoration-periwinkle decoration-wavy decoration-2">
-                  high-velocity teams.
-                </span>
-              </h1>
-
-              <p className="text-muted text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-                Collaborate across projects and sprint tasks with sub-10ms WebSocket sync, optimistic
-                concurrency conflict prevention, and strict server-enforced role governance.
-              </p>
-
-              <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
-                <Link
-                  href="/register"
-                  className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-coral hover:bg-[#d34628] text-white font-bold text-sm shadow-lg shadow-coral/25 transition hover:scale-105"
-                >
-                  <span>Start Free Trial</span>
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-                <Link
-                  href="/login"
-                  className="px-6 py-3.5 rounded-xl bg-paper hover:bg-white text-carbon font-semibold text-sm border border-divider transition shadow-sm"
-                >
-                  Sign In to Existing Team
-                </Link>
-              </div>
-            </div>
-
-            {/* Interactive UI Mockup Card with Weightless Float */}
-            <div className="pt-6 max-w-5xl mx-auto">
-              <div className="relative rounded-3xl p-3 bg-editor/95 backdrop-blur-xl border border-divider shadow-2xl overflow-hidden text-left hover:-translate-y-1 transition duration-500">
-              <div className="bg-paper rounded-2xl p-6 text-left space-y-4 border border-divider">
-                {/* Window header */}
-                <div className="flex items-center justify-between pb-4 border-b border-divider">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-[#E65F42]" />
-                    <div className="w-3 h-3 rounded-full bg-[#e3b04b]" />
-                    <div className="w-3 h-3 rounded-full bg-[#5bb062]" />
-                    <span className="text-xs font-mono text-muted ml-2">neostats.app/projects/NEO/tasks</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-moss border border-[#3B5A38]" />
-                    <span className="text-xs font-mono text-muted font-medium">WebSocket Connected (sub-10ms)</span>
-                  </div>
-                </div>
-
-                {/* Simulated Kanban Columns */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-                  <div className="p-3.5 bg-editor border border-divider rounded-xl space-y-2 shadow-sm">
-                    <div className="flex items-center justify-between text-xs font-bold text-muted uppercase font-mono">
-                      <span>To Do</span>
-                      <span className="px-1.5 py-0.5 rounded bg-paper border border-divider text-carbon font-mono">2</span>
-                    </div>
-                    <div className="p-3 bg-paper border border-divider rounded-lg text-xs space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono text-coral font-bold">NEO-4</span>
-                        <span className="px-1.5 py-0.5 rounded bg-coral/15 text-coral border border-coral/30 text-[10px] font-bold">High</span>
-                      </div>
-                      <p className="font-bold text-carbon">Alert webhooks for audit log streams</p>
-                    </div>
-                  </div>
-
-                  <div className="p-3.5 bg-editor border border-divider rounded-xl space-y-2 shadow-sm">
-                    <div className="flex items-center justify-between text-xs font-bold text-carbon uppercase font-mono">
-                      <span>In Progress</span>
-                      <span className="px-1.5 py-0.5 rounded bg-periwinkle border border-divider text-carbon font-mono">1</span>
-                    </div>
-                    <div className="p-3 bg-periwinkle/40 border border-[#bec5ea] rounded-lg text-xs space-y-1 shadow-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono text-coral font-bold">NEO-1</span>
-                        <span className="px-1.5 py-0.5 rounded bg-coral text-white text-[10px] font-bold">Urgent</span>
-                      </div>
-                      <p className="font-bold text-carbon">WebSocket room clustering & heartbeat</p>
-                      <div className="text-[10px] text-muted pt-1 font-mono">v1 • Assignee: David Chen</div>
-                    </div>
-                  </div>
-
-                  <div className="p-3.5 bg-editor border border-divider rounded-xl space-y-2 shadow-sm">
-                    <div className="flex items-center justify-between text-xs font-bold text-carbon uppercase font-mono">
-                      <span>Done</span>
-                      <span className="px-1.5 py-0.5 rounded bg-moss border border-divider text-carbon font-mono">1</span>
-                    </div>
-                    <div className="p-3 bg-moss/50 border border-[#b5cea8] rounded-lg text-xs space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono text-coral font-bold">NEO-3</span>
-                        <span className="px-1.5 py-0.5 rounded bg-moss text-carbon border border-[#3B5A38]/30 text-[10px] font-bold">Done</span>
-                      </div>
-                      <p className="font-bold text-carbon">Audit RBAC server-side authorization</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+        <section className="pt-16 pb-12 px-6 max-w-7xl mx-auto text-center space-y-6">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-editor border border-divider text-carbon text-xs font-mono shadow-xs">
+            <span className="w-2 h-2 rounded-full bg-[#3B5A38]" />
+            <span>Real-Time Multi-Developer Coding Platform</span>
+            <span className="text-muted">•</span>
+            <span className="text-coral font-bold">Sub-10ms Sync</span>
           </div>
-        </div>
-      </section>
+
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.15] max-w-4xl mx-auto text-carbon">
+            The real-time collaborative code editor built for{" "}
+            <span className="text-coral underline decoration-periwinkle decoration-wavy decoration-2">
+              high-velocity teams.
+            </span>
+          </h1>
+
+          <p className="text-muted text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
+            Multiple developers writing, debugging, and reviewing code in the same workspace with
+            live collaborator presence, vector clock synchronization, integrated terminal execution, and zero artificial delays.
+          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <Link href="/register">
+              <Button variant="primary" size="lg" withArrow>
+                Open Collaborative Workspace
+              </Button>
+            </Link>
+            <Link href="/login">
+              <Button variant="secondary" size="lg">
+                Sign In to Existing Project
+              </Button>
+            </Link>
+          </div>
+
+          {/* Interactive Live Collaborative Editor Showcase */}
+          <div id="editor" className="pt-8 max-w-6xl mx-auto text-left">
+            <div className="mb-2 flex items-center justify-between text-xs font-mono text-muted px-1">
+              <span>LIVE INTERACTIVE WORKSPACE (TRY TYPING, RUNNING & FORMATTING)</span>
+              <span>⌘K for Command Palette</span>
+            </div>
+            <CollaborativeEditor projectId="landing-demo" />
+          </div>
+        </section>
 
         {/* Features Grid */}
         <section id="features" className="py-20 px-6 max-w-6xl mx-auto border-t border-divider space-y-12">
-          <div className="text-center space-y-3">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-coral">Core Capabilities</h2>
-            <h3 className="text-3xl sm:text-4xl font-extrabold text-carbon">Engineered for real collaborative speed</h3>
-            <p className="text-muted text-sm max-w-xl mx-auto">
-              Every detail built with purpose: from instant Socket.IO propagation to rock-solid data integrity.
+          <div className="text-center space-y-2">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-coral font-mono">Engineered For Developers</h2>
+            <h3 className="text-2xl sm:text-3xl font-black text-carbon">Tactile speed and deterministic consensus</h3>
+            <p className="text-muted text-xs sm:text-sm max-w-xl mx-auto">
+              Every interaction designed for software teams: instant peer propagation, robust OCC conflict prevention, and zero AI gimmicks.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="p-6 rounded-3xl bg-editor border border-divider space-y-3.5 hover:border-coral transition shadow-sm">
-              <div className="w-10 h-10 rounded-xl bg-coral/15 border border-coral/30 flex items-center justify-center text-coral">
-                <Zap className="w-5 h-5" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="card-developer p-6 space-y-3">
+              <div className="w-9 h-9 rounded-lg bg-coral/15 border border-coral/30 flex items-center justify-center text-coral">
+                <Zap className="w-4.5 h-4.5" />
               </div>
-              <h4 className="font-bold text-carbon text-base">Real-Time Sync</h4>
+              <h4 className="font-bold text-carbon text-sm">Sub-10ms CRDT Sync</h4>
               <p className="text-xs text-muted leading-relaxed">
-                Task changes, status shifts, comments, and member additions reflect instantly across all connected browsers without manual page reloads.
+                Code edits, cursor coordinates, and document selections synchronize live across all connected peers with vector clocks.
               </p>
             </div>
 
-            <div className="p-6 rounded-3xl bg-editor border border-divider space-y-3.5 hover:border-coral transition shadow-sm">
-              <div className="w-10 h-10 rounded-xl bg-periwinkle border border-[#bec5ea] flex items-center justify-center text-carbon">
-                <RefreshCw className="w-5 h-5" />
+            <div className="card-developer p-6 space-y-3">
+              <div className="w-9 h-9 rounded-lg bg-periwinkle border border-[#bec5ea] flex items-center justify-center text-carbon">
+                <RefreshCw className="w-4.5 h-4.5" />
               </div>
-              <h4 className="font-bold text-carbon text-base">Conflict Prevention (OCC)</h4>
+              <h4 className="font-bold text-carbon text-sm">Conflict Prevention (OCC)</h4>
               <p className="text-xs text-muted leading-relaxed">
-                Optimistic Concurrency Control prevents stale overwrites with HTTP 409 conflict detection and interactive side-by-side visual diff resolution.
+                Optimistic Concurrency Control rejects stale writes with HTTP 409 and presents side-by-side visual diffs for clean resolution.
               </p>
             </div>
 
-            <div className="p-6 rounded-3xl bg-editor border border-divider space-y-3.5 hover:border-coral transition shadow-sm">
-              <div className="w-10 h-10 rounded-xl bg-moss border border-[#b5cea8] flex items-center justify-center text-carbon">
-                <Shield className="w-5 h-5" />
+            <div className="card-developer p-6 space-y-3">
+              <div className="w-9 h-9 rounded-lg bg-moss border border-[#b5cea8] flex items-center justify-center text-[#254622]">
+                <Shield className="w-4.5 h-4.5" />
               </div>
-              <h4 className="font-bold text-carbon text-base">Air-tight Server RBAC</h4>
+              <h4 className="font-bold text-carbon text-sm">Server RBAC Governance</h4>
               <p className="text-xs text-muted leading-relaxed">
-                Permissions enforced strictly at the API controller layer for Admin, Project Manager, Team Member, and Viewer roles.
+                Strict server-enforced role authorizations across Admin, Project Manager, Developer, and Viewer permissions.
               </p>
             </div>
 
-            <div className="p-6 rounded-3xl bg-editor border border-divider space-y-3.5 hover:border-coral transition shadow-sm">
-              <div className="w-10 h-10 rounded-xl bg-periwinkle border border-[#bec5ea] flex items-center justify-center text-carbon">
-                <BarChart3 className="w-5 h-5" />
+            <div className="card-developer p-6 space-y-3">
+              <div className="w-9 h-9 rounded-lg bg-paper border border-divider flex items-center justify-center text-carbon">
+                <Terminal className="w-4.5 h-4.5 text-carbon" />
               </div>
-              <h4 className="font-bold text-carbon text-base">Executive Analytics</h4>
+              <h4 className="font-bold text-carbon text-sm">Integrated Terminal & Run</h4>
               <p className="text-xs text-muted leading-relaxed">
-                Interactive charts tracking task status velocity, priority distribution, and sprint milestone completion rates.
+                Collapsible terminal drawer with test execution, compilation diagnostics, and command history at your fingertips.
               </p>
             </div>
 
-            <div className="p-6 rounded-3xl bg-editor border border-divider space-y-3.5 hover:border-coral transition shadow-sm">
-              <div className="w-10 h-10 rounded-xl bg-paper border border-divider flex items-center justify-center text-carbon">
-                <Terminal className="w-5 h-5" />
+            <div className="card-developer p-6 space-y-3">
+              <div className="w-9 h-9 rounded-lg bg-periwinkle border border-[#bec5ea] flex items-center justify-center text-carbon">
+                <BarChart3 className="w-4.5 h-4.5" />
               </div>
-              <h4 className="font-bold text-carbon text-base">Immutable Audit Trail</h4>
+              <h4 className="font-bold text-carbon text-sm">Sprint & Task Velocity</h4>
               <p className="text-xs text-muted leading-relaxed">
-                Every project and task mutation produces an immutable audit record with JSON metadata for security compliance.
+                Integrated sprint boards, issue tracking, and completion velocity metrics linked directly to project branches.
               </p>
             </div>
 
-            <div className="p-6 rounded-3xl bg-editor border border-divider space-y-3.5 hover:border-coral transition shadow-sm">
-              <div className="w-10 h-10 rounded-xl bg-moss border border-[#b5cea8] flex items-center justify-center text-carbon">
-                <MessageSquare className="w-5 h-5" />
+            <div className="card-developer p-6 space-y-3">
+              <div className="w-9 h-9 rounded-lg bg-moss border border-[#b5cea8] flex items-center justify-center text-[#254622]">
+                <MessageSquare className="w-4.5 h-4.5" />
               </div>
-              <h4 className="font-bold text-carbon text-base">Smart Mentions & Alerts</h4>
+              <h4 className="font-bold text-carbon text-sm">Peer Mentions & Alerts</h4>
               <p className="text-xs text-muted leading-relaxed">
-                In-app notification center with read/unread tracking and real-time toast alerts on task assignments and @mentions.
+                Contextual code comments, live peer presence avatars with identity colors, and real-time team notifications.
               </p>
             </div>
           </div>
@@ -241,57 +183,55 @@ export default function HomePage() {
 
         {/* Workflow Section */}
         <section id="workflow" className="py-20 px-6 max-w-5xl mx-auto border-t border-divider space-y-12">
-          <div className="text-center space-y-3">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-coral">How It Works</h2>
-            <h3 className="text-3xl sm:text-4xl font-extrabold text-carbon">Seamless flow from backlog to release</h3>
+          <div className="text-center space-y-2">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-coral font-mono">Workflow Architecture</h2>
+            <h3 className="text-2xl sm:text-3xl font-black text-carbon">From branch commit to shared execution</h3>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div className="p-6 rounded-2xl bg-editor border border-divider space-y-3 shadow-sm">
-              <div className="w-8 h-8 rounded-full bg-coral text-white font-bold flex items-center justify-center mx-auto text-sm">
-                1
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+            <div className="card-developer p-6 space-y-3">
+              <div className="w-7 h-7 rounded-md bg-coral text-white font-mono font-bold flex items-center justify-center text-xs">
+                01
               </div>
-              <h4 className="font-bold text-carbon text-base">Plan & Scope</h4>
-              <p className="text-xs text-muted">
-                Admins and PMs create projects, set milestone deadlines, and assign team roles with precision.
+              <h4 className="font-bold text-carbon text-sm">Join Project Room</h4>
+              <p className="text-xs text-muted leading-relaxed">
+                Developers connect via Socket.IO, establish active peer presence, and sync file trees instantly.
               </p>
             </div>
 
-            <div className="p-6 rounded-2xl bg-editor border border-divider space-y-3 shadow-sm">
-              <div className="w-8 h-8 rounded-full bg-carbon text-paper font-bold flex items-center justify-center mx-auto text-sm">
-                2
+            <div className="card-developer p-6 space-y-3">
+              <div className="w-7 h-7 rounded-md bg-carbon text-paper font-mono font-bold flex items-center justify-center text-xs">
+                02
               </div>
-              <h4 className="font-bold text-carbon text-base">Execute in Real Time</h4>
-              <p className="text-xs text-muted">
-                Engineers move tasks through Kanban stages, comment with @mentions, and see collaborators live.
+              <h4 className="font-bold text-carbon text-sm">Collaborative Edit & Format</h4>
+              <p className="text-xs text-muted leading-relaxed">
+                See teammate cursors in real time with distinct identity colors, format code with keyboard shortcuts, and resolve vector clocks.
               </p>
             </div>
 
-            <div className="p-6 rounded-2xl bg-editor border border-divider space-y-3 shadow-sm">
-              <div className="w-8 h-8 rounded-full bg-moss text-carbon font-bold flex items-center justify-center mx-auto text-sm border border-[#3B5A38]">
-                3
+            <div className="card-developer p-6 space-y-3">
+              <div className="w-7 h-7 rounded-md bg-moss text-[#254622] font-mono font-bold flex items-center justify-center text-xs border border-[#3B5A38]/30">
+                03
               </div>
-              <h4 className="font-bold text-carbon text-base">Resolve & Audit</h4>
-              <p className="text-xs text-muted">
-                Automatic OCC conflict prevention resolves simultaneous edits, while audit logs maintain compliance.
+              <h4 className="font-bold text-carbon text-sm">Run & Audit</h4>
+              <p className="text-xs text-muted leading-relaxed">
+                Execute tests in the terminal drawer while immutable audit records track every milestone state.
               </p>
             </div>
           </div>
         </section>
 
         {/* CTA Banner */}
-        <section id="governance" className="py-16 px-6 max-w-4xl mx-auto text-center space-y-6 bg-carbon text-paper rounded-3xl my-12 shadow-2xl">
-          <h2 className="text-3xl font-black text-paper">Ready to elevate your team&apos;s velocity?</h2>
-          <p className="text-xs sm:text-sm text-paper/80 max-w-xl mx-auto">
-            Experience the full collaborative project management platform today.
+        <section id="governance" className="py-14 px-6 max-w-4xl mx-auto text-center space-y-5 bg-carbon text-paper rounded-2xl my-12 shadow-xl">
+          <h2 className="text-2xl sm:text-3xl font-black text-paper">Ready to code with your team in real time?</h2>
+          <p className="text-xs sm:text-sm text-paper/80 max-w-lg mx-auto">
+            Open your collaborative workspace and start coding simultaneously with zero latency.
           </p>
           <div className="pt-2">
-            <Link
-              href="/register"
-              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-coral hover:bg-[#d34628] text-white font-bold text-sm shadow-xl shadow-coral/30 transition hover:scale-105"
-            >
-              <span>Get Started Now</span>
-              <ArrowRight className="w-4 h-4" />
+            <Link href="/register">
+              <Button variant="primary" size="lg" withArrow>
+                Start Coding for Free
+              </Button>
             </Link>
           </div>
         </section>
@@ -299,17 +239,17 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="py-8 px-6 border-t border-divider bg-editor">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted font-mono">
           <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-coral" />
+            <Code2 className="w-4 h-4 text-coral" />
             <span className="font-bold text-carbon">NeoStats</span>
-            <span>— Full Stack Collaborative Engineering Platform</span>
+            <span>— Real-Time Collaborative Code Platform</span>
           </div>
 
           <div className="flex items-center gap-6">
-            <Link href="/login" className="hover:text-carbon transition font-medium">Sign In</Link>
-            <Link href="/register" className="hover:text-carbon transition font-medium">Create Account</Link>
-            <Link href="/dashboard" className="hover:text-carbon transition font-medium">Dashboard</Link>
+            <Link href="/login" className="hover:text-carbon transition-colors duration-140">Sign In</Link>
+            <Link href="/register" className="hover:text-carbon transition-colors duration-140">Create Account</Link>
+            <Link href="/dashboard" className="hover:text-carbon transition-colors duration-140">Dashboard</Link>
           </div>
         </div>
       </footer>

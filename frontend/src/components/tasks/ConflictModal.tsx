@@ -3,6 +3,7 @@
 import React from "react";
 import { AlertTriangle, RefreshCw, Zap, X } from "lucide-react";
 import { STATUS_CONFIG, PRIORITY_CONFIG } from "../../lib/utils";
+import { Button } from "../ui/Button";
 
 interface ConflictModalProps {
   isOpen: boolean;
@@ -30,8 +31,8 @@ export function ConflictModal({
   if (!isOpen || !serverTask) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-carbon/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-3xl bg-editor border border-coral/60 rounded-3xl shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-carbon/70 backdrop-blur-xs transition-opacity duration-160">
+      <div className="relative w-full max-w-3xl bg-editor border border-coral/60 rounded-3xl shadow-2xl overflow-hidden animate-command-palette">
         {/* Header Banner */}
         <div className="bg-paper px-6 py-5 border-b border-divider flex items-start justify-between">
           <div className="flex items-center space-x-3">
@@ -180,30 +181,36 @@ export function ConflictModal({
 
         {/* Footer Actions */}
         <div className="px-6 py-4 bg-paper border-t border-divider flex flex-col sm:flex-row items-center justify-between gap-3">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={onClose}
-            className="w-full sm:w-auto px-4 py-2 text-xs font-medium text-muted hover:text-carbon rounded-xl transition"
+            className="w-full sm:w-auto"
           >
             Review Later / Cancel
-          </button>
+          </Button>
 
           <div className="flex items-center gap-3 w-full sm:w-auto">
-            <button
+            <Button
+              variant="secondary"
+              size="md"
               onClick={onReloadServer}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold bg-carbon hover:bg-[#353a34] text-paper rounded-xl transition shadow-sm"
+              icon={<RefreshCw className="w-3.5 h-3.5" />}
+              className="flex-1 sm:flex-initial"
             >
-              <RefreshCw className="w-3.5 h-3.5" />
               Discard & Load Server Version
-            </button>
+            </Button>
 
-            <button
+            <Button
+              variant="primary"
+              size="md"
               onClick={onForceOverwrite}
-              disabled={isOverwriting}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold bg-coral hover:bg-[#d34628] disabled:opacity-50 text-white rounded-xl shadow-md shadow-coral/20 transition"
+              isLoading={isOverwriting}
+              icon={<Zap className="w-3.5 h-3.5" />}
+              className="flex-1 sm:flex-initial"
             >
-              <Zap className="w-3.5 h-3.5" />
-              {isOverwriting ? "Overwriting..." : "Force Overwrite"}
-            </button>
+              Force Overwrite
+            </Button>
           </div>
         </div>
       </div>

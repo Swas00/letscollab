@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { STATUS_CONFIG, PRIORITY_CONFIG, formatDate, cn } from "../../../../lib/utils";
+import { Button } from "../../../../components/ui/Button";
 
 export default function ProjectTasksPage() {
   const params = useParams();
@@ -137,12 +138,13 @@ export default function ProjectTasksPage() {
     });
 
     if (res.status === 409) {
-      const serverTask = res.data?.serverTask;
+      const conflictData = res.data as any;
+      const serverTask = conflictData?.serverTask;
       setConflictState({
         isOpen: true,
         serverTask,
         localChanges: { status: newStatus },
-        serverVersion: res.data?.currentVersion || currentVersion + 1,
+        serverVersion: conflictData?.currentVersion || currentVersion + 1,
         clientVersion: currentVersion,
       });
       return;
@@ -150,7 +152,7 @@ export default function ProjectTasksPage() {
 
     if (res.data?.task) {
       setTasks((prev) =>
-        prev.map((t) => (t.id === taskId ? { ...t, ...res.data.task } : t))
+        prev.map((t) => (t.id === taskId ? { ...t, ...res.data!.task } : t))
       );
     }
   };
@@ -161,7 +163,6 @@ export default function ProjectTasksPage() {
     setCreateError(null);
 
     const payload = {
-      projectId,
       title: newTitle,
       description: newDesc,
       status: newStatus,
@@ -172,7 +173,7 @@ export default function ProjectTasksPage() {
       estimatedHours: newEstHours ? Number(newEstHours) : undefined,
     };
 
-    const res = await api.tasks.create(payload);
+    const res = await api.tasks.create(projectId, payload);
     setIsSubmitting(false);
 
     if (res.data?.task) {
@@ -183,7 +184,7 @@ export default function ProjectTasksPage() {
       setNewDueDate("");
       setNewTags("");
       setNewEstHours("");
-      setTasks((prev) => [res.data.task, ...prev]);
+      setTasks((prev) => [res.data!.task, ...prev]);
     } else {
       setCreateError(res.error || "Failed to create task");
     }

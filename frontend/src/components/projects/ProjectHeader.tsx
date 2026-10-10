@@ -9,6 +9,7 @@ import {
   Users,
   Activity,
   Shield,
+  Code2,
   ArrowLeft,
 } from "lucide-react";
 import { PRIORITY_CONFIG, cn } from "../../lib/utils";
@@ -24,6 +25,7 @@ export function ProjectHeader({ project, userAccess }: ProjectHeaderProps) {
 
   const tabs = [
     { label: "Overview", href: `/projects/${project.id}`, icon: FolderKanban, exact: true },
+    { label: "Code Editor", href: `/projects/${project.id}/editor`, icon: Code2 },
     { label: "Tasks", href: `/projects/${project.id}/tasks`, icon: CheckSquare },
     { label: "Team Members", href: `/projects/${project.id}/team`, icon: Users },
     { label: "Activity", href: `/projects/${project.id}/activity`, icon: Activity },
@@ -94,14 +96,17 @@ export function ProjectHeader({ project, userAccess }: ProjectHeaderProps) {
               key={tab.href}
               href={tab.href}
               className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition shrink-0",
+                "group relative flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-160 ease-out shrink-0 select-none hover:-translate-y-0.5 active:scale-[0.98] active:translate-y-0",
                 isActive
                   ? "bg-carbon text-paper shadow-sm"
-                  : "text-muted hover:text-carbon hover:bg-paper"
+                  : "text-muted hover:text-carbon hover:bg-paper border border-transparent hover:border-divider"
               )}
             >
-              <Icon className="w-3.5 h-3.5" />
+              <Icon className={cn("w-3.5 h-3.5 transition-transform duration-160", isActive ? "text-coral" : "text-muted group-hover:scale-105")} />
               <span>{tab.label}</span>
+              {isActive && (
+                <span className="absolute bottom-0 left-3 right-3 h-[2px] bg-coral rounded-full" />
+              )}
             </Link>
           );
         })}

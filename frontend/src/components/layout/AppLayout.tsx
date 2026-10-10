@@ -14,11 +14,14 @@ import {
   X,
   Settings,
   User as UserIcon,
+  Search,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useSocket } from "../../context/SocketContext";
 import { ROLE_CONFIG, cn } from "../../lib/utils";
 import { api } from "../../lib/api";
+import { SyncStatusBadge } from "../ui/SyncStatusBadge";
+import { CommandPalette } from "../ui/CommandPalette";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, logout, switchUser } = useAuth();
@@ -28,6 +31,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const [demoUsers, setDemoUsers] = useState<any[]>([]);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showCmd, setShowCmd] = useState(false);
 
   useEffect(() => {
     api.auth.demoUsers().then((res) => {
@@ -127,10 +131,10 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150",
+                    "flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-160 ease-out select-none hover:-translate-y-0.5 active:scale-[0.98]",
                     isActive
-                      ? "bg-carbon text-paper font-semibold shadow-sm"
-                      : "text-muted hover:text-carbon hover:bg-paper"
+                      ? "bg-carbon text-paper font-semibold shadow-xs"
+                      : "text-muted hover:text-carbon hover:bg-paper border border-transparent hover:border-divider"
                   )}
                 >
                   <div className="flex items-center gap-3">
@@ -203,17 +207,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <header className="h-16 border-b border-divider bg-editor/90 backdrop-blur-md px-6 flex items-center justify-between shrink-0 shadow-sm">
           {/* Real-time Status Badge & Breadcrumb */}
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-paper border border-divider text-xs">
-              <span
-                className={cn(
-                  "w-2 h-2 rounded-full",
-                  isConnected ? "bg-moss border border-[#3B5A38]" : "bg-coral animate-pulse"
-                )}
-              />
-              <span className="text-muted font-mono text-[11px] font-medium">
-                {isConnected ? "Real-time Live Sync" : "Reconnecting..."}
-              </span>
-            </div>
+            <SyncStatusBadge state={isConnected ? "Synced" : "Offline"} />
+
+            <button
+              onClick={() => setShowCmd(true)}
+              className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-paper hover:bg-editor border border-divider text-muted hover:text-carbon text-xs font-mono transition-all duration-140 hover:-translate-y-0.5 active:scale-[0.98]"
+            >
+              <Search className="w-3.5 h-3.5 text-muted" />
+              <span>Search commands & actions</span>
+              <kbd className="px-1.5 py-0.5 rounded bg-editor border border-divider text-[10px] text-muted">⌘K</kbd>
+            </button>
           </div>
 
           {/* Right Header Controls */}
@@ -221,7 +224,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             {/* Notification Bell */}
             <Link
               href="/notifications"
-              className="relative p-2 text-muted hover:text-carbon rounded-xl hover:bg-paper transition"
+              className="relative p-2 text-muted hover:text-carbon rounded-xl hover:bg-paper transition-all duration-150 hover:-translate-y-0.5 active:scale-95"
               title="Notifications"
             >
               <Bell className="w-4 h-4" />
@@ -235,7 +238,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <div className="relative">
                 <button
                   onClick={() => setShowUserDropdown(!showUserDropdown)}
-                  className="flex items-center gap-2.5 p-1.5 pr-2.5 rounded-xl hover:bg-paper border border-divider bg-editor transition shadow-sm"
+                  className="flex items-center gap-2.5 p-1.5 pr-2.5 rounded-xl hover:bg-paper border border-divider bg-editor transition-all duration-150 hover:-translate-y-0.5 shadow-xs"
                 >
                   <img
                     src={user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
@@ -245,11 +248,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   <span className="text-xs font-bold text-carbon hidden sm:inline">
                     {user.name.split(" ")[0]}
                   </span>
-                  <ChevronDown className="w-3.5 h-3.5 text-muted" />
+                  <ChevronDown
+                    className={cn(
+                      "w-3.5 h-3.5 text-muted transition-transform duration-160",
+                      showUserDropdown && "rotate-180"
+                    )}
+                  />
                 </button>
 
                 {showUserDropdown && (
-                  <div className="absolute right-0 mt-2 w-64 bg-editor border border-divider rounded-2xl shadow-xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="absolute right-0 mt-2 w-64 bg-editor border border-divider rounded-2xl shadow-xl p-2 z-50 animate-tooltip">
                     <div className="px-3 py-2 border-b border-divider">
                       <p className="text-xs font-bold text-carbon">{user.name}</p>
                       <p className="text-[11px] text-muted truncate">{user.email}</p>
@@ -330,6 +338,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Page Main Content */}
         <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-paper">{children}</main>
       </div>
+
+      {/* Global Command Palette (Cmd+K) */}
+      <CommandPalette isOpen={showCmd} onClose={() => setShowCmd(false)} />
     </div>
   );
 }

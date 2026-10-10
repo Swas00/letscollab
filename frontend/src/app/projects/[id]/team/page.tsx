@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { formatDate } from "../../../../lib/utils";
+import { Button } from "../../../../components/ui/Button";
 
 export default function ProjectTeamPage() {
   const params = useParams();
@@ -127,14 +128,17 @@ export default function ProjectTeamPage() {
     setIsSubmitting(true);
     setModalError(null);
 
-    const res = await api.projects.addMember(projectId, selectedUserId, selectedRole);
+    const res = await api.projects.addMember(projectId, {
+      userId: selectedUserId,
+      role: selectedRole,
+    });
     setIsSubmitting(false);
 
     if (res.data?.member) {
       setIsAddOpen(false);
       setSelectedUserId("");
       setSelectedRole("TEAM_MEMBER");
-      setMembers((prev) => [...prev, res.data.member]);
+      setMembers((prev) => [...prev, res.data!.member]);
     } else {
       setModalError(res.error || "Failed to add member");
     }

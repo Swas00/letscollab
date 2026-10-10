@@ -7,6 +7,7 @@ import { Layers, ArrowRight, AlertCircle, ChevronDown, Key } from "lucide-react"
 import { useAuth } from "../../context/AuthContext";
 import { api } from "../../lib/api";
 import { ROLE_CONFIG, cn } from "../../lib/utils";
+import { Button } from "../../components/ui/Button";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -108,14 +109,16 @@ export default function LoginPage() {
               />
             </div>
 
-            <button
+            <Button
               type="submit"
-              disabled={isLoading}
-              className="w-full py-3 bg-coral hover:bg-[#d34628] disabled:opacity-50 text-white font-bold text-sm rounded-xl shadow-md shadow-coral/20 transition flex items-center justify-center gap-2 mt-2"
+              variant="primary"
+              size="lg"
+              isLoading={isLoading}
+              withArrow
+              className="w-full mt-2"
             >
-              <span>{isLoading ? "Signing in..." : "Sign In"}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+              Sign In
+            </Button>
           </form>
 
           <div className="pt-4 border-t border-divider text-center text-xs text-muted">
@@ -131,25 +134,25 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowDemoAccounts(!showDemoAccounts)}
-                className="w-full py-2 px-3 rounded-xl bg-paper hover:bg-editor border border-divider text-[11px] text-muted flex items-center justify-between transition"
+                className="w-full py-2 px-3 rounded-xl bg-paper hover:bg-editor border border-divider text-[11px] text-muted flex items-center justify-between transition-all duration-140 hover:-translate-y-0.5 active:scale-[0.98]"
               >
                 <div className="flex items-center gap-1.5">
                   <Key className="w-3.5 h-3.5 text-muted" />
                   <span className="font-medium">Sample Pre-seeded Accounts (password: password123)</span>
                 </div>
                 <ChevronDown
-                  className={cn("w-3.5 h-3.5 transition-transform text-muted", showDemoAccounts && "rotate-180")}
+                  className={cn("w-3.5 h-3.5 transition-transform duration-160 text-muted", showDemoAccounts && "rotate-180")}
                 />
               </button>
 
               {showDemoAccounts && (
-                <div className="mt-2.5 space-y-1.5 animate-in fade-in duration-150">
+                <div className="mt-2.5 space-y-1.5 animate-tooltip">
                   {demoUsers.map((dUser) => (
                     <button
                       key={dUser.id}
                       type="button"
                       onClick={() => handleQuickFill(dUser.email)}
-                      className="w-full p-2 rounded-xl bg-paper hover:bg-editor border border-divider text-left transition flex items-center justify-between text-xs"
+                      className="w-full p-2.5 rounded-xl bg-paper hover:bg-editor border border-divider text-left transition-all duration-140 hover:-translate-y-0.5 active:scale-[0.98] flex items-center justify-between text-xs"
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <img

@@ -53,6 +53,19 @@ module.exports = {
         card: "var(--card)",
         "card-foreground": "var(--card-foreground)",
       },
+      fontFamily: {
+        sans: ['"IBM Plex Sans"', "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
+        mono: ['"IBM Plex Mono"', "ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "monospace"],
+      },
+      transitionDuration: {
+        micro: "140ms",
+        btn: "180ms",
+        menu: "200ms",
+        panel: "240ms",
+      },
+      transitionTimingFunction: {
+        editorial: "cubic-bezier(0.16, 1, 0.3, 1)",
+      },
     },
   },
   plugins: [],

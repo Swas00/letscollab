@@ -17,6 +17,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { PRIORITY_CONFIG, cn } from "../../lib/utils";
+import { Button } from "../../components/ui/Button";
 
 export default function ProjectsPage() {
   const { user } = useAuth();
@@ -140,13 +141,14 @@ export default function ProjectsPage() {
           </div>
 
           {isAdmin && (
-            <button
+            <Button
               onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-coral hover:bg-[#d34628] text-white text-xs font-bold shadow-md shadow-coral/20 transition"
+              variant="primary"
+              size="md"
+              icon={<Plus className="w-4 h-4" />}
             >
-              <Plus className="w-4 h-4" />
-              <span>Create Project</span>
-            </button>
+              Create Project
+            </Button>
           )}
         </div>
 
@@ -304,8 +306,8 @@ export default function ProjectsPage() {
 
       {/* Create Project Modal (Admin Only) */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-carbon/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-lg bg-editor border border-divider rounded-3xl shadow-2xl overflow-hidden p-6 space-y-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-carbon/50 backdrop-blur-xs transition-opacity duration-160">
+          <div className="w-full max-w-lg bg-editor border border-divider rounded-3xl shadow-2xl overflow-hidden p-6 space-y-5 animate-command-palette">
             <div className="flex items-center justify-between pb-3 border-b border-divider">
               <h2 className="text-lg font-bold text-carbon flex items-center gap-2">
                 <Plus className="w-5 h-5 text-coral" />
@@ -410,20 +412,22 @@ export default function ProjectsPage() {
               </div>
 
               <div className="pt-2 flex items-center justify-end gap-3">
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-xs font-medium text-muted hover:text-carbon transition"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={isSubmitting}
-                  className="px-5 py-2.5 bg-coral hover:bg-[#d34628] disabled:opacity-50 text-white text-xs font-bold rounded-xl transition shadow-md shadow-coral/20"
+                  variant="primary"
+                  size="md"
+                  isLoading={isSubmitting}
                 >
-                  {isSubmitting ? "Creating..." : "Create Project"}
-                </button>
+                  Create Project
+                </Button>
               </div>
             </form>
           </div>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Layers, ArrowRight, AlertCircle } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { Button } from "../../components/ui/Button";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -149,14 +150,16 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <button
+            <Button
               type="submit"
-              disabled={isLoading}
-              className="w-full py-3 bg-coral hover:bg-[#d34628] disabled:opacity-50 text-white font-bold text-sm rounded-xl shadow-md shadow-coral/20 transition flex items-center justify-center gap-2 mt-2"
+              variant="primary"
+              size="lg"
+              isLoading={isLoading}
+              withArrow
+              className="w-full mt-2"
             >
-              <span>{isLoading ? "Creating Account..." : "Create Account"}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+              Create Account
+            </Button>
           </form>
 
           <div className="pt-4 border-t border-divider text-center text-xs text-muted">

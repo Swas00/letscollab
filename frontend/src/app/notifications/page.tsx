@@ -10,6 +10,7 @@ import {
   Check,
 } from "lucide-react";
 import { formatRelativeTime, cn } from "../../lib/utils";
+import { Button } from "../../components/ui/Button";
 
 export default function NotificationsPage() {
   const { unreadCount, setUnreadCount, socket } = useSocket();
@@ -90,25 +91,26 @@ export default function NotificationsPage() {
 
           <div className="flex items-center gap-2">
             {unreadCount > 0 && (
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={handleMarkAllRead}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-editor hover:bg-paper border border-divider text-xs font-bold text-carbon transition shadow-sm"
+                icon={<CheckCheck className="w-4 h-4 text-coral" />}
               >
-                <CheckCheck className="w-4 h-4 text-coral" />
-                <span>Mark All Read</span>
-              </button>
+                Mark All Read
+              </Button>
             )}
           </div>
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex items-center gap-2 p-1.5 bg-editor border border-divider rounded-2xl w-fit shadow-sm">
+        <div className="flex items-center gap-2 p-1.5 bg-editor border border-divider rounded-2xl w-fit shadow-xs">
           <button
             onClick={() => setFilter("ALL")}
             className={cn(
-              "px-3 py-1.5 rounded-xl text-xs font-bold transition",
+              "px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-140 select-none hover:-translate-y-0.5 active:scale-[0.98]",
               filter === "ALL"
-                ? "bg-carbon text-paper shadow-sm"
+                ? "bg-carbon text-paper shadow-xs"
                 : "text-muted hover:text-carbon"
             )}
           >
@@ -117,9 +119,9 @@ export default function NotificationsPage() {
           <button
             onClick={() => setFilter("UNREAD")}
             className={cn(
-              "px-3 py-1.5 rounded-xl text-xs font-bold transition",
+              "px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-140 select-none hover:-translate-y-0.5 active:scale-[0.98]",
               filter === "UNREAD"
-                ? "bg-carbon text-paper shadow-sm"
+                ? "bg-carbon text-paper shadow-xs"
                 : "text-muted hover:text-carbon"
             )}
           >
@@ -138,10 +140,10 @@ export default function NotificationsPage() {
                   key={notif.id}
                   onClick={() => !notif.isRead && handleMarkAsRead(notif.id)}
                   className={cn(
-                    "p-4 rounded-2xl border transition flex items-start justify-between gap-4 cursor-pointer",
+                    "p-4 rounded-2xl border transition-all duration-160 ease-out select-none hover:-translate-y-0.5 active:scale-[0.99] flex items-start justify-between gap-4 cursor-pointer animate-activity-slide",
                     notif.isRead
                       ? "bg-paper border-divider opacity-85 hover:opacity-100"
-                      : "bg-periwinkle/30 border-[#bec5ea] hover:bg-periwinkle/40 shadow-sm"
+                      : "bg-periwinkle/30 border-[#bec5ea] hover:bg-periwinkle/40 shadow-xs"
                   )}
                 >
                   <div className="flex items-start gap-3.5">

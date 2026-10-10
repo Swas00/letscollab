@@ -78,7 +78,7 @@ export function KanbanBoard({
                   <div
                     key={task.id}
                     onClick={() => onTaskClick(task)}
-                    className="group relative p-3.5 bg-editor hover:bg-[#FAF8F2] border border-divider hover:border-coral rounded-xl cursor-pointer shadow-sm hover:shadow-md transition-all duration-200"
+                    className="group relative p-3.5 bg-editor hover:bg-[#FAF8F2] border border-divider hover:border-carbon/30 rounded-xl cursor-pointer shadow-xs hover:shadow-md transition-all duration-160 ease-out hover:-translate-y-1 active:scale-[0.99]"
                   >
                     {/* Top Row: Task Key & Version & Priority */}
                     <div className="flex items-center justify-between gap-2 mb-2">
@@ -173,7 +173,7 @@ export function KanbanBoard({
                           <button
                             onClick={() => onStatusChange(task.id, prev, task.version)}
                             title={`Move back to ${STATUS_CONFIG[prev]?.label}`}
-                            className="p-1 text-muted hover:text-coral hover:bg-paper rounded transition"
+                            className="p-1 text-muted hover:text-carbon hover:bg-paper rounded transition-all duration-140 hover:-translate-x-0.5"
                           >
                             <ArrowLeft className="w-3.5 h-3.5" />
                           </button>
@@ -185,7 +185,7 @@ export function KanbanBoard({
                           <button
                             onClick={() => onStatusChange(task.id, next, task.version)}
                             title={`Advance to ${STATUS_CONFIG[next]?.label}`}
-                            className="p-1 text-muted hover:text-coral hover:bg-paper rounded transition"
+                            className="p-1 text-muted hover:text-coral hover:bg-paper rounded transition-all duration-140 hover:translate-x-0.5"
                           >
                             <ArrowRight className="w-3.5 h-3.5" />
                           </button>

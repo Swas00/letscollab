@@ -98,7 +98,7 @@ export default function ProjectActivityPage() {
                 return (
                   <div
                     key={act.id}
-                    className="p-4 rounded-2xl bg-paper border border-divider flex items-start gap-4 text-xs shadow-sm"
+                    className="p-4 rounded-2xl bg-paper border border-divider flex items-start gap-4 text-xs shadow-xs animate-activity-slide transition-colors duration-140 hover:bg-[#FAF8F2]"
                   >
                     <img
                       src={

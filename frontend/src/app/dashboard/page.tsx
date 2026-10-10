@@ -241,7 +241,7 @@ export default function DashboardPage() {
                   <div
                     key={t.id}
                     onClick={() => setSelectedTaskId(t.id)}
-                    className="p-3.5 rounded-xl bg-paper hover:bg-editor border border-divider hover:border-coral cursor-pointer transition flex items-center justify-between group shadow-sm"
+                    className="p-3.5 rounded-xl bg-paper hover:bg-editor border border-divider hover:border-coral cursor-pointer transition-all duration-150 ease-out hover:-translate-y-0.5 active:scale-[0.99] flex items-center justify-between group shadow-xs"
                   >
                     <div className="space-y-1 min-w-0 pr-3">
                       <div className="flex items-center gap-2">
@@ -298,7 +298,7 @@ export default function DashboardPage() {
               {activities.map((act) => (
                 <div
                   key={act.id}
-                  className="p-3 rounded-xl bg-paper border border-divider flex items-start gap-3 text-xs"
+                  className="p-3 rounded-xl bg-paper border border-divider flex items-start gap-3 text-xs animate-activity-slide transition-colors duration-140 hover:bg-editor"
                 >
                   <img
                     src={

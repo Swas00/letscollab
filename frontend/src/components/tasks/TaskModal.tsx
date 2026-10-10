@@ -16,6 +16,7 @@ import { ConflictModal } from "./ConflictModal";
 import {
   formatRelativeTime,
 } from "../../lib/utils";
+import { Button } from "../ui/Button";
 
 interface TaskModalProps {
   taskId: string | null;
@@ -122,11 +123,12 @@ export function TaskModal({ taskId, onClose, onTaskUpdated, onTaskDeleted }: Tas
     setIsSaving(false);
 
     if (res.status === 409) {
+      const conflictData = res.data as any;
       setConflictState({
         isOpen: true,
-        serverTask: res.data?.serverTask || {},
+        serverTask: conflictData?.serverTask || {},
         localChanges: payload,
-        serverVersion: res.data?.currentVersion || task.version + 1,
+        serverVersion: conflictData?.currentVersion || task.version + 1,
         clientVersion: task.version,
       });
       return;
@@ -204,8 +206,8 @@ export function TaskModal({ taskId, onClose, onTaskUpdated, onTaskDeleted }: Tas
 
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-carbon/60 backdrop-blur-sm animate-in fade-in duration-200">
-        <div className="relative w-full max-w-4xl bg-editor border border-divider rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-carbon/60 backdrop-blur-xs transition-opacity duration-160">
+        <div className="relative w-full max-w-4xl bg-editor border border-divider rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-command-palette">
           {/* Header */}
           <div className="px-6 py-4 border-b border-divider flex items-center justify-between bg-paper/60">
             <div className="flex items-center gap-3">
@@ -381,14 +383,15 @@ export function TaskModal({ taskId, onClose, onTaskUpdated, onTaskDeleted }: Tas
 
                 {/* Save Button */}
                 {!isViewer && (
-                  <button
+                  <Button
                     onClick={() => handleSave(false)}
-                    disabled={isSaving}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-coral hover:bg-[#d34628] disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-md shadow-coral/20 transition"
+                    variant="primary"
+                    size="md"
+                    isLoading={isSaving}
+                    icon={<Save className="w-4 h-4" />}
                   >
-                    <Save className="w-4 h-4" />
-                    <span>{isSaving ? "Saving..." : "Save Changes"}</span>
-                  </button>
+                    Save Changes
+                  </Button>
                 )}
               </div>
 
@@ -465,12 +468,13 @@ export function TaskModal({ taskId, onClose, onTaskUpdated, onTaskDeleted }: Tas
                         placeholder="Add a comment..."
                         className="flex-1 px-3 py-2 bg-paper border border-divider rounded-xl text-xs text-carbon placeholder-muted focus:outline-none focus:border-coral focus:bg-editor"
                       />
-                      <button
+                      <Button
                         type="submit"
-                        className="px-3 py-2 bg-carbon hover:bg-[#353a34] text-paper text-xs font-bold rounded-xl transition"
+                        variant="secondary"
+                        size="sm"
                       >
                         Send
-                      </button>
+                      </Button>
                     </div>
                   </form>
                 )}
