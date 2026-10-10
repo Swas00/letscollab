@@ -1,7 +1,7 @@
 # LetsCollab — Collaborative Project Management Platform
 ### Full Stack Engineering Hackathon 2026 Submission
 
-NeoStats is an enterprise-grade, real-time collaborative project management platform built for modern engineering teams. Featuring **strict server-enforced RBAC**, **Optimistic Concurrency Control (OCC) with HTTP 409 conflict detection**, **real-time Socket.IO room clustering**, and an **immutable audit trail**.
+LetsCollab is an enterprise-grade, real-time collaborative project management platform built for modern engineering teams. Featuring **strict server-enforced RBAC**, **Optimistic Concurrency Control (OCC) with HTTP 409 conflict detection**, **real-time Socket.IO room clustering**, and an **immutable audit trail**.
 
 ---
 
@@ -43,12 +43,12 @@ All demo accounts use the standard password: `password123`
 
 | Role | Name | Email | Password | Key Permissions |
 | :--- | :--- | :--- | :--- | :--- |
-| **Admin** | Pooja Sharma | `admin@neostats.com` | `password123` | Full system control, user CRUD, create/delete projects |
-| **Project Manager** | Rohan Verma | `pm@neostats.com` | `password123` | Manage assigned projects, tasks CRUD, add/remove members |
-| **Team Member** | Aditya Kumar | `dev@neostats.com` | `password123` | Update assigned tasks, change task status, post comments |
-| **Designer** | Maya Patel | `designer@neostats.com` | `password123` | Design tasks, UX conflict reviews, comments |
-| **Viewer** | Ananya Iyer | `viewer@neostats.com` | `password123` | Read-only view; all mutation attempts return HTTP 403 |
-| **Deactivated User** | Vikram Malhotra | `inactive@neostats.com` | `password123` | Test deactivation enforcement (login returns HTTP 403) |
+| **Admin** | Pooja Sharma | `admin@letscollab.com` | `password123` | Full system control, user CRUD, create/delete projects |
+| **Project Manager** | Rohan Verma | `pm@letscollab.com` | `password123` | Manage assigned projects, tasks CRUD, add/remove members |
+| **Team Member** | Aditya Kumar | `dev@letscollab.com` | `password123` | Update assigned tasks, change task status, post comments |
+| **Designer** | Maya Patel | `designer@letscollab.com` | `password123` | Design tasks, UX conflict reviews, comments |
+| **Viewer** | Ananya Iyer | `viewer@letscollab.com` | `password123` | Read-only view; all mutation attempts return HTTP 403 |
+| **Deactivated User** | Vikram Malhotra | `inactive@letscollab.com` | `password123` | Test deactivation enforcement (login returns HTTP 403) |
 
 ---
 
@@ -136,7 +136,7 @@ If you wish to use PostgreSQL instead of SQLite:
    ```
 2. Set your PostgreSQL connection string in `backend/.env`:
    ```env
-   DATABASE_URL="postgresql://postgres:password@localhost:5432/neostats?schema=public"
+   DATABASE_URL="postgresql://postgres:password@localhost:5432/letscollab?schema=public"
    ```
 3. Run `npm run db:migrate && npm run db:seed`.
 
@@ -176,7 +176,7 @@ If you wish to use PostgreSQL instead of SQLite:
 
 ## 🏆 Summary
 
-NeoStats fulfills 100% of the Challenge Brief specifications:
+LetsCollab fulfills 100% of the Challenge Brief specifications:
 - Multi-user real-time collaboration with Socket.IO room clustering.
 - Strict server-enforced RBAC rejecting unauthorized API calls.
 - Optimistic Concurrency Control preventing silent overwrites with HTTP 409 conflict diff modal.

@@ -1,7 +1,7 @@
 # Architectural Decision Document & Design Justifications
-## Collaborative Project Management Platform — NeoStats
+## Collaborative Project Management Platform — LetsCollab
 
-This document details the core architectural decisions, data models, real-time protocols, concurrency models, and security layers implemented in NeoStats.
+This document details the core architectural decisions, data models, real-time protocols, concurrency models, and security layers implemented in LetsCollab.
 
 ---
 
@@ -27,7 +27,7 @@ When User A and User B open the same task simultaneously:
 - If User A submits first, the database updates to version 8.
 - If User B submits subsequently without concurrency checks, User B's payload would silently overwrite User A's changes (the "Lost Update" anomaly).
 
-### NeoStats Solution
+### LetsCollab Solution
 1. **Version Field**: Every `Task` record in the database holds an integer `version` initialized to `1`.
 2. **Version Checking on Mutation**:
    - The frontend includes the `version` it originally read in its `PUT /api/tasks/:id` payload.
