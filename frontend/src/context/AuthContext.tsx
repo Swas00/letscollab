@@ -16,9 +16,8 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
-  login: (email: string, password?: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   register: (name: string, email: string, password: string, role?: string) => Promise<{ success: boolean; error?: string }>;
-  switchUser: (user: User, token?: string) => void;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -54,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string, password = "password123") => {
+  const login = async (email: string, password: string) => {
     setIsLoading(true);
     const res = await api.auth.login({ email, password });
     setIsLoading(false);
@@ -86,15 +85,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { success: false, error: res.error || "Registration failed" };
   };
 
-  const switchUser = (newUser: User, newToken?: string) => {
-    setUser(newUser);
-    localStorage.setItem("neostats_user", JSON.stringify(newUser));
-    if (newToken) {
-      setToken(newToken);
-      localStorage.setItem("neostats_token", newToken);
-    }
-  };
-
   const logout = () => {
     setUser(null);
     setToken(null);
@@ -118,7 +108,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         login,
         register,
-        switchUser,
         logout,
         refreshUser,
       }}

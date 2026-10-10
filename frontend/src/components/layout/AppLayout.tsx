@@ -24,31 +24,13 @@ import { SyncStatusBadge } from "../ui/SyncStatusBadge";
 import { CommandPalette } from "../ui/CommandPalette";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, logout, switchUser } = useAuth();
+  const { user, logout } = useAuth();
   const { isConnected, toasts, removeToast, unreadCount } = useSocket();
   const pathname = usePathname();
   const router = useRouter();
 
-  const [demoUsers, setDemoUsers] = useState<any[]>([]);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showCmd, setShowCmd] = useState(false);
-
-  useEffect(() => {
-    api.auth.demoUsers().then((res) => {
-      if (res.data?.demoUsers) {
-        setDemoUsers(res.data.demoUsers);
-      }
-    });
-  }, []);
-
-  const handleSwitchAccount = async (targetUser: any) => {
-    setShowUserDropdown(false);
-    const res = await api.auth.login({ email: targetUser.email, password: "password123" });
-    if (res.data) {
-      switchUser(res.data.user, res.data.token);
-      router.refresh();
-    }
-  };
 
   const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -290,31 +272,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                         <span>My Projects</span>
                       </Link>
                     </div>
-
-                    {/* Switch Account Option */}
-                    {demoUsers.length > 1 && (
-                      <div className="pt-1 border-t border-divider">
-                        <div className="px-3 py-1 text-[10px] font-bold text-muted uppercase tracking-wider">
-                          Switch Active Account
-                        </div>
-                        <div className="max-h-36 overflow-y-auto space-y-0.5">
-                          {demoUsers
-                            .filter((u) => u.id !== user.id)
-                            .map((otherUser) => (
-                              <button
-                                key={otherUser.id}
-                                onClick={() => handleSwitchAccount(otherUser)}
-                                className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-left text-xs text-muted hover:text-carbon hover:bg-paper transition"
-                              >
-                                <span className="truncate font-medium">{otherUser.name}</span>
-                                <span className="text-[9px] font-mono text-muted">
-                                  {otherUser.role}
-                                </span>
-                              </button>
-                            ))}
-                        </div>
-                      </div>
-                    )}
 
                     <div className="pt-1 border-t border-divider">
                       <button

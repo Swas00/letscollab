@@ -78,7 +78,6 @@ export const api = {
         method: "PUT",
         body: JSON.stringify(data),
       }),
-    demoUsers: () => apiFetch<{ demoUsers: any[] }>("/auth/demo-users"),
   },
   users: {
     list: (params?: { search?: string; role?: string; includeInactive?: boolean }) => {

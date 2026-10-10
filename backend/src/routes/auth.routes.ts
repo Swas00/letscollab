@@ -185,20 +185,4 @@ router.put("/change-password", authenticateToken, async (req: AuthRequest, res: 
   return res.json({ message: "Password updated successfully" });
 });
 
-// Demo accounts endpoint for reference/seeding
-router.get("/demo-users", async (req, res) => {
-  const users = await prisma.user.findMany({
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      role: true,
-      avatarUrl: true,
-      isActive: true,
-    },
-    orderBy: { role: "asc" },
-  });
-  return res.json({ demoUsers: users });
-});
-
 export default router;

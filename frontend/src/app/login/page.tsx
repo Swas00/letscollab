@@ -3,10 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Layers, ArrowRight, AlertCircle, ChevronDown, Key } from "lucide-react";
+import { Layers, ArrowRight, AlertCircle } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import { api } from "../../lib/api";
-import { ROLE_CONFIG, cn } from "../../lib/utils";
 import { Button } from "../../components/ui/Button";
 
 export default function LoginPage() {
@@ -15,8 +13,6 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [demoUsers, setDemoUsers] = useState<any[]>([]);
-  const [showDemoAccounts, setShowDemoAccounts] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -24,12 +20,6 @@ export default function LoginPage() {
     if (user) {
       router.push("/dashboard");
     }
-
-    api.auth.demoUsers().then((res) => {
-      if (res.data?.demoUsers) {
-        setDemoUsers(res.data.demoUsers);
-      }
-    });
   }, [user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,11 +35,6 @@ export default function LoginPage() {
     } else {
       setErrorMsg(res.error || "Invalid email or password");
     }
-  };
-
-  const handleQuickFill = (dEmail: string) => {
-    setEmail(dEmail);
-    setPassword("password123");
   };
 
   return (
@@ -127,51 +112,6 @@ export default function LoginPage() {
               Create an account
             </Link>
           </div>
-
-          {/* Collapsible Sample Accounts */}
-          {demoUsers.length > 0 && (
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={() => setShowDemoAccounts(!showDemoAccounts)}
-                className="w-full py-2 px-3 rounded-xl bg-paper hover:bg-editor border border-divider text-[11px] text-muted flex items-center justify-between transition-all duration-140 hover:-translate-y-0.5 active:scale-[0.98]"
-              >
-                <div className="flex items-center gap-1.5">
-                  <Key className="w-3.5 h-3.5 text-muted" />
-                  <span className="font-medium">Sample Pre-seeded Accounts (password: password123)</span>
-                </div>
-                <ChevronDown
-                  className={cn("w-3.5 h-3.5 transition-transform duration-160 text-muted", showDemoAccounts && "rotate-180")}
-                />
-              </button>
-
-              {showDemoAccounts && (
-                <div className="mt-2.5 space-y-1.5 animate-tooltip">
-                  {demoUsers.map((dUser) => (
-                    <button
-                      key={dUser.id}
-                      type="button"
-                      onClick={() => handleQuickFill(dUser.email)}
-                      className="w-full p-2.5 rounded-xl bg-paper hover:bg-editor border border-divider text-left transition-all duration-140 hover:-translate-y-0.5 active:scale-[0.98] flex items-center justify-between text-xs"
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <img
-                          src={dUser.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${dUser.name}`}
-                          alt={dUser.name}
-                          className="w-5 h-5 rounded-full object-cover shrink-0 border border-divider"
-                        />
-                        <span className="text-carbon font-semibold truncate">{dUser.name}</span>
-                        <span className="text-[10px] text-muted truncate">({dUser.email})</span>
-                      </div>
-                      <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-editor border border-divider text-muted shrink-0 font-medium">
-                        {dUser.role}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </div>
