@@ -1,4 +1,4 @@
-# NeoStats — Collaborative Project Management Platform
+# LetsCollab — Collaborative Project Management Platform
 ### Full Stack Engineering Hackathon 2026 Submission
 
 NeoStats is an enterprise-grade, real-time collaborative project management platform built for modern engineering teams. Featuring **strict server-enforced RBAC**, **Optimistic Concurrency Control (OCC) with HTTP 409 conflict detection**, **real-time Socket.IO room clustering**, and an **immutable audit trail**.
