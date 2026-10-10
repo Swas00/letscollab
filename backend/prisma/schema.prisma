@@ -1,0 +1,129 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String           @id @default(cuid())
+  email           String           @unique
+  password        String
+  name            String
+  role            String           @default("TEAM_MEMBER") // ADMIN, PROJECT_MANAGER, TEAM_MEMBER, VIEWER
+  avatarUrl       String?
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  managedProjects Project[]        @relation("ProjectManager")
+  memberships     ProjectMember[]
+  assignedTasks   Task[]           @relation("AssignedTasks")
+  createdTasks    Task[]           @relation("CreatedTasks")
+  comments        Comment[]
+  notifications   Notification[]   @relation("UserNotifications")
+  actedNotifications Notification[] @relation("NotificationActor")
+  activityLogs    ActivityLog[]
+}
+
+model Project {
+  id          String          @id @default(cuid())
+  name        String
+  key         String          @unique
+  description String?
+  status      String          @default("ACTIVE") // ACTIVE, COMPLETED, ARCHIVED
+  priority    String          @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  managerId   String?
+  manager     User?           @relation("ProjectManager", fields: [managerId], references: [id], onDelete: SetNull)
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  members      ProjectMember[]
+  tasks        Task[]
+  activityLogs ActivityLog[]
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  role      String   @default("TEAM_MEMBER") // PROJECT_MANAGER, TEAM_MEMBER, VIEWER
+  joinedAt  DateTime @default(now())
+
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+}
+
+model Task {
+  id             String    @id @default(cuid())
+  taskNumber     Int
+  title          String
+  description    String?
+  status         String    @default("TODO") // BACKLOG, TODO, IN_PROGRESS, IN_REVIEW, DONE
+  priority       String    @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  version        Int       @default(1) // Optimistic Concurrency Control counter
+  dueDate        DateTime?
+  tags           String?   // comma-separated tags e.g. "Frontend,Bug"
+  estimatedHours Float?
+
+  projectId      String
+  project        Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  assigneeId     String?
+  assignee       User?     @relation("AssignedTasks", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  creatorId      String?
+  creator        User?     @relation("CreatedTasks", fields: [creatorId], references: [id], onDelete: SetNull)
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  comments       Comment[]
+
+  @@unique([projectId, taskNumber])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  actorId    String?
+  actor      User?    @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  type       String   // TASK_ASSIGNED, TASK_STATUS_CHANGED, COMMENT_ADDED, PROJECT_INVITE, CONCURRENT_CONFLICT, SYSTEM
+  title      String
+  message    String
+  entityType String?  // TASK, PROJECT, COMMENT
+  entityId   String?
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  projectId  String?
+  project    Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  action     String   // PROJECT_CREATED, TASK_UPDATED, etc.
+  entityType String   // PROJECT, TASK, MEMBER, COMMENT, USER
+  entityId   String
+  metadata   String?  // JSON string
+  createdAt  DateTime @default(now())
+}
