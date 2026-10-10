@@ -1,8 +1,3 @@
-"use client";
-
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "../context/AuthContext";
 import Link from "next/link";
 import {
   Layers,
@@ -20,15 +15,6 @@ import {
 } from "lucide-react";
 
 export default function HomePage() {
-  const router = useRouter();
-  const { user, isLoading } = useAuth();
-
-  useEffect(() => {
-    if (!isLoading && user) {
-      router.push("/dashboard");
-    }
-  }, [user, isLoading, router]);
-
   return (
     <div className="min-h-screen bg-[#090a0f] text-white flex flex-col justify-between selection:bg-indigo-500/30 overflow-x-hidden">
       {/* Navigation Bar */}
