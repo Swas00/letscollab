@@ -25,7 +25,7 @@ app.get("/api/health", (req, res) => {
   res.json({
     status: "healthy",
     timestamp: new Date().toISOString(),
-    service: "neostats-collaborative-api",
+    service: "letscollab-collaborative-api",
   });
 });
 

@@ -34,7 +34,7 @@ export default function HomePage() {
               <Code2 className="w-4 h-4 text-white" />
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-lg tracking-tight text-carbon">NeoStats</span>
+              <span className="font-extrabold text-lg tracking-tight text-carbon">LetsCollab</span>
               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-moss border border-[#b5cea8] text-[#254622] font-semibold">
                 v1.4 • CRDT
               </span>
@@ -252,7 +252,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted font-mono">
           <div className="flex items-center gap-2">
             <Code2 className="w-4 h-4 text-coral" />
-            <span className="font-bold text-carbon">NeoStats</span>
+            <span className="font-bold text-carbon">LetsCollab</span>
             <span>— Real-Time Collaborative Code Platform</span>
           </div>
 

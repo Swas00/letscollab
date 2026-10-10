@@ -2,7 +2,7 @@ import request from "supertest";
 import { app } from "../app";
 import { prisma } from "../prisma";
 
-describe("NeoStats Collaborative Platform Core Test Suite", () => {
+describe("LetsCollab Collaborative Platform Core Test Suite", () => {
   let adminToken: string;
   let pmToken: string;
   let devToken: string;

@@ -27,7 +27,7 @@ export default function CarouselPage() {
       <header className="absolute top-4 inset-x-4 z-30 flex items-center justify-between pointer-events-none">
         <Link href="/" className="pointer-events-auto">
           <Button variant="secondary" size="sm" icon={<ArrowLeft className="w-3.5 h-3.5" />}>
-            Back to NeoStats
+            Back to LetsCollab
           </Button>
         </Link>
 

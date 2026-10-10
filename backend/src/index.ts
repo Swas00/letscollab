@@ -12,6 +12,6 @@ const server = http.createServer(app);
 initSocket(server);
 
 server.listen(PORT, () => {
-  console.log(`🚀 NeoStats Backend Server running on http://localhost:${PORT}`);
+  console.log(`🚀 LetsCollab Backend Server running on http://localhost:${PORT}`);
   console.log(`📡 Real-time Socket.IO initialized`);
 });

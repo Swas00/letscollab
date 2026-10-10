@@ -57,7 +57,7 @@ export default function ProjectsPage() {
   }, [statusFilter, user?.id]);
 
   useEffect(() => {
-    if (user?.role === "ADMIN") {
+    if (user) {
       api.users.list().then((res) => {
         if (res.data?.users) {
           setAllUsers(res.data.users);
@@ -140,7 +140,7 @@ export default function ProjectsPage() {
             </p>
           </div>
 
-          {isAdmin && (
+          {user?.role !== "VIEWER" && (
             <Button
               onClick={() => setIsModalOpen(true)}
               variant="primary"

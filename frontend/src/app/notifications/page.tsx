@@ -150,7 +150,7 @@ export default function NotificationsPage() {
                     <img
                       src={
                         notif.actor?.avatarUrl ||
-                        `https://api.dicebear.com/7.x/avataaars/svg?seed=${notif.actor?.name || "NeoStats"}`
+                        `https://api.dicebear.com/7.x/avataaars/svg?seed=${notif.actor?.name || "LetsCollab"}`
                       }
                       alt={notif.actor?.name || "Actor"}
                       className="w-8 h-8 rounded-full object-cover bg-paper border border-divider shrink-0 mt-0.5"

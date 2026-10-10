@@ -268,7 +268,7 @@ export function CommandPalette({
             <span>↑↓ Navigate</span>
             <span>↵ Select</span>
           </div>
-          <span>Command Palette • NeoStats</span>
+          <span>Command Palette • LetsCollab</span>
         </div>
       </div>
     </div>

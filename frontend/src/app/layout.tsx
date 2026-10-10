@@ -5,7 +5,7 @@ import { AuthProvider } from "../context/AuthContext";
 import { SocketProvider } from "../context/SocketContext";
 
 export const metadata: Metadata = {
-  title: "NeoStats | Collaborative Project Management Platform",
+  title: "LetsCollab | Real-Time Collaborative Workspace & Project Platform",
   description:
     "Real-time multi-user collaborative platform with RBAC, optimistic concurrency conflict detection, and live synchronization.",
 };

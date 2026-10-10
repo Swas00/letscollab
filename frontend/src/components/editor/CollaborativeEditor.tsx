@@ -56,7 +56,7 @@ const INITIAL_FILES: EditorFile[] = [
     name: "crdt_sync.rs",
     language: "rust",
     version: 1,
-    content: `// NeoStats CRDT State Engine - Vector Clock & Concurrency Resolver
+    content: `// LetsCollab CRDT State Engine - Vector Clock & Concurrency Resolver
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -103,7 +103,7 @@ impl VectorClock {
     name: "socket_pipeline.ts",
     language: "typescript",
     version: 1,
-    content: `// NeoStats Real-Time Collaborative Socket Pipeline
+    content: `// LetsCollab Real-Time Collaborative Socket Pipeline
 import { Socket } from "socket.io";
 
 export interface CodeDeltaEvent {
@@ -140,7 +140,7 @@ export class SocketPipeline {
     version: 1,
     content: `syntax = "proto3";
 
-package neostats.collaboration.v1;
+package letscollab.collaboration.v1;
 
 message EditOperation {
   string op_id = 1;
@@ -474,7 +474,7 @@ export function CollaborativeEditor({
       } else {
         setTerminalHistory((prev) => [
           ...prev,
-          `neostats: ${cmd}: command executed successfully`,
+          `letscollab: ${cmd}: command executed successfully`,
         ]);
       }
     }, 180);
@@ -496,7 +496,7 @@ export function CollaborativeEditor({
           </div>
 
           <span className="text-xs font-mono font-bold text-carbon">
-            neostats-workspace <span className="text-muted font-normal">/ {activeFile.name}</span>
+            letscollab-workspace <span className="text-muted font-normal">/ {activeFile.name}</span>
           </span>
 
           <SyncStatusBadge state={syncState} lastSynced={lastSynced} />
@@ -820,7 +820,7 @@ export function CollaborativeEditor({
                 onSubmit={handleTerminalSubmit}
                 className="flex items-center gap-2 px-2.5 py-1.5 border-t border-[#30362f] bg-[#141613] text-[11px] font-mono"
               >
-                <span className="text-coral font-bold">neostats❯</span>
+                <span className="text-coral font-bold">letscollab❯</span>
                 <input
                   type="text"
                   value={terminalInput}

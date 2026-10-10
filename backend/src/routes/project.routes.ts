@@ -85,8 +85,11 @@ router.get("/", authenticateToken, async (req: AuthRequest, res: Response) => {
   return res.json({ projects });
 });
 
-// Create project (Admin only)
-router.post("/", authenticateToken, requireSystemRole("ADMIN"), async (req: AuthRequest, res: Response) => {
+// Create project (Admin, Project Manager, or any registered team member)
+router.post("/", authenticateToken, async (req: AuthRequest, res: Response) => {
+  if (req.user?.role === "VIEWER") {
+    return res.status(403).json({ error: "Forbidden: Viewers cannot create projects" });
+  }
   const parse = createProjectSchema.safeParse(req.body);
   if (!parse.success) {
     return res.status(400).json({ error: "Validation failed", details: parse.error.issues });

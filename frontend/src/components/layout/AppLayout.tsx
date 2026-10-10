@@ -110,7 +110,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="font-extrabold text-lg tracking-tight text-carbon">NeoStats</span>
+                  <span className="font-extrabold text-lg tracking-tight text-carbon">LetsCollab</span>
                 </div>
                 <span className="text-[11px] text-muted block -mt-0.5 font-medium">Project Workspace</span>
               </div>
