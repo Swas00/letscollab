@@ -30,12 +30,14 @@ interface TaskModalProps {
 
 export function TaskModal({ taskId, onClose, onTaskUpdated, onTaskDeleted }: TaskModalProps) {
   const { user } = useAuth();
-  const { broadcastViewingTask, activeViewers } = useSocket();
+  const { socket, broadcastViewingTask, activeViewers } = useSocket();
 
   const [task, setTask] = useState<any>(null);
+  const [userAccess, setUserAccess] = useState<any>(null);
   const [projectMembers, setProjectMembers] = useState<any[]>([]);
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState("");
+  const [isPostingComment, setIsPostingComment] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -82,6 +84,7 @@ export function TaskModal({ taskId, onClose, onTaskUpdated, onTaskDeleted }: Tas
       setTags(t.tags || "");
       setEstimatedHours(t.estimatedHours || "");
       setComments(t.comments || []);
+      setUserAccess((res.data as any).userAccess || null);
 
       if (t.projectId) {
         api.projects.get(t.projectId).then((pRes) => {
@@ -103,6 +106,30 @@ export function TaskModal({ taskId, onClose, onTaskUpdated, onTaskDeleted }: Tas
       fetchTaskDetails(taskId);
     }
   }, [taskId]);
+
+  // Real-time comment sync: show comments written/deleted by other collaborators instantly
+  useEffect(() => {
+    if (!socket || !taskId) return;
+
+    const handleCommentCreated = (payload: any) => {
+      if (payload?.taskId !== taskId || !payload.comment) return;
+      setComments((prev) =>
+        prev.some((c) => c.id === payload.comment.id) ? prev : [...prev, payload.comment]
+      );
+    };
+
+    const handleCommentDeleted = (payload: any) => {
+      if (payload?.taskId !== taskId) return;
+      setComments((prev) => prev.filter((c) => c.id !== payload.commentId));
+    };
+
+    socket.on("comment:created", handleCommentCreated);
+    socket.on("comment:deleted", handleCommentDeleted);
+    return () => {
+      socket.off("comment:created", handleCommentCreated);
+      socket.off("comment:deleted", handleCommentDeleted);
+    };
+  }, [socket, taskId]);
 
   const handleSave = async (forceOverwrite: boolean = false) => {
     if (!task) return;
@@ -222,21 +249,32 @@ export function TaskModal({ taskId, onClose, onTaskUpdated, onTaskDeleted }: Tas
     }
   };
 
-  const handlePostComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newComment.trim() || !task) return;
+  const handlePostComment = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!newComment.trim() || !task || isPostingComment) return;
 
+    setIsPostingComment(true);
     const res = await api.comments.create(task.id, newComment.trim());
+    setIsPostingComment(false);
+
     if (res.data?.comment) {
       const createdComment = res.data.comment;
-      setComments((prev) => [...prev, createdComment]);
+      setComments((prev) =>
+        prev.some((c) => c.id === createdComment.id) ? prev : [...prev, createdComment]
+      );
       setNewComment("");
     } else {
       setErrorMsg(res.error || "Failed to post comment");
     }
   };
 
+  const canDeleteComment = (comment: any) =>
+    user?.id === comment.userId ||
+    user?.role === "ADMIN" ||
+    !!userAccess?.isManager;
+
   const handleDeleteComment = async (commentId: string) => {
+    if (!confirm("Delete this comment?")) return;
     const res = await api.comments.delete(commentId);
     if (!res.error) {
       setComments((prev) => prev.filter((c) => c.id !== commentId));
@@ -495,14 +533,14 @@ export function TaskModal({ taskId, onClose, onTaskUpdated, onTaskDeleted }: Tas
                             <span className="text-[10px] text-muted">
                               {formatRelativeTime(comment.createdAt)}
                             </span>
-                            {(user?.id === comment.userId ||
-                              user?.role === "ADMIN" ||
-                              user?.role === "PROJECT_MANAGER") && (
+                            {canDeleteComment(comment) && (
                               <button
                                 onClick={() => handleDeleteComment(comment.id)}
-                                className="opacity-0 group-hover:opacity-100 text-muted hover:text-coral transition"
+                                title="Delete comment"
+                                aria-label="Delete comment"
+                                className="p-1 rounded-md text-muted hover:text-coral hover:bg-coral/10 transition"
                               >
-                                <Trash2 className="w-3 h-3" />
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             )}
                           </div>
@@ -524,20 +562,28 @@ export function TaskModal({ taskId, onClose, onTaskUpdated, onTaskDeleted }: Tas
                 {/* New Comment Input */}
                 <form onSubmit={handlePostComment} className="pt-3 border-t border-divider">
                   <div className="text-[10px] text-muted mb-1 font-medium">
-                    Tip: Use @Name to notify a collaborator
+                    Enter to send · Shift+Enter for new line · Use @Name to notify a collaborator
                   </div>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
+                  <div className="flex gap-2 items-end">
+                    <textarea
+                      rows={2}
                       value={newComment}
                       onChange={(e) => setNewComment(e.target.value)}
-                      placeholder="Add a comment..."
-                      className="flex-1 px-3 py-2 bg-paper border border-divider rounded-xl text-xs text-carbon placeholder-muted focus:outline-none focus:border-coral focus:bg-editor"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handlePostComment();
+                        }
+                      }}
+                      placeholder="Write a comment..."
+                      className="flex-1 px-3 py-2 bg-paper border border-divider rounded-xl text-xs text-carbon placeholder-muted focus:outline-none focus:border-coral focus:bg-editor resize-none"
                     />
                     <Button
                       type="submit"
                       variant="secondary"
                       size="sm"
+                      isLoading={isPostingComment}
+                      disabled={!newComment.trim()}
                     >
                       Send
                     </Button>

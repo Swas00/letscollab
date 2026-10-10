@@ -264,6 +264,58 @@ describe("LetsCollab Collaborative Platform Core Test Suite", () => {
       expect(res.body.comment.content).toContain("Testing automated comment");
     });
 
+    it("Empty comments are rejected with HTTP 400", async () => {
+      const res = await request(app)
+        .post(`/api/comments/task/${testTaskId}`)
+        .set("Authorization", `Bearer ${devToken}`)
+        .send({ content: "" });
+      expect(res.status).toBe(400);
+    });
+
+    it("Comments can be read, and only the author / PM / Admin can delete them", async () => {
+      const created = await request(app)
+        .post(`/api/comments/task/${testTaskId}`)
+        .set("Authorization", `Bearer ${devToken}`)
+        .send({ content: "Comment to read and delete" });
+      expect(created.status).toBe(201);
+      const commentId = created.body.comment.id;
+
+      // Read
+      const list = await request(app)
+        .get(`/api/comments/task/${testTaskId}`)
+        .set("Authorization", `Bearer ${pmToken}`);
+      expect(list.status).toBe(200);
+      expect(list.body.comments.some((c: any) => c.id === commentId)).toBe(true);
+
+      // Non-author, non-manager cannot delete
+      const viewerDelete = await request(app)
+        .delete(`/api/comments/${commentId}`)
+        .set("Authorization", `Bearer ${viewerToken}`);
+      expect(viewerDelete.status).toBe(403);
+
+      // Author can delete
+      const authorDelete = await request(app)
+        .delete(`/api/comments/${commentId}`)
+        .set("Authorization", `Bearer ${devToken}`);
+      expect(authorDelete.status).toBe(200);
+
+      const after = await request(app)
+        .get(`/api/comments/task/${testTaskId}`)
+        .set("Authorization", `Bearer ${devToken}`);
+      expect(after.body.comments.some((c: any) => c.id === commentId)).toBe(false);
+    });
+
+    it("Admin can delete any user's comment", async () => {
+      const created = await request(app)
+        .post(`/api/comments/task/${testTaskId}`)
+        .set("Authorization", `Bearer ${devToken}`)
+        .send({ content: "Admin moderation test" });
+      const res = await request(app)
+        .delete(`/api/comments/${created.body.comment.id}`)
+        .set("Authorization", `Bearer ${adminToken}`);
+      expect(res.status).toBe(200);
+    });
+
     it("Activity log reflects task and comment events", async () => {
       const res = await request(app)
         .get(`/api/activity/project/${testProjectId}`)
