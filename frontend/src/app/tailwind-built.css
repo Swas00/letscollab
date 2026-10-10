@@ -825,10 +825,6 @@ video {
   margin-top: 0.5rem;
 }
 
-.mt-2\.5{
-  margin-top: 0.625rem;
-}
-
 .mt-3{
   margin-top: 0.75rem;
 }
@@ -976,8 +972,8 @@ video {
   max-height: 6rem;
 }
 
-.max-h-36{
-  max-height: 9rem;
+.max-h-32{
+  max-height: 8rem;
 }
 
 .max-h-72{
@@ -1269,6 +1265,10 @@ video {
 
 .items-start{
   align-items: flex-start;
+}
+
+.items-end{
+  align-items: flex-end;
 }
 
 .items-center{
@@ -3107,6 +3107,10 @@ code, pre, kbd, .font-mono {
 .focus\:outline-none:focus{
   outline: 2px solid transparent;
   outline-offset: 2px;
+}
+
+.focus\:ring-coral\/20:focus{
+  --tw-ring-color: rgb(230 95 66 / 0.2);
 }
 
 .focus-visible\:outline-none:focus-visible{
