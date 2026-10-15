@@ -7,7 +7,7 @@ const config: CapacitorConfig = {
   server: {
     // When deploying, point to your Vercel URL (e.g. https://letscollab.vercel.app)
     // or your local machine's IP (e.g. http://192.168.1.X:3000) for hot reload
-    url: process.env.CAPACITOR_SERVER_URL,
+    url: process.env.CAPACITOR_SERVER_URL || 'https://letscollab-delta.vercel.app',
     cleartext: true,
   },
 };
