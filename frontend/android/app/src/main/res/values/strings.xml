@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">LetsCollab</string>
+    <string name="title_activity_main">LetsCollab</string>
+    <string name="package_name">com.letscollab.app</string>
+    <string name="custom_url_scheme">com.letscollab.app</string>
+</resources>
