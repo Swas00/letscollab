@@ -347,6 +347,25 @@ code, pre, kbd, .font-mono {
   animation: remoteCursorBlink 1.1s ease-in-out infinite;
 }
 
+/* Monaco Remote Cursor Decorations */
+.monaco-remote-cursor-line {
+  border-left: 2px solid #E65F42 !important;
+  z-index: 10;
+  position: absolute;
+  animation: remoteCursorBlink 1.1s ease-in-out infinite;
+}
+
+.monaco-remote-tag {
+  font-size: 9px !important;
+  font-family: "IBM Plex Mono", monospace !important;
+  padding: 1px 4px !important;
+  border-radius: 3px !important;
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+  margin-left: 4px !important;
+  display: inline-block !important;
+}
+
 /* =========================================================================
    ACCESSIBILITY: RESPECT PREFERS-REDUCED-MOTION
    ========================================================================= */

@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Editor, { OnMount, BeforeMount } from "@monaco-editor/react";
 import {
   FileCode,
-  Folder,
   FolderOpen,
   ChevronRight,
   ChevronDown,
@@ -15,14 +15,10 @@ import {
   Sparkles,
   Search,
   Plus,
-  RefreshCw,
   X,
-  Maximize2,
-  Minimize2,
-  Trash2,
-  Layers,
   Code2,
-  Settings2,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { Button } from "../ui/Button";
 import { Tooltip } from "../ui/Tooltip";
@@ -177,6 +173,19 @@ interface CollaborativeEditorProps {
   initialActiveFile?: string;
 }
 
+const getMonacoLanguage = (filename: string): string => {
+  if (filename.endsWith(".rs")) return "rust";
+  if (filename.endsWith(".ts") || filename.endsWith(".tsx")) return "typescript";
+  if (filename.endsWith(".js") || filename.endsWith(".jsx")) return "javascript";
+  if (filename.endsWith(".json")) return "json";
+  if (filename.endsWith(".proto")) return "proto";
+  if (filename.endsWith(".css")) return "css";
+  if (filename.endsWith(".html")) return "html";
+  if (filename.endsWith(".md")) return "markdown";
+  if (filename.endsWith(".py")) return "python";
+  return "plaintext";
+};
+
 export function CollaborativeEditor({
   projectId = "demo-workspace",
   initialActiveFile = "file-1",
@@ -198,6 +207,7 @@ export function CollaborativeEditor({
   // Editor Interaction States
   const [syncState, setSyncState] = useState<SyncState>("Synced");
   const [lastSynced, setLastSynced] = useState<Date | null>(new Date());
+  const [editorTheme, setEditorTheme] = useState<"letscollab-paper" | "vs-dark">("letscollab-paper");
   const [isCopied, setIsCopied] = useState(false);
   const [isFormatting, setIsFormatting] = useState(false);
   const [isTerminalOpen, setIsTerminalOpen] = useState(true);
@@ -209,20 +219,20 @@ export function CollaborativeEditor({
     "✔ Zero warnings. CRDT synchronization mesh verified.",
   ]);
   const [terminalInput, setTerminalInput] = useState("");
-  const [searchFilter, setSearchFilter] = useState("");
   const [treeExpanded, setTreeExpanded] = useState<Record<string, boolean>>({
     src: true,
     protocol: true,
   });
 
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const editorRef = useRef<any>(null);
+  const monacoRef = useRef<any>(null);
+  const decorationsRef = useRef<string[]>([]);
   const activeFile = files.find((f) => f.id === activeFileId) || files[0];
 
   // 1. Socket.IO Real-Time Peer Listeners
   useEffect(() => {
     if (!socket || !projectId) return;
 
-    // Join editor room with authenticated user identity
     const userColor = COLLABORATOR_COLORS[Math.floor(Math.random() * COLLABORATOR_COLORS.length)];
     socket.emit("editor:join", {
       projectId,
@@ -263,6 +273,14 @@ export function CollaborativeEditor({
             f.id === data.fileId ? { ...f, content: data.content, version: data.version || f.version + 1 } : f
           )
         );
+        if (data.fileId === activeFileId && editorRef.current) {
+          const currentVal = editorRef.current.getValue();
+          if (currentVal !== data.content) {
+            const pos = editorRef.current.getPosition();
+            editorRef.current.setValue(data.content);
+            if (pos) editorRef.current.setPosition(pos);
+          }
+        }
         setSyncState("Synced");
         setLastSynced(new Date());
       }
@@ -280,7 +298,7 @@ export function CollaborativeEditor({
       socket.off("editor:cursor-moved", handleCursorMoved);
       socket.off("editor:code-updated", handleCodeUpdated);
     };
-  }, [socket, projectId, user]);
+  }, [socket, projectId, user, activeFileId]);
 
   // Sync state management
   useEffect(() => {
@@ -290,6 +308,38 @@ export function CollaborativeEditor({
       setSyncState("Synced");
     }
   }, [isConnected]);
+
+  // Remote cursor decorations
+  useEffect(() => {
+    if (!editorRef.current || !monacoRef.current) return;
+    const editor = editorRef.current;
+    const monaco = monacoRef.current;
+
+    const newDecorations: any[] = [];
+    peers.forEach((peer) => {
+      if (!peer.cursor) return;
+      if (peer.activeFileId && peer.activeFileId !== activeFileId) return;
+
+      newDecorations.push({
+        range: new monaco.Range(
+          peer.cursor.line,
+          peer.cursor.ch,
+          peer.cursor.line,
+          peer.cursor.ch + 1
+        ),
+        options: {
+          className: "monaco-remote-cursor-line",
+          hoverMessage: { value: `**${peer.name}** is editing here` },
+          after: {
+            content: ` ${peer.name} `,
+            inlineClassName: "monaco-remote-tag",
+          },
+        },
+      });
+    });
+
+    decorationsRef.current = editor.deltaDecorations(decorationsRef.current, newDecorations);
+  }, [peers, activeFileId]);
 
   // Global custom event listeners (Command Palette actions)
   useEffect(() => {
@@ -317,24 +367,69 @@ export function CollaborativeEditor({
     };
   }, [activeFile, files]);
 
-  // Keyboard shortcut listener for Cmd+S, Cmd+R
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === "s") {
-      e.preventDefault();
+  // Monaco Theme Initialization
+  const handleEditorWillMount: BeforeMount = (monaco) => {
+    monaco.editor.defineTheme("letscollab-paper", {
+      base: "vs",
+      inherit: true,
+      rules: [
+        { token: "", foreground: "232722", background: "FCFBF7" },
+        { token: "keyword", foreground: "E65F42", fontStyle: "bold" },
+        { token: "comment", foreground: "686D64", fontStyle: "italic" },
+        { token: "string", foreground: "3B5A38" },
+        { token: "number", foreground: "364573" },
+        { token: "type", foreground: "b0361e" },
+        { token: "identifier", foreground: "232722" },
+        { token: "delimiter", foreground: "82877E" },
+      ],
+      colors: {
+        "editor.background": "#FCFBF7",
+        "editor.foreground": "#232722",
+        "editorLineNumber.foreground": "#DAD8CE",
+        "editorLineNumber.activeForeground": "#E65F42",
+        "editor.lineHighlightBackground": "#F2EFE666",
+        "editor.selectionBackground": "#D8DDF5AA",
+        "editorCursor.foreground": "#E65F42",
+        "editorWhitespace.foreground": "#DAD8CE",
+        "editorIndentGuide.background": "#DAD8CE44",
+        "editorIndentGuide.activeBackground": "#E65F4266",
+      },
+    });
+  };
+
+  const handleEditorDidMount: OnMount = (editor, monaco) => {
+    editorRef.current = editor;
+    monacoRef.current = monaco;
+
+    // Track cursor movements and broadcast to peers
+    editor.onDidChangeCursorPosition((e) => {
+      if (socket && projectId) {
+        socket.emit("editor:cursor", {
+          projectId,
+          fileId: activeFileId,
+          line: e.position.lineNumber,
+          ch: e.position.column,
+          user: { id: user?.id, name: user?.name },
+        });
+      }
+    });
+
+    // Native VS Code keybinding overrides for LetsCollab
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       handleSave();
-    } else if ((e.metaKey || e.ctrlKey) && e.key === "r") {
-      e.preventDefault();
+    });
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyR, () => {
       handleRun();
-    }
+    });
   };
 
   // Editor Actions
-  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const val = e.target.value;
+  const handleCodeChange = (newVal: string | undefined) => {
+    if (newVal === undefined) return;
     setSyncState("Saving");
 
     setFiles((prev) =>
-      prev.map((f) => (f.id === activeFileId ? { ...f, content: val, isModified: true } : f))
+      prev.map((f) => (f.id === activeFileId ? { ...f, content: newVal, isModified: true } : f))
     );
 
     // Broadcast edit to peers via Socket
@@ -342,33 +437,16 @@ export function CollaborativeEditor({
       socket.emit("editor:code-change", {
         projectId,
         fileId: activeFileId,
-        content: val,
+        content: newVal,
         version: activeFile.version + 1,
         user: { id: user?.id, name: user?.name },
       });
     }
 
-    // Debounce to Synced state
     setTimeout(() => {
       setSyncState("Synced");
       setLastSynced(new Date());
-    }, 450);
-  };
-
-  const handleCursorMove = () => {
-    if (!textareaRef.current || !socket || !projectId) return;
-    const pos = textareaRef.current.selectionStart;
-    const textBefore = textareaRef.current.value.substring(0, pos);
-    const line = textBefore.split("\n").length;
-    const ch = pos - textBefore.lastIndexOf("\n");
-
-    socket.emit("editor:cursor", {
-      projectId,
-      fileId: activeFileId,
-      line,
-      ch,
-      user: { id: user?.id, name: user?.name },
-    });
+    }, 350);
   };
 
   const handleSave = () => {
@@ -391,22 +469,13 @@ export function CollaborativeEditor({
 
   const handleFormat = () => {
     setIsFormatting(true);
+    if (editorRef.current) {
+      editorRef.current.getAction("editor.action.formatDocument")?.run();
+    }
     setTimeout(() => {
-      setFiles((prev) =>
-        prev.map((f) => {
-          if (f.id === activeFileId) {
-            const formatted = f.content
-              .split("\n")
-              .map((line) => line.trimEnd())
-              .join("\n");
-            return { ...f, content: formatted, isModified: true };
-          }
-          return f;
-        })
-      );
       setIsFormatting(false);
       setSyncState("Synced");
-    }, 240);
+    }, 250);
   };
 
   const handleRun = () => {
@@ -480,7 +549,6 @@ export function CollaborativeEditor({
     }, 180);
   };
 
-  // Line numbers calculation
   const linesCount = activeFile.content.split("\n").length;
 
   return (
@@ -495,14 +563,15 @@ export function CollaborativeEditor({
             <span className="w-2.5 h-2.5 rounded-full bg-[#5bb062]" />
           </div>
 
-          <span className="text-xs font-mono font-bold text-carbon">
-            letscollab-workspace <span className="text-muted font-normal">/ {activeFile.name}</span>
+          <span className="text-xs font-mono font-bold text-carbon flex items-center gap-1.5">
+            <span>VS Code Engine</span>
+            <span className="text-muted font-normal">/ {activeFile.name}</span>
           </span>
 
           <SyncStatusBadge state={syncState} lastSynced={lastSynced} />
         </div>
 
-        {/* Center / Right: Collaborator Avatars & Action Buttons */}
+        {/* Center / Right: Collaborator Avatars, Theme Toggle & Action Buttons */}
         <div className="flex items-center gap-2">
           {/* Active Collaborators Presence Bar */}
           <div className="flex items-center -space-x-1.5 mr-2">
@@ -524,6 +593,20 @@ export function CollaborativeEditor({
               </div>
             </Tooltip>
           </div>
+
+          {/* Theme Toggle (LetsCollab Paper vs VS Code Dark) */}
+          <Tooltip content={editorTheme === "letscollab-paper" ? "Switch to VS Code Dark Theme" : "Switch to LetsCollab Light Theme"} side="bottom">
+            <button
+              onClick={() => setEditorTheme(editorTheme === "letscollab-paper" ? "vs-dark" : "letscollab-paper")}
+              className="p-1.5 rounded-md border text-xs bg-editor text-muted hover:text-carbon border-divider hover:bg-paper transition"
+            >
+              {editorTheme === "letscollab-paper" ? (
+                <Moon className="w-3.5 h-3.5 text-muted" />
+              ) : (
+                <Sun className="w-3.5 h-3.5 text-[#e3b04b]" />
+              )}
+            </button>
+          </Tooltip>
 
           {/* Quick Command Palette Button */}
           <button
@@ -612,7 +695,7 @@ export function CollaborativeEditor({
         </div>
       </div>
 
-      {/* 2. Main Editor Workspace Body (File Tree + Code View) */}
+      {/* 2. Main Editor Workspace Body (File Tree + Monaco Code View) */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Left Side: Resizable File Explorer */}
         <div className="w-56 shrink-0 bg-paper/60 border-r border-divider flex flex-col justify-between overflow-y-auto">
@@ -683,7 +766,7 @@ export function CollaborativeEditor({
           </div>
         </div>
 
-        {/* Center: Tabs + Code Editor */}
+        {/* Center: Tabs + Monaco Editor */}
         <div className="flex-1 flex flex-col min-w-0 bg-editor">
           {/* Tabs Bar */}
           <div className="flex items-center border-b border-divider bg-paper/30 overflow-x-auto shrink-0">
@@ -720,57 +803,39 @@ export function CollaborativeEditor({
             })}
           </div>
 
-          {/* Code Textarea & Line Numbers */}
-          <div className="relative flex-1 flex min-h-0 overflow-hidden font-mono text-xs">
-            {/* Line numbers column */}
-            <div className="w-12 py-3 bg-editor border-r border-divider/40 text-muted/60 text-right pr-3 select-none shrink-0 font-mono text-[11px] leading-5">
-              {Array.from({ length: linesCount }, (_, i) => (
-                <div key={i + 1}>{i + 1}</div>
-              ))}
-            </div>
-
-            {/* Code Input Area with Remote Peer Cursors */}
-            <div className="relative flex-1 h-full overflow-hidden">
-              <textarea
-                ref={textareaRef}
-                value={activeFile.content}
-                onChange={handleTextChange}
-                onSelect={handleCursorMove}
-                onKeyUp={handleCursorMove}
-                onClick={handleCursorMove}
-                onKeyDown={handleKeyDown}
-                spellCheck={false}
-                className="w-full h-full p-3 bg-editor text-carbon outline-none resize-none font-mono text-[12px] leading-5 selection:bg-periwinkle/70 selection:text-carbon"
-              />
-
-              {/* Real Remote Peer Cursors Overlay */}
-              {peers.map((peer) => {
-                if (!peer.cursor) return null;
-                const topPx = (peer.cursor.line - 1) * 20 + 12;
-                const leftPx = peer.cursor.ch * 7.2 + 12;
-
-                return (
-                  <div
-                    key={peer.id}
-                    className="absolute pointer-events-none transition-all duration-140 ease-out z-10"
-                    style={{ top: `${topPx}px`, left: `${leftPx}px` }}
-                  >
-                    {/* Blinking remote cursor line */}
-                    <div
-                      className="w-0.5 h-4.5 animate-remote-cursor"
-                      style={{ backgroundColor: peer.color }}
-                    />
-                    {/* Name badge */}
-                    <div
-                      className="absolute -top-4 left-1 px-1.5 py-0.2 rounded text-[9px] font-mono font-bold text-white shadow-xs whitespace-nowrap"
-                      style={{ backgroundColor: peer.color }}
-                    >
-                      {peer.name}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          {/* Monaco Editor Container */}
+          <div className="relative flex-1 h-full w-full overflow-hidden">
+            <Editor
+              height="100%"
+              width="100%"
+              language={getMonacoLanguage(activeFile.name)}
+              theme={editorTheme}
+              value={activeFile.content}
+              beforeMount={handleEditorWillMount}
+              onMount={handleEditorDidMount}
+              onChange={handleCodeChange}
+              loading={
+                <div className="flex items-center justify-center h-full text-xs text-muted font-mono gap-2">
+                  <Sparkles className="w-4 h-4 text-coral animate-spin" />
+                  <span>Initializing Monaco VS Code Engine...</span>
+                </div>
+              }
+              options={{
+                fontSize: 12.5,
+                fontFamily: "'IBM Plex Mono', Menlo, Monaco, 'Courier New', monospace",
+                tabSize: 2,
+                minimap: { enabled: true, maxColumn: 80, scale: 0.8 },
+                wordWrap: "on",
+                scrollBeyondLastLine: false,
+                smoothScrolling: true,
+                cursorBlinking: "smooth",
+                cursorSmoothCaretAnimation: "on",
+                bracketPairColorization: { enabled: true },
+                renderLineHighlight: "all",
+                padding: { top: 12, bottom: 12 },
+                automaticLayout: true,
+              }}
+            />
           </div>
 
           {/* 3. Collapsible Terminal Drawer */}
@@ -844,7 +909,9 @@ export function CollaborativeEditor({
           <span>•</span>
           <span>UTF-8</span>
           <span>•</span>
-          <span>{activeFile.language.toUpperCase()}</span>
+          <span>{getMonacoLanguage(activeFile.name).toUpperCase()}</span>
+          <span>•</span>
+          <span className="text-coral font-semibold">VS Code Monaco Active</span>
         </div>
 
         <div className="flex items-center gap-3">
