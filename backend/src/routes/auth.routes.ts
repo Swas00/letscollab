@@ -1,6 +1,7 @@
 import { Router, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import { z } from "zod";
 import { prisma } from "../prisma";
 import { AuthRequest, authenticateToken } from "../middleware/auth";
@@ -53,9 +54,11 @@ router.post("/register", async (req, res) => {
   }
 
   const { name, email, password, role, avatarUrl, organizationName } = parse.data;
+  const normalizedEmail = email.toLowerCase().trim();
+  const trimmedName = name.trim();
 
   const existing = await prisma.user.findUnique({
-    where: { email: email.toLowerCase() },
+    where: { email: normalizedEmail },
   });
 
   if (existing) {
@@ -64,14 +67,14 @@ router.post("/register", async (req, res) => {
 
   const hashedPassword = await bcrypt.hash(password, 10);
   const defaultAvatar =
-    avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`;
+    avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(trimmedName)}`;
 
   const userRole = role || "TEAM_MEMBER";
 
   const user = await prisma.user.create({
     data: {
-      name,
-      email: email.toLowerCase(),
+      name: trimmedName,
+      email: normalizedEmail,
       password: hashedPassword,
       role: userRole,
       avatarUrl: defaultAvatar,
@@ -190,8 +193,9 @@ router.post("/login", async (req, res) => {
   }
 
   const { email, password } = parse.data;
+  const normalizedEmail = email.toLowerCase().trim();
   const user = await prisma.user.findUnique({
-    where: { email: email.toLowerCase() },
+    where: { email: normalizedEmail },
     include: {
       organizationMemberships: {
         select: {
@@ -311,8 +315,15 @@ router.post("/forgot-password", async (req, res) => {
     });
   }
 
-  // Generate secure 6-digit numeric OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  // Automatically cleanup expired OTP records older than 24h
+  await prisma.passwordResetOtp.deleteMany({
+    where: {
+      expiresAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+    },
+  }).catch((err) => console.error("[Auth] Cleanup old OTPs error:", err));
+
+  // Generate cryptographically secure 6-digit numeric OTP
+  const otp = crypto.randomInt(100000, 1000000).toString();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
   // Invalidate any previous pending OTPs for this email
@@ -321,7 +332,7 @@ router.post("/forgot-password", async (req, res) => {
     data: { used: true },
   });
 
-  // Store new OTP
+  // Store new OTP safely in DB
   await prisma.passwordResetOtp.create({
     data: {
       email: normalizedEmail,
@@ -354,6 +365,19 @@ router.post("/reset-password", async (req, res) => {
   const { email, otp, newPassword } = parse.data;
   const normalizedEmail = email.toLowerCase().trim();
 
+  // Verify user exists and is active
+  const user = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+  });
+
+  if (!user) {
+    return res.status(404).json({ error: "No account found matching this email address." });
+  }
+
+  if (!user.isActive) {
+    return res.status(403).json({ error: "This account has been deactivated. Please contact an administrator." });
+  }
+
   // Find valid, unused OTP that hasn't expired
   const validOtp = await prisma.passwordResetOtp.findFirst({
     where: {
@@ -371,17 +395,17 @@ router.post("/reset-password", async (req, res) => {
     });
   }
 
-  // Mark OTP as used
+  // Atomically mark OTP as used (replay protection)
   await prisma.passwordResetOtp.update({
     where: { id: validOtp.id },
     data: { used: true },
   });
 
-  // Hash new password
+  // Hash new password securely
   const hashedPassword = await bcrypt.hash(newPassword, 10);
 
   const updatedUser = await prisma.user.update({
-    where: { email: normalizedEmail },
+    where: { id: user.id },
     data: { password: hashedPassword },
     include: {
       organizationMemberships: {

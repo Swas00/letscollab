@@ -153,7 +153,11 @@ export default function LoginPage() {
       setSuccessMsg("Password reset successfully! Logging you into your workspace...");
       setSession(res.data.token, res.data.user);
       setTimeout(() => {
-        router.push("/dashboard");
+        const redirectUrl =
+          typeof window !== "undefined"
+            ? new URLSearchParams(window.location.search).get("redirect") || "/dashboard"
+            : "/dashboard";
+        router.push(redirectUrl);
       }, 1000);
     } else {
       setErrorMsg(res.error || "Invalid or expired verification code.");
