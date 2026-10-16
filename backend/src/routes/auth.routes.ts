@@ -5,6 +5,8 @@ import { z } from "zod";
 import { prisma } from "../prisma";
 import { AuthRequest, authenticateToken } from "../middleware/auth";
 import { logActivity } from "../services/activity.service";
+import { createNotification } from "../services/notification.service";
+import { sendWelcomeEmail } from "../services/mail.service";
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || "super-secret-jwt-key-for-neostats-hackathon-2026";
@@ -109,6 +111,41 @@ router.post("/register", async (req, res) => {
     entityId: user.id,
     metadata: { name: user.name, email: user.email, role: user.role, organization: createdOrg?.name },
   });
+
+  // 1. Send Welcome Email asynchronously
+  sendWelcomeEmail({
+    to: user.email,
+    name: user.name,
+    organizationName: createdOrg?.name,
+  }).catch((err) => console.error("[Auth] Welcome email send error:", err));
+
+  // 2. Create In-App Welcome Notification
+  await createNotification({
+    userId: user.id,
+    type: "SYSTEM_ALERT",
+    title: "Welcome to LetsCollab! 🚀",
+    message: "Your collaborative workspace is ready. Create projects, invite your team by email, and build together in real-time.",
+    entityType: "USER",
+    entityId: user.id,
+  });
+
+  // 3. Link any pending invitations previously sent to this email address
+  const pendingInvitations = await prisma.projectInvitation.findMany({
+    where: { email: user.email, status: "PENDING" },
+    include: { project: true, inviter: true },
+  });
+
+  for (const inv of pendingInvitations) {
+    await createNotification({
+      userId: user.id,
+      actorId: inv.inviterId,
+      type: "PROJECT_INVITE",
+      title: "Project Collaboration Invitation",
+      message: `${inv.inviter?.name || "A project manager"} invited you to join "${inv.project.name}" as ${inv.role.replace("_", " ")}`,
+      entityType: "PROJECT",
+      entityId: inv.projectId,
+    });
+  }
 
   const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "7d" });
 

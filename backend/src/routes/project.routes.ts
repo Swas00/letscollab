@@ -6,6 +6,7 @@ import { requireSystemRole, requireProjectAccess, requireProjectManager } from "
 import { logActivity } from "../services/activity.service";
 import { createNotification } from "../services/notification.service";
 import { emitToProject, emitToUser, emitBroadcast } from "../socket";
+import { sendProjectInviteEmail } from "../services/mail.service";
 
 const router = Router();
 
@@ -223,6 +224,15 @@ router.post("/", authenticateToken, async (req: AuthRequest, res: Response) => {
           project: { id: project.id, name: project.name, key: project.key },
         });
       }
+
+      // Send project invitation email asynchronously
+      sendProjectInviteEmail({
+        to: normalizedEmail,
+        inviterName: req.user!.name,
+        projectName: project.name,
+        projectKey: project.key,
+        role: "TEAM_MEMBER",
+      }).catch((err) => console.error("[Projects] Initial invite email error:", err));
     }
   }
 
@@ -703,6 +713,15 @@ router.post("/:id/invitations", authenticateToken, requireProjectManager(), asyn
       project: { id: project.id, name: project.name, key: project.key },
     });
   }
+
+  // Send project invitation email asynchronously
+  sendProjectInviteEmail({
+    to: normalizedEmail,
+    inviterName: req.user!.name,
+    projectName: project.name,
+    projectKey: project.key,
+    role,
+  }).catch((err) => console.error("[Projects] Invitation email send error:", err));
 
   await logActivity({
     userId: req.user?.id,

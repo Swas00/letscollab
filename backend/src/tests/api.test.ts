@@ -394,6 +394,9 @@ describe("LetsCollab Collaborative Platform Core Test Suite", () => {
   describe("6. Email-Based Project Invitations & Access Control", () => {
     let inviteId: string;
     let inviteProjectId: string;
+    const testSuffix = Math.floor(Math.random() * 90000 + 10000).toString();
+    const testKey = `I${testSuffix.slice(0, 4)}`;
+    const testJaneEmail = `jane_${testSuffix}@collab.com`;
 
     it("PM can create a project and invite a user to collaborate by their email address", async () => {
       // 1. Create a fresh project with no extra members
@@ -401,8 +404,8 @@ describe("LetsCollab Collaborative Platform Core Test Suite", () => {
         .post("/api/projects")
         .set("Authorization", `Bearer ${pmToken}`)
         .send({
-          name: "Invite Test Project",
-          key: "INVITE",
+          name: `Invite Test Project ${testSuffix}`,
+          key: testKey,
           priority: "MEDIUM",
         });
       expect(createRes.status).toBe(201);
@@ -450,6 +453,94 @@ describe("LetsCollab Collaborative Platform Core Test Suite", () => {
         .set("Authorization", `Bearer ${viewerToken}`);
       expect(projectRes.status).toBe(200);
       expect(projectRes.body.project.members.some((m: any) => m.userId === res.body.member.userId)).toBe(true);
+    });
+
+    it("New user registration triggers welcome notification and welcome email", async () => {
+      const regRes = await request(app)
+        .post("/api/auth/register")
+        .send({
+          name: "Collaborator Jane",
+          email: testJaneEmail,
+          password: "password123",
+          role: "TEAM_MEMBER",
+        });
+
+      expect(regRes.status).toBe(201);
+      const janeToken = regRes.body.token;
+
+      // Verify Jane received the in-app welcome notification
+      const notifsRes = await request(app)
+        .get("/api/notifications")
+        .set("Authorization", `Bearer ${janeToken}`);
+
+      expect(notifsRes.status).toBe(200);
+      expect(
+        notifsRes.body.notifications.some(
+          (n: any) => n.title.includes("Welcome to LetsCollab")
+        )
+      ).toBe(true);
+    });
+
+    it("PM can directly invite a newly created account by their email ID and collaborate together on project tasks", async () => {
+      // 1. PM invites Jane directly by email ID
+      const inviteRes = await request(app)
+        .post(`/api/projects/${inviteProjectId}/invitations`)
+        .set("Authorization", `Bearer ${pmToken}`)
+        .send({
+          email: testJaneEmail,
+          role: "TEAM_MEMBER",
+        });
+
+      expect(inviteRes.status).toBe(201);
+      expect(inviteRes.body.invitation.email).toBe(testJaneEmail);
+      const janeInviteId = inviteRes.body.invitation.id;
+
+      // 2. Jane logs in and accepts the invitation
+      const loginRes = await request(app)
+        .post("/api/auth/login")
+        .send({ email: testJaneEmail, password: "password123" });
+      const janeToken = loginRes.body.token;
+
+      const acceptRes = await request(app)
+        .post(`/api/projects/invitations/${janeInviteId}/accept`)
+        .set("Authorization", `Bearer ${janeToken}`);
+
+      expect(acceptRes.status).toBe(200);
+      expect(acceptRes.body.success).toBe(true);
+
+      // 3. Jane creates a task in the collaborative project
+      const taskRes = await request(app)
+        .post(`/api/tasks/project/${inviteProjectId}`)
+        .set("Authorization", `Bearer ${janeToken}`)
+        .send({
+          title: "Jane's Collaborative Task",
+          description: "Working together with PM on project goals",
+          status: "TODO",
+          priority: "HIGH",
+        });
+
+      expect(taskRes.status).toBe(201);
+      const taskId = taskRes.body.task.id;
+
+      // 4. PM comments on Jane's task to collaborate
+      const commentRes = await request(app)
+        .post(`/api/comments/task/${taskId}`)
+        .set("Authorization", `Bearer ${pmToken}`)
+        .send({
+          content: "Great start, Jane! Let's get this done.",
+        });
+
+      expect(commentRes.status).toBe(201);
+      expect(commentRes.body.comment.content).toContain("Great start, Jane!");
+
+      // 5. Verify Jane can read the PM's comment on their task
+      const getCommentsRes = await request(app)
+        .get(`/api/comments/task/${taskId}`)
+        .set("Authorization", `Bearer ${janeToken}`);
+
+      expect(getCommentsRes.status).toBe(200);
+      expect(getCommentsRes.body.comments.length).toBe(1);
+      expect(getCommentsRes.body.comments[0].user.name).toBe("Rohan Verma");
     });
   });
 });
