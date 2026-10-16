@@ -1,4 +1,5 @@
 import request from "supertest";
+import bcrypt from "bcryptjs";
 import { app } from "../app";
 import { prisma } from "../prisma";
 
@@ -13,7 +14,75 @@ describe("LetsCollab Collaborative Platform Core Test Suite", () => {
   let testTaskId: string;
 
   beforeAll(async () => {
-    // 1. Authenticate sample users from seed
+    const hashedPassword = await bcrypt.hash("password123", 10);
+
+    // Clean any leftover test records first
+    await prisma.project.deleteMany({ where: { key: "NEO" } });
+    await prisma.user.deleteMany({
+      where: {
+        email: {
+          in: [
+            "admin@neostats.com",
+            "pm@neostats.com",
+            "dev@neostats.com",
+            "viewer@neostats.com",
+            "inactive@neostats.com",
+          ],
+        },
+      },
+    });
+
+    const admin = await prisma.user.create({
+      data: { email: "admin@neostats.com", name: "Pooja Sharma", password: hashedPassword, role: "ADMIN", isActive: true },
+    });
+    const pm = await prisma.user.create({
+      data: { email: "pm@neostats.com", name: "Rohan Verma", password: hashedPassword, role: "PROJECT_MANAGER", isActive: true },
+    });
+    const dev = await prisma.user.create({
+      data: { email: "dev@neostats.com", name: "Aditya Kumar", password: hashedPassword, role: "TEAM_MEMBER", isActive: true },
+    });
+    const viewer = await prisma.user.create({
+      data: { email: "viewer@neostats.com", name: "Ananya Iyer", password: hashedPassword, role: "VIEWER", isActive: true },
+    });
+    await prisma.user.create({
+      data: { email: "inactive@neostats.com", name: "Vikram Malhotra", password: hashedPassword, role: "TEAM_MEMBER", isActive: false },
+    });
+
+    const project = await prisma.project.create({
+      data: {
+        name: "Test Suite Project",
+        key: "NEO",
+        status: "ACTIVE",
+        priority: "HIGH",
+        managerId: pm.id,
+        members: {
+          create: [
+            { userId: admin.id, role: "PROJECT_MANAGER" },
+            { userId: pm.id, role: "PROJECT_MANAGER" },
+            { userId: dev.id, role: "TEAM_MEMBER" },
+            { userId: viewer.id, role: "VIEWER" },
+          ],
+        },
+      },
+    });
+
+    const task = await prisma.task.create({
+      data: {
+        projectId: project.id,
+        taskNumber: 1,
+        title: "Test Task 1",
+        status: "IN_PROGRESS",
+        priority: "HIGH",
+        version: 1,
+        assigneeId: dev.id,
+        creatorId: pm.id,
+      },
+    });
+
+    testProjectId = project.id;
+    testTaskId = task.id;
+
+    // Authenticate test users
     const adminRes = await request(app)
       .post("/api/auth/login")
       .send({ email: "admin@neostats.com", password: "password123" });
@@ -33,17 +102,21 @@ describe("LetsCollab Collaborative Platform Core Test Suite", () => {
       .post("/api/auth/login")
       .send({ email: "viewer@neostats.com", password: "password123" });
     viewerToken = viewerRes.body.token;
-
-    // Fetch existing seeded project
-    const project = await prisma.project.findFirst({
-      where: { key: "NEO" },
-      include: { tasks: true },
-    });
-    testProjectId = project!.id;
-    testTaskId = project!.tasks[0].id;
   });
 
   afterAll(async () => {
+    // Clean up all test fixtures so database has zero sample/test accounts
+    await prisma.project.deleteMany({ where: { key: "NEO" } });
+    await prisma.user.deleteMany({
+      where: {
+        OR: [
+          { email: { endsWith: "@neostats.com" } },
+          { email: { endsWith: "@testcompany.com" } },
+          { email: { endsWith: "@collab.com" } },
+          { email: { endsWith: "@test.com" } },
+        ],
+      },
+    });
     await prisma.$disconnect();
   });
 
@@ -907,4 +980,95 @@ describe("LetsCollab Collaborative Platform Core Test Suite", () => {
       expect(deadLoginRes.status).toBe(401);
     });
   });
+
+  describe("10. VS Code IDE Workspace, Multi-Language Execution & Step-by-Step Debugger", () => {
+    it("should load project workspace files and create a new file", async () => {
+      const getRes = await request(app)
+        .get(`/api/editor/${testProjectId}/files`)
+        .set("Authorization", `Bearer ${devToken}`);
+      expect(getRes.status).toBe(200);
+      expect(Array.isArray(getRes.body.files)).toBe(true);
+      expect(getRes.body.files.length).toBeGreaterThan(0);
+
+      const createRes = await request(app)
+        .post(`/api/editor/${testProjectId}/files`)
+        .set("Authorization", `Bearer ${devToken}`)
+        .send({
+          name: "helper.js",
+          folder: "src",
+          content: "console.log('helper loaded');",
+        });
+      expect(createRes.status).toBe(201);
+      expect(createRes.body.file.path).toBe("src/helper.js");
+    });
+
+    it("should execute JavaScript and Python code and return real stdout", async () => {
+      const jsRes = await request(app)
+        .post("/api/editor/execute")
+        .set("Authorization", `Bearer ${devToken}`)
+        .send({
+          language: "javascript",
+          fileName: "test.js",
+          code: "const a = 15; const b = 27; console.log('SUM=' + (a + b));",
+        });
+      expect(jsRes.status).toBe(200);
+      expect(jsRes.body.stdout).toContain("SUM=42");
+      expect(jsRes.body.exitCode).toBe(0);
+
+      const pyRes = await request(app)
+        .post("/api/editor/execute")
+        .set("Authorization", `Bearer ${devToken}`)
+        .send({
+          language: "python",
+          fileName: "test.py",
+          code: "nums = [2, 4, 6, 8]\nprint('PY_SUM=' + str(sum(nums)))",
+        });
+      expect(pyRes.status).toBe(200);
+      expect(pyRes.body.stdout).toContain("PY_SUM=20");
+    });
+
+    it("should step-debug JavaScript and Python code with breakpoints and variable inspection", async () => {
+      const jsDebugRes = await request(app)
+        .post("/api/editor/debug")
+        .set("Authorization", `Bearer ${devToken}`)
+        .send({
+          language: "javascript",
+          fileName: "debug.js",
+          breakpoints: [3],
+          code: [
+            "const x = 10;",
+            "const y = 25;",
+            "const total = x + y;",
+            "console.log(total);",
+          ].join("\n"),
+        });
+
+      expect(jsDebugRes.status).toBe(200);
+      expect(Array.isArray(jsDebugRes.body.steps)).toBe(true);
+      expect(jsDebugRes.body.steps.length).toBeGreaterThan(0);
+      const bpStep = jsDebugRes.body.steps.find((s: any) => s.isBreakpoint);
+      expect(bpStep).toBeDefined();
+      expect(bpStep.variables.total.value).toBe("35");
+
+      const pyDebugRes = await request(app)
+        .post("/api/editor/debug")
+        .set("Authorization", `Bearer ${devToken}`)
+        .send({
+          language: "python",
+          fileName: "debug.py",
+          breakpoints: [3],
+          code: [
+            "alpha = 7",
+            "beta = 6",
+            "product = alpha * beta",
+            "print(product)",
+          ].join("\n"),
+        });
+
+      expect(pyDebugRes.status).toBe(200);
+      expect(Array.isArray(pyDebugRes.body.steps)).toBe(true);
+      expect(pyDebugRes.body.steps.length).toBeGreaterThan(0);
+    });
+  });
 });
+

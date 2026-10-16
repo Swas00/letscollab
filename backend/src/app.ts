@@ -8,6 +8,7 @@ import commentRoutes from "./routes/comment.routes";
 import notificationRoutes from "./routes/notification.routes";
 import activityRoutes from "./routes/activity.routes";
 import organizationRoutes from "./routes/organization.routes";
+import editorRoutes from "./routes/editor.routes";
 
 export const app = express();
 
@@ -40,6 +41,7 @@ app.use("/api/comments", commentRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/activity", activityRoutes);
 app.use("/api/organizations", organizationRoutes);
+app.use("/api/editor", editorRoutes);
 
 // Global Error Handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {

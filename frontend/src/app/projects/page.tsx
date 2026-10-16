@@ -529,7 +529,7 @@ export default function ProjectsPage() {
                       );
                     }
                   }}
-                  placeholder="e.g. NeoFlow Cloud Platform"
+                  placeholder="e.g. Campus Event Management System"
                   className="w-full px-3.5 py-2.5 bg-paper border border-divider rounded-xl text-xs text-carbon placeholder-muted focus:outline-none focus:border-coral focus:bg-editor"
                 />
               </div>

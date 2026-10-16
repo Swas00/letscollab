@@ -293,4 +293,71 @@ export const api = {
       return apiFetch<{ activities: any[] }>(`/activity/project/${projectId}?${q.toString()}`);
     },
   },
+  editor: {
+    getFiles: (projectId: string) =>
+      apiFetch<{ projectId: string; files: any[]; commits: any[] }>(`/editor/${projectId}/files`),
+    createFile: (projectId: string, data: { name: string; folder?: string; content?: string }) =>
+      apiFetch<{ file: any }>(`/editor/${projectId}/files`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    updateFile: (projectId: string, fileId: string, data: { content?: string; name?: string; folder?: string }) =>
+      apiFetch<{ file: any }>(`/editor/${projectId}/files/${fileId}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    deleteFile: (projectId: string, fileId: string) =>
+      apiFetch<{ success: boolean; fileId: string }>(`/editor/${projectId}/files/${fileId}`, {
+        method: "DELETE",
+      }),
+    commit: (projectId: string, data: { message: string; files?: any[] }) =>
+      apiFetch<{ commit: any; commits: any[] }>(`/editor/${projectId}/commit`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    execute: (data: { code: string; language?: string; fileName?: string; files?: any[]; stdin?: string }) =>
+      apiFetch<{
+        stdout: string;
+        stderr: string;
+        exitCode: number;
+        durationMs: number;
+        problems: Array<{ file: string; line: number; column: number; severity: "error" | "warning"; message: string }>;
+        language: string;
+      }>("/editor/execute", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    debug: (data: {
+      code: string;
+      language?: string;
+      fileName?: string;
+      breakpoints?: number[];
+      watchExpressions?: string[];
+    }) =>
+      apiFetch<{
+        steps: Array<{
+          stepIndex: number;
+          line: number;
+          functionName: string;
+          isBreakpoint: boolean;
+          variables: Record<string, { value: string; type: string }>;
+          callStack: Array<{ name: string; file: string; line: number }>;
+          stdout: string;
+        }>;
+        stdout: string;
+        stderr: string;
+        problems: Array<{ file: string; line: number; column: number; severity: "error" | "warning"; message: string }>;
+        durationMs: number;
+        language: string;
+      }>("/editor/debug", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    terminal: (data: { command: string; files?: any[] }) =>
+      apiFetch<{ stdout: string; stderr: string; exitCode: number }>("/editor/terminal", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+  },
 };
+

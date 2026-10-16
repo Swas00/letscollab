@@ -366,6 +366,43 @@ code, pre, kbd, .font-mono {
   display: inline-block !important;
 }
 
+/* VS Code Breakpoint & Debugger Decorations */
+.vscode-breakpoint-glyph {
+  background: #e51400 !important;
+  border-radius: 50% !important;
+  width: 10px !important;
+  height: 10px !important;
+  margin-left: 5px !important;
+  margin-top: 4px !important;
+  box-shadow: 0 0 6px rgba(229, 20, 0, 0.7) !important;
+  cursor: pointer !important;
+}
+
+.vscode-debug-current-line {
+  background: rgba(255, 204, 0, 0.22) !important;
+  border-left: 3px solid #ffcc00 !important;
+}
+
+.vscode-debug-current-glyph {
+  background: #ffcc00 !important;
+  clip-path: polygon(0% 15%, 65% 15%, 100% 50%, 65% 85%, 0% 85%) !important;
+  width: 12px !important;
+  height: 12px !important;
+  margin-left: 4px !important;
+  margin-top: 3px !important;
+}
+
+.vscode-debug-inline-vars {
+  font-family: "IBM Plex Mono", monospace !important;
+  font-size: 11px !important;
+  color: #f59e0b !important;
+  background: rgba(245, 158, 11, 0.12) !important;
+  padding: 1px 6px !important;
+  border-radius: 4px !important;
+  margin-left: 16px !important;
+  font-style: italic !important;
+}
+
 /* =========================================================================
    ACCESSIBILITY: RESPECT PREFERS-REDUCED-MOTION
    ========================================================================= */
