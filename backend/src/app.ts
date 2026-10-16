@@ -7,6 +7,7 @@ import taskRoutes from "./routes/task.routes";
 import commentRoutes from "./routes/comment.routes";
 import notificationRoutes from "./routes/notification.routes";
 import activityRoutes from "./routes/activity.routes";
+import organizationRoutes from "./routes/organization.routes";
 
 export const app = express();
 
@@ -37,6 +38,7 @@ app.use("/api/tasks", taskRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/activity", activityRoutes);
+app.use("/api/organizations", organizationRoutes);
 
 // Global Error Handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {

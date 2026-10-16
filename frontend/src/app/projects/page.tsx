@@ -16,6 +16,7 @@ import {
   X,
   AlertCircle,
   Trash2,
+  Building,
 } from "lucide-react";
 import { PRIORITY_CONFIG, cn } from "../../lib/utils";
 import { Button } from "../../components/ui/Button";
@@ -27,6 +28,7 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [orgFilter, setOrgFilter] = useState("ALL");
   const [isLoading, setIsLoading] = useState(true);
 
   // Create Project Modal State
@@ -35,6 +37,7 @@ export default function ProjectsPage() {
   const [key, setKey] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("MEDIUM");
+  const [selectedOrgId, setSelectedOrgId] = useState("");
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [managerId, setManagerId] = useState("");
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
@@ -46,6 +49,8 @@ export default function ProjectsPage() {
     const params: any = {};
     if (statusFilter !== "ALL") params.status = statusFilter;
     if (search.trim()) params.search = search.trim();
+    if (orgFilter === "PERSONAL") params.organizationId = "personal";
+    else if (orgFilter !== "ALL") params.organizationId = orgFilter;
 
     const res = await api.projects.list(params);
     if (res.data?.projects) {
@@ -56,7 +61,7 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     fetchProjects();
-  }, [statusFilter, user?.id]);
+  }, [statusFilter, orgFilter, user?.id]);
 
   useEffect(() => {
     if (user) {
@@ -124,6 +129,7 @@ export default function ProjectsPage() {
       key,
       description,
       priority,
+      organizationId: selectedOrgId || undefined,
       managerId: managerId || undefined,
       memberIds: selectedMemberIds,
     };
@@ -136,6 +142,7 @@ export default function ProjectsPage() {
       setName("");
       setKey("");
       setDescription("");
+      setSelectedOrgId("");
       setManagerId("");
       setSelectedMemberIds([]);
       fetchProjects();
@@ -205,9 +212,9 @@ export default function ProjectsPage() {
         </div>
 
         {/* Filters & Search Toolbar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-editor border border-divider rounded-2xl shadow-sm">
-          {/* Status Tabs */}
-          <div className="flex items-center gap-1 w-full sm:w-auto overflow-x-auto">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-3 p-3 bg-editor border border-divider rounded-2xl shadow-sm">
+          {/* Status Tabs & Org Filter */}
+          <div className="flex items-center gap-1 w-full md:w-auto overflow-x-auto">
             {["ALL", "ACTIVE", "COMPLETED", "ARCHIVED"].map((tab) => (
               <button
                 key={tab}
@@ -219,9 +226,29 @@ export default function ProjectsPage() {
                     : "text-muted hover:text-carbon hover:bg-paper"
                 )}
               >
-                {tab === "ALL" ? "All Projects" : tab.charAt(0) + tab.slice(1).toLowerCase()}
+                {tab === "ALL" ? "All Status" : tab.charAt(0) + tab.slice(1).toLowerCase()}
               </button>
             ))}
+
+            {user?.organizationMemberships && user.organizationMemberships.length > 0 && (
+              <div className="h-4 w-px bg-divider mx-1.5 shrink-0" />
+            )}
+
+            {user?.organizationMemberships && user.organizationMemberships.length > 0 && (
+              <select
+                value={orgFilter}
+                onChange={(e) => setOrgFilter(e.target.value)}
+                className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-paper border border-divider text-carbon focus:outline-none focus:border-coral transition shrink-0"
+              >
+                <option value="ALL">All Workspaces</option>
+                <option value="PERSONAL">Personal Projects Only</option>
+                {user.organizationMemberships.map((m) => (
+                  <option key={m.organizationId} value={m.organizationId}>
+                    🏢 {m.organization.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Search Box */}
@@ -261,10 +288,20 @@ export default function ProjectsPage() {
                   <div className="space-y-4">
                     {/* Top Row: Key & Priority & Status */}
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-mono font-black text-coral px-2 py-0.5 rounded-md bg-coral/15 border border-coral/30">
                           {proj.key}
                         </span>
+                        {proj.organization?.name ? (
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-periwinkle/15 text-navy border border-periwinkle/30 font-semibold flex items-center gap-1">
+                            <Building className="w-2.5 h-2.5" />
+                            {proj.organization.name}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-paper text-muted border border-divider">
+                            Personal
+                          </span>
+                        )}
                         {isArchived && (
                           <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-paper text-muted border border-divider font-medium">
                             Archived
@@ -447,6 +484,30 @@ export default function ProjectsPage() {
                   </select>
                 </div>
               </div>
+
+              {/* Workspace / Organization (Optional) */}
+              {user?.organizationMemberships && user.organizationMemberships.length > 0 && (
+                <div>
+                  <label className="text-xs font-bold text-carbon block mb-1">
+                    Workspace / Organization (Optional)
+                  </label>
+                  <select
+                    value={selectedOrgId}
+                    onChange={(e) => setSelectedOrgId(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-paper border border-divider rounded-xl text-xs text-carbon focus:outline-none focus:border-coral focus:bg-editor font-medium"
+                  >
+                    <option value="">Personal / Independent (No Organization)</option>
+                    {user.organizationMemberships.map((m) => (
+                      <option key={m.organizationId} value={m.organizationId}>
+                        🏢 {m.organization.name} ({m.role})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-muted mt-1">
+                    Choose an organization to share with teammates, or leave as Personal for independent work.
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="text-xs font-bold text-carbon block mb-1">

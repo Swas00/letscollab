@@ -9,6 +9,16 @@ export interface AuthenticatedUser {
   role: string;
   avatarUrl: string | null;
   isActive: boolean;
+  organizationMemberships?: {
+    id: string;
+    organizationId: string;
+    role: string;
+    organization: {
+      id: string;
+      name: string;
+      slug: string;
+    };
+  }[];
 }
 
 export interface AuthRequest extends Request {
@@ -36,6 +46,20 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
         role: true,
         avatarUrl: true,
         isActive: true,
+        organizationMemberships: {
+          select: {
+            id: true,
+            organizationId: true,
+            role: true,
+            organization: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+              },
+            },
+          },
+        },
       },
     });
 

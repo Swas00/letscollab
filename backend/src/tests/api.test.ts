@@ -326,4 +326,68 @@ describe("LetsCollab Collaborative Platform Core Test Suite", () => {
       expect(res.body.activities.length).toBeGreaterThan(0);
     });
   });
+
+  describe("5. Optional Organization Support", () => {
+    let createdOrgId: string;
+
+    it("User can register with an optional organization name", async () => {
+      const uniqueSuffix = Date.now();
+      const uniqueEmail = `orguser_${uniqueSuffix}@testcompany.com`;
+      const uniqueOrgName = `Acme Innovations ${uniqueSuffix}`;
+      const res = await request(app)
+        .post("/api/auth/register")
+        .send({
+          name: "Org User",
+          email: uniqueEmail,
+          password: "password123",
+          role: "PROJECT_MANAGER",
+          organizationName: uniqueOrgName,
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.user.organizationMemberships).toBeDefined();
+      expect(res.body.user.organizationMemberships.length).toBeGreaterThan(0);
+      expect(res.body.user.organizationMemberships[0].organization.name).toBe(uniqueOrgName);
+      expect(res.body.user.organizationMemberships[0].role).toBe("OWNER");
+    });
+
+    it("User can create an organization via API", async () => {
+      const uniqueOrg = `Stark Labs ${Date.now()}`;
+      const res = await request(app)
+        .post("/api/organizations")
+        .set("Authorization", `Bearer ${pmToken}`)
+        .send({
+          name: uniqueOrg,
+          description: "High-tech collaboration hub",
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.organization.name).toBe(uniqueOrg);
+      expect(res.body.organization.userRole).toBe("OWNER");
+      createdOrgId = res.body.organization.id;
+    });
+
+    it("User can list their organizations", async () => {
+      const res = await request(app)
+        .get("/api/organizations")
+        .set("Authorization", `Bearer ${pmToken}`);
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body.organizations)).toBe(true);
+      expect(res.body.organizations.some((o: any) => o.id === createdOrgId)).toBe(true);
+    });
+
+    it("Organization owner can invite team member by email", async () => {
+      const res = await request(app)
+        .post(`/api/organizations/${createdOrgId}/members`)
+        .set("Authorization", `Bearer ${pmToken}`)
+        .send({
+          email: "dev@neostats.com",
+          role: "MEMBER",
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.member.user.email).toBe("dev@neostats.com");
+    });
+  });
 });

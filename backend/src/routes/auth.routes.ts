@@ -20,6 +20,7 @@ const registerSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
   role: z.enum(["ADMIN", "PROJECT_MANAGER", "TEAM_MEMBER", "VIEWER"]).optional(),
   avatarUrl: z.string().optional(),
+  organizationName: z.string().optional(),
 });
 
 const updateProfileSchema = z.object({
@@ -39,7 +40,7 @@ router.post("/register", async (req, res) => {
     return res.status(400).json({ error: "Validation failed", details: parse.error.issues });
   }
 
-  const { name, email, password, role, avatarUrl } = parse.data;
+  const { name, email, password, role, avatarUrl, organizationName } = parse.data;
 
   const existing = await prisma.user.findUnique({
     where: { email: email.toLowerCase() },
@@ -66,15 +67,60 @@ router.post("/register", async (req, res) => {
     },
   });
 
+  // Handle optional organization creation / joining
+  let createdOrg = null;
+  if (organizationName && organizationName.trim()) {
+    const orgName = organizationName.trim();
+    let baseSlug = orgName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "org";
+    let slug = baseSlug;
+
+    // Check if an organization with this slug already exists
+    let org = await prisma.organization.findUnique({ where: { slug } });
+    if (!org) {
+      org = await prisma.organization.create({
+        data: {
+          name: orgName,
+          slug,
+          members: {
+            create: {
+              userId: user.id,
+              role: "OWNER",
+            },
+          },
+        },
+      });
+      createdOrg = org;
+    } else {
+      await prisma.organizationMember.create({
+        data: {
+          organizationId: org.id,
+          userId: user.id,
+          role: "MEMBER",
+        },
+      });
+      createdOrg = org;
+    }
+  }
+
   await logActivity({
     userId: user.id,
     action: "USER_REGISTERED",
     entityType: "USER",
     entityId: user.id,
-    metadata: { name: user.name, email: user.email, role: user.role },
+    metadata: { name: user.name, email: user.email, role: user.role, organization: createdOrg?.name },
   });
 
   const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: "7d" });
+
+  const memberships = await prisma.organizationMember.findMany({
+    where: { userId: user.id },
+    select: {
+      id: true,
+      organizationId: true,
+      role: true,
+      organization: { select: { id: true, name: true, slug: true } },
+    },
+  });
 
   const safeUser = {
     id: user.id,
@@ -83,6 +129,7 @@ router.post("/register", async (req, res) => {
     role: user.role,
     avatarUrl: user.avatarUrl,
     isActive: user.isActive,
+    organizationMemberships: memberships,
   };
 
   return res.status(201).json({ token, user: safeUser });
@@ -98,6 +145,16 @@ router.post("/login", async (req, res) => {
   const { email, password } = parse.data;
   const user = await prisma.user.findUnique({
     where: { email: email.toLowerCase() },
+    include: {
+      organizationMemberships: {
+        select: {
+          id: true,
+          organizationId: true,
+          role: true,
+          organization: { select: { id: true, name: true, slug: true } },
+        },
+      },
+    },
   });
 
   if (!user) {
@@ -122,6 +179,7 @@ router.post("/login", async (req, res) => {
     role: user.role,
     avatarUrl: user.avatarUrl,
     isActive: user.isActive,
+    organizationMemberships: user.organizationMemberships,
   };
 
   return res.json({ token, user: safeUser });

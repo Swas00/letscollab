@@ -3,6 +3,17 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { api } from "../lib/api";
 
+export interface OrganizationMembership {
+  id: string;
+  organizationId: string;
+  role: "OWNER" | "ADMIN" | "MEMBER";
+  organization: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+}
+
 export interface User {
   id: string;
   email: string;
@@ -10,6 +21,7 @@ export interface User {
   role: "ADMIN" | "PROJECT_MANAGER" | "TEAM_MEMBER" | "VIEWER";
   avatarUrl?: string;
   isActive: boolean;
+  organizationMemberships?: OrganizationMembership[];
 }
 
 interface AuthContextType {
@@ -17,7 +29,7 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (name: string, email: string, password: string, role?: string) => Promise<{ success: boolean; error?: string }>;
+  register: (name: string, email: string, password: string, role?: string, organizationName?: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -69,9 +81,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { success: false, error: res.error || "Login failed" };
   };
 
-  const register = async (name: string, email: string, password: string, role?: string) => {
+  const register = async (name: string, email: string, password: string, role?: string, organizationName?: string) => {
     setIsLoading(true);
-    const res = await api.auth.register({ name, email, password, role });
+    const res = await api.auth.register({ name, email, password, role, organizationName });
     setIsLoading(false);
 
     if (res.data) {

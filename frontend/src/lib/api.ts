@@ -62,7 +62,7 @@ export const api = {
         method: "POST",
         body: JSON.stringify(credentials),
       }),
-    register: (data: { name: string; email: string; password: string; role?: string }) =>
+    register: (data: { name: string; email: string; password: string; role?: string; organizationName?: string }) =>
       apiFetch<{ token: string; user: any }>("/auth/register", {
         method: "POST",
         body: JSON.stringify(data),
@@ -77,6 +77,24 @@ export const api = {
       apiFetch<{ message: string }>("/auth/change-password", {
         method: "PUT",
         body: JSON.stringify(data),
+      }),
+  },
+  organizations: {
+    list: () => apiFetch<{ organizations: any[] }>("/organizations"),
+    get: (id: string) => apiFetch<{ organization: any }>(`/organizations/${id}`),
+    create: (data: { name: string; description?: string }) =>
+      apiFetch<{ organization: any }>("/organizations", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    addMember: (id: string, data: { email: string; role?: string }) =>
+      apiFetch<{ member: any }>(`/organizations/${id}/members`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    removeMember: (id: string, userId: string) =>
+      apiFetch<{ message: string }>(`/organizations/${id}/members/${userId}`, {
+        method: "DELETE",
       }),
   },
   users: {
@@ -105,10 +123,11 @@ export const api = {
       }),
   },
   projects: {
-    list: (params?: { status?: string; search?: string }) => {
+    list: (params?: { status?: string; search?: string; organizationId?: string }) => {
       const q = new URLSearchParams();
       if (params?.status) q.set("status", params.status);
       if (params?.search) q.set("search", params.search);
+      if (params?.organizationId) q.set("organizationId", params.organizationId);
       return apiFetch<{ projects: any[] }>(`/projects?${q.toString()}`);
     },
     get: (id: string) => apiFetch<{ project: any; userAccess: any }>(`/projects/${id}`),

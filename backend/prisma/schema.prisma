@@ -27,6 +27,7 @@ model User {
   notifications   Notification[]   @relation("UserNotifications")
   actedNotifications Notification[] @relation("NotificationActor")
   activityLogs    ActivityLog[]
+  organizationMemberships OrganizationMember[]
 }
 
 model Project {
@@ -40,6 +41,8 @@ model Project {
   creator     User?           @relation("ProjectCreator", fields: [creatorId], references: [id], onDelete: SetNull)
   managerId   String?
   manager     User?           @relation("ProjectManager", fields: [managerId], references: [id], onDelete: SetNull)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   startDate   DateTime?
   endDate     DateTime?
   createdAt   DateTime        @default(now())
@@ -129,4 +132,29 @@ model ActivityLog {
   entityId   String
   metadata   String?  // JSON string
   createdAt  DateTime @default(now())
+}
+
+model Organization {
+  id          String               @id @default(cuid())
+  name        String
+  slug        String               @unique
+  description String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  members     OrganizationMember[]
+  projects    Project[]
+}
+
+model OrganizationMember {
+  id             String        @id @default(cuid())
+  organizationId String
+  userId         String
+  role           String        @default("MEMBER") // OWNER, ADMIN, MEMBER
+  joinedAt       DateTime      @default(now())
+
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
 }

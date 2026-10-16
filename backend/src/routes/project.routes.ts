@@ -15,6 +15,7 @@ const createProjectSchema = z.object({
   description: z.string().optional(),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).default("MEDIUM"),
   managerId: z.string().optional(),
+  organizationId: z.string().optional(),
   memberIds: z.array(z.string()).optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
@@ -26,6 +27,7 @@ const updateProjectSchema = z.object({
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).optional(),
   status: z.enum(["ACTIVE", "COMPLETED", "ARCHIVED"]).optional(),
   managerId: z.string().optional(),
+  organizationId: z.string().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
 });
@@ -41,7 +43,7 @@ const updateMemberRoleSchema = z.object({
 
 // List projects (Admin sees all; others see only projects they created or are assigned to)
 router.get("/", authenticateToken, async (req: AuthRequest, res: Response) => {
-  const { status, search } = req.query;
+  const { status, search, organizationId } = req.query;
 
   const whereClause: any = {};
 
@@ -52,6 +54,12 @@ router.get("/", authenticateToken, async (req: AuthRequest, res: Response) => {
       { members: { some: { userId: req.user?.id } } },
       { tasks: { some: { assigneeId: req.user?.id } } },
     ];
+  }
+
+  if (organizationId === "personal") {
+    whereClause.organizationId = null;
+  } else if (organizationId && typeof organizationId === "string") {
+    whereClause.organizationId = organizationId;
   }
 
   if (status && typeof status === "string") {
@@ -70,6 +78,9 @@ router.get("/", authenticateToken, async (req: AuthRequest, res: Response) => {
       },
       manager: {
         select: { id: true, name: true, email: true, avatarUrl: true },
+      },
+      organization: {
+        select: { id: true, name: true, slug: true },
       },
       members: {
         include: {
@@ -132,6 +143,7 @@ router.post("/", authenticateToken, async (req: AuthRequest, res: Response) => {
       status: "ACTIVE",
       creatorId: req.user!.id,
       managerId,
+      organizationId: parse.data.organizationId || null,
       startDate: parse.data.startDate ? new Date(parse.data.startDate) : null,
       endDate: parse.data.endDate ? new Date(parse.data.endDate) : null,
       members: {
@@ -141,6 +153,7 @@ router.post("/", authenticateToken, async (req: AuthRequest, res: Response) => {
     include: {
       creator: { select: { id: true, name: true, email: true, avatarUrl: true } },
       manager: { select: { id: true, name: true, email: true, avatarUrl: true } },
+      organization: { select: { id: true, name: true, slug: true } },
       members: {
         include: {
           user: { select: { id: true, name: true, email: true, avatarUrl: true, role: true } },
@@ -185,6 +198,9 @@ router.get("/:id", authenticateToken, requireProjectAccess(), async (req: AuthRe
       },
       manager: {
         select: { id: true, name: true, email: true, avatarUrl: true },
+      },
+      organization: {
+        select: { id: true, name: true, slug: true },
       },
       members: {
         include: {

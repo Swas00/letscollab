@@ -16,6 +16,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState("PROJECT_MANAGER");
+  const [organizationName, setOrganizationName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -40,7 +41,7 @@ export default function RegisterPage() {
     }
 
     setIsLoading(true);
-    const res = await register(name, email, password, role);
+    const res = await register(name, email, password, role, organizationName);
     setIsLoading(false);
 
     if (res.success) {
@@ -118,6 +119,27 @@ export default function RegisterPage() {
                 <option value="TEAM_MEMBER">Team Member (Can work on tasks & comment)</option>
                 <option value="VIEWER">Viewer (Read-only observation)</option>
               </select>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-carbon">
+                  Organization / Company
+                </label>
+                <span className="text-[10px] text-muted font-medium bg-paper border border-divider px-2 py-0.5 rounded-full">
+                  Optional
+                </span>
+              </div>
+              <input
+                type="text"
+                value={organizationName}
+                onChange={(e) => setOrganizationName(e.target.value)}
+                placeholder="e.g. Acme Corp or Stark Labs"
+                className="w-full px-3.5 py-2.5 bg-paper border border-divider rounded-xl text-sm text-carbon placeholder-muted focus:outline-none focus:border-coral focus:bg-editor transition"
+              />
+              <p className="text-[11px] text-muted mt-1 leading-relaxed">
+                Opt into a shared organization workspace or leave blank to work independently.
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
