@@ -131,8 +131,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-paper text-carbon flex flex-col md:flex-row antialiased selection:bg-periwinkle selection:text-carbon">
-      {/* Toast Notification Container */}
-      <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full">
+      {/* Accessible Skip Link */}
+      <a href="#main-app-content" className="sr-only focus:not-sr-only">
+        Skip to main content
+      </a>
+
+      {/* Toast Notification Live Region */}
+      <div
+        role="status"
+        aria-live="polite"
+        className="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full"
+      >
         {toasts.map((toast) => (
           <div
             key={toast.id}
@@ -147,6 +156,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   toast.type === "conflict" && "bg-coral",
                   toast.type === "info" && "bg-periwinkle border border-[#364573]"
                 )}
+                aria-hidden="true"
               />
               <div>
                 <p className="text-sm font-bold text-carbon">{toast.title}</p>
@@ -155,6 +165,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
             <button
               onClick={() => removeToast(toast.id)}
+              aria-label="Dismiss notification"
               className="text-muted hover:text-carbon transition"
             >
               <X className="w-4 h-4" />
@@ -163,8 +174,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         ))}
       </div>
 
-      {/* Sidebar Navigation */}
-      <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r border-divider bg-editor flex flex-col justify-between shrink-0 shadow-sm">
+      {/* Sidebar Navigation Landmark */}
+      <aside aria-label="Sidebar Navigation" className="w-full md:w-64 border-b md:border-b-0 md:border-r border-divider bg-editor flex flex-col justify-between shrink-0 shadow-sm">
         <div>
           {/* Logo & App Title */}
           <div className="p-5 border-b border-divider flex items-center justify-between">
@@ -204,7 +215,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Navigation Links */}
-          <nav className="p-3 space-y-1">
+          <nav aria-label="Main Application Navigation" className="p-3 space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive =
@@ -216,6 +227,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
+                  aria-current={isActive ? "page" : undefined}
                   className={cn(
                     "flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-160 ease-out select-none hover:-translate-y-0.5 active:scale-[0.98]",
                     isActive
@@ -397,12 +409,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Page Main Content */}
-        <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-paper">{children}</main>
+        <main id="main-app-content" tabIndex={-1} className="flex-1 overflow-y-auto p-6 md:p-8 bg-paper focus:outline-hidden">
+          {children}
+        </main>
       </div>
 
       {/* Organization Workspace Modal */}
       {showOrgModal && (
-        <div className="fixed inset-0 z-50 bg-carbon/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="org-modal-title"
+          className="fixed inset-0 z-50 bg-carbon/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+        >
           <div className="bg-editor border border-divider rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="p-5 border-b border-divider flex items-center justify-between bg-paper/50">
@@ -411,7 +430,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                   <Building className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-base text-carbon">
+                  <h3 id="org-modal-title" className="font-extrabold text-base text-carbon">
                     {activeMembership ? activeMembership.organization.name : "Organization Workspaces"}
                   </h3>
                   <p className="text-xs text-muted">

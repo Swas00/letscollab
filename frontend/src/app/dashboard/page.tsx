@@ -174,13 +174,13 @@ export default function DashboardPage() {
         </div>
 
         {/* 4 Stat Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <section aria-label="Key Performance Indicators" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="p-5 rounded-2xl bg-editor border border-divider shadow-sm flex items-center justify-between">
             <div>
               <p className="text-xs text-muted font-medium">Active Projects</p>
-              <h3 className="text-2xl font-black text-carbon mt-1">{activeProjectsCount}</h3>
+              <p className="text-2xl font-black text-carbon mt-1">{activeProjectsCount}</p>
             </div>
-            <div className="p-3 bg-periwinkle border border-[#bec5ea] rounded-xl text-carbon">
+            <div className="p-3 bg-periwinkle border border-[#bec5ea] rounded-xl text-carbon" aria-hidden="true">
               <FolderKanban className="w-5 h-5" />
             </div>
           </div>
@@ -188,9 +188,9 @@ export default function DashboardPage() {
           <div className="p-5 rounded-2xl bg-editor border border-divider shadow-sm flex items-center justify-between">
             <div>
               <p className="text-xs text-muted font-medium">Assigned to Me</p>
-              <h3 className="text-2xl font-black text-carbon mt-1">{myAssignedTasks.length}</h3>
+              <p className="text-2xl font-black text-carbon mt-1">{myAssignedTasks.length}</p>
             </div>
-            <div className="p-3 bg-moss border border-[#b5cea8] rounded-xl text-carbon">
+            <div className="p-3 bg-moss border border-[#b5cea8] rounded-xl text-carbon" aria-hidden="true">
               <Clock className="w-5 h-5" />
             </div>
           </div>
@@ -198,9 +198,9 @@ export default function DashboardPage() {
           <div className="p-5 rounded-2xl bg-editor border border-divider shadow-sm flex items-center justify-between">
             <div>
               <p className="text-xs text-muted font-medium">In Progress</p>
-              <h3 className="text-2xl font-black text-carbon mt-1">{inProgressCount}</h3>
+              <p className="text-2xl font-black text-carbon mt-1">{inProgressCount}</p>
             </div>
-            <div className="p-3 bg-coral/15 border border-coral/30 rounded-xl text-coral">
+            <div className="p-3 bg-coral/15 border border-coral/30 rounded-xl text-coral" aria-hidden="true">
               <TrendingUp className="w-5 h-5" />
             </div>
           </div>
@@ -208,24 +208,27 @@ export default function DashboardPage() {
           <div className="p-5 rounded-2xl bg-editor border border-divider shadow-sm flex items-center justify-between">
             <div>
               <p className="text-xs text-muted font-medium">Tasks Completed</p>
-              <h3 className="text-2xl font-black text-carbon mt-1">{completedCount}</h3>
+              <p className="text-2xl font-black text-carbon mt-1">{completedCount}</p>
             </div>
-            <div className="p-3 bg-moss border border-[#b5cea8] rounded-xl text-[#254622]">
+            <div className="p-3 bg-moss border border-[#b5cea8] rounded-xl text-[#254622]" aria-hidden="true">
               <CheckCircle2 className="w-5 h-5" />
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Charts Section */}
-        <DashboardCharts statusData={statusChartData} priorityData={priorityChartData} />
+        <section aria-labelledby="analytics-heading">
+          <h2 id="analytics-heading" className="sr-only">Project Analytics & Breakdown</h2>
+          <DashboardCharts statusData={statusChartData} priorityData={priorityChartData} />
+        </section>
 
         {/* Two Column Split: My Tasks & Live Activity Stream */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* My Tasks List */}
-          <div className="p-6 rounded-3xl bg-editor border border-divider shadow-sm">
+          <section aria-labelledby="assigned-tasks-heading" className="p-6 rounded-3xl bg-editor border border-divider shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-sm font-bold text-carbon">My Assigned Tasks</h3>
+                <h2 id="assigned-tasks-heading" className="text-sm font-bold text-carbon">My Assigned Tasks</h2>
                 <p className="text-xs text-muted">Direct work items requiring your attention</p>
               </div>
               <span className="text-xs text-muted font-mono">
@@ -240,8 +243,17 @@ export default function DashboardPage() {
                 return (
                   <div
                     key={t.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Open task ${t.projectKey || "TSK"}-${t.taskNumber}: ${t.title}`}
                     onClick={() => setSelectedTaskId(t.id)}
-                    className="p-3.5 rounded-xl bg-paper hover:bg-editor border border-divider hover:border-coral cursor-pointer transition-all duration-150 ease-out hover:-translate-y-0.5 active:scale-[0.99] flex items-center justify-between group shadow-xs"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSelectedTaskId(t.id);
+                      }
+                    }}
+                    className="p-3.5 rounded-xl bg-paper hover:bg-editor border border-divider hover:border-coral cursor-pointer transition-all duration-150 ease-out hover:-translate-y-0.5 active:scale-[0.99] flex items-center justify-between group shadow-xs focus-visible:outline-coral"
                   >
                     <div className="space-y-1 min-w-0 pr-3">
                       <div className="flex items-center gap-2">
@@ -252,9 +264,9 @@ export default function DashboardPage() {
                           v{t.version}
                         </span>
                       </div>
-                      <h4 className="text-xs font-bold text-carbon group-hover:text-coral transition truncate">
+                      <p className="text-xs font-bold text-carbon group-hover:text-coral transition truncate">
                         {t.title}
-                      </h4>
+                      </p>
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
@@ -279,17 +291,17 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-          </div>
+          </section>
 
           {/* Real-time Activity Stream */}
-          <div className="p-6 rounded-3xl bg-editor border border-divider shadow-sm">
+          <section aria-labelledby="activity-feed-heading" className="p-6 rounded-3xl bg-editor border border-divider shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <Activity className="w-4 h-4 text-coral" />
-                <h3 className="text-sm font-bold text-carbon">Live Activity Feed</h3>
+                <Activity className="w-4 h-4 text-coral" aria-hidden="true" />
+                <h2 id="activity-feed-heading" className="text-sm font-bold text-carbon">Live Activity Feed</h2>
               </div>
               <span className="text-[11px] text-muted font-mono flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-moss border border-[#3B5A38]" />
+                <span className="w-2 h-2 rounded-full bg-moss border border-[#3B5A38]" aria-hidden="true" />
                 Real-time
               </span>
             </div>
@@ -331,7 +343,7 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-          </div>
+          </section>
         </div>
       </div>
 

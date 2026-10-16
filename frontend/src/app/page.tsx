@@ -18,35 +18,49 @@ import {
   Play,
   Check,
   Search,
+  Mail,
+  FolderKanban,
+  Bug,
+  GitBranch,
+  Cpu,
 } from "lucide-react";
 import { CollaborativeEditor } from "../components/editor/CollaborativeEditor";
 import { Button } from "../components/ui/Button";
-import BackgroundCarousel from "../components/hero/BackgroundCarousel";
 import { Logo, LogoIcon } from "../components/ui/Logo";
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-paper text-carbon flex flex-col justify-between selection:bg-periwinkle selection:text-carbon overflow-x-hidden font-sans">
-      {/* Navigation Bar */}
+      {/* Accessible Skip Link */}
+      <a href="#main-content" className="sr-only focus:not-sr-only">
+        Skip to main content
+      </a>
+
+      {/* 1. Header & Navigation Landmark */}
       <header className="sticky top-0 z-40 w-full border-b border-divider bg-editor/95 backdrop-blur-md shadow-xs">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Logo href="/" size="md" badge="v1.4 • CRDT" />
+          <Logo href="/" size="md" badge="v2.0 • VS Code Engine" />
 
-          {/* Desktop Nav Links */}
-          <nav className="hidden md:flex items-center gap-7 text-xs font-semibold text-muted">
-            <a href="#editor" className="hover:text-carbon transition-colors duration-140">Code Workspace</a>
-            <a href="#features" className="hover:text-carbon transition-colors duration-140">Capabilities</a>
-            <a href="#workflow" className="hover:text-carbon transition-colors duration-140">Architecture</a>
-            <a href="#governance" className="hover:text-carbon transition-colors duration-140">Governance</a>
-            <Link href="/carousel" className="hover:text-coral transition-colors duration-140 flex items-center gap-1.5 font-mono text-[11px] text-coral font-bold bg-coral/10 hover:bg-coral/20 px-2 py-0.5 rounded-full border border-coral/25">
-              <span>Zero-G Motion</span>
-              <span className="text-[9px] bg-coral text-white px-1 rounded font-bold">20F</span>
-            </Link>
+          {/* Desktop Navigation Links */}
+          <nav aria-label="Main Navigation" className="hidden md:flex items-center gap-7 text-xs font-semibold text-muted">
+            <a href="#workspace" className="hover:text-carbon transition-colors duration-140">
+              VS Code Workspace
+            </a>
+            <a href="#capabilities" className="hover:text-carbon transition-colors duration-140">
+              Platform Features
+            </a>
+            <a href="#workflow" className="hover:text-carbon transition-colors duration-140">
+              Team Workflow
+            </a>
+            <a href="#security" className="hover:text-carbon transition-colors duration-140">
+              Security & RBAC
+            </a>
           </nav>
 
-          <div className="flex items-center gap-2.5">
+          {/* Quick Action Buttons */}
+          <div className="flex items-center gap-3">
             <Link href="/login">
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" className="font-bold">
                 Sign In
               </Button>
             </Link>
@@ -59,199 +73,315 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Hero Section with Auto-Playing 20-Frame Carousel Background */}
-      <main className="flex-1">
-        <section className="relative overflow-hidden pt-16 pb-16 px-6 min-h-[92vh] flex flex-col justify-center items-center">
-          {/* Full-Width & Full-Height 20-Frame Auto-Playing Responsive Slideshow Background */}
-          <BackgroundCarousel className="absolute inset-0" />
-
-          <div className="relative z-10 max-w-7xl mx-auto text-center space-y-6 w-full">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-editor/95 backdrop-blur-md border border-divider text-carbon text-xs font-mono shadow-xs">
-              <span className="w-2 h-2 rounded-full bg-[#3B5A38]" />
-              <span>Real-Time Multi-Developer Coding Platform</span>
-              <span className="text-muted">•</span>
-              <span className="text-coral font-bold">Sub-10ms Sync</span>
+      {/* 2. Main Landmark */}
+      <main id="main-content" className="flex-1 focus:outline-none">
+        {/* HERO SECTION */}
+        <section aria-labelledby="hero-heading" className="relative pt-16 pb-14 px-6 max-w-7xl mx-auto">
+          <div className="text-center space-y-6 max-w-4xl mx-auto">
+            {/* Live Status Pill */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-editor border border-divider text-carbon text-xs font-mono shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" aria-hidden="true" />
+              <span className="font-semibold">Team-Based Project Collaboration</span>
+              <span className="text-muted" aria-hidden="true">•</span>
+              <span className="text-coral font-bold">VS Code Real-Time IDE</span>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.15] max-w-4xl mx-auto text-carbon">
-              The real-time collaborative code editor built for{" "}
+            {/* Main Headline */}
+            <h1
+              id="hero-heading"
+              className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.12] text-carbon"
+            >
+              Collaborate, code, and debug together in{" "}
               <span className="text-coral underline decoration-periwinkle decoration-wavy decoration-2">
-                high-velocity teams.
+                real time.
               </span>
             </h1>
 
+            {/* Sub-headline description */}
             <p className="text-muted text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
-              Multiple developers writing, debugging, and reviewing code in the same workspace with
-              live collaborator presence, vector clock synchronization, integrated terminal execution, and zero artificial delays.
+              Create individual accounts, spin up private project workspaces, invite teammates directly by email, and build with a full in-browser VS Code IDE equipped with live execution and step-by-step debugging.
             </p>
 
+            {/* CTAs */}
             <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
               <Link href="/register">
-                <Button variant="primary" size="lg" withArrow>
-                  Open Collaborative Workspace
+                <Button variant="primary" size="lg" withArrow className="font-bold shadow-md">
+                  Create Free Account
                 </Button>
               </Link>
               <Link href="/login">
-                <Button variant="secondary" size="lg">
-                  Sign In to Existing Project
+                <Button variant="secondary" size="lg" className="font-bold">
+                  Sign In to Workspace
                 </Button>
               </Link>
             </div>
 
-            {/* Interactive Live Collaborative Editor Showcase */}
-            <div id="editor" className="pt-8 max-w-6xl mx-auto text-left">
-              <div className="mb-2 flex items-center justify-between text-xs font-mono text-muted px-1">
-                <span>LIVE INTERACTIVE WORKSPACE (TRY TYPING, RUNNING & FORMATTING)</span>
-                <span>⌘K for Command Palette</span>
+            {/* Value Badges */}
+            <div className="flex flex-wrap items-center justify-center gap-6 pt-4 text-xs font-mono text-muted">
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>Email Invitation Access Control</span>
               </div>
-              <CollaborativeEditor projectId="landing-demo" />
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>Node.js, TypeScript & Python Runner</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>OCC Concurrency Conflict Detection</span>
+              </div>
             </div>
+          </div>
+
+          {/* Interactive VS Code Editor Showcase */}
+          <div id="workspace" className="mt-12 max-w-6xl mx-auto">
+            <div className="mb-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs font-mono text-muted px-2">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-carbon uppercase tracking-wider">
+                  Interactive Live Workspace
+                </span>
+                <span className="text-muted">• Try setting breakpoints, running code, or opening split preview</span>
+              </div>
+              <span className="text-[11px] bg-paper px-2 py-0.5 rounded border border-divider font-semibold text-coral">
+                Press ⌘K for Command Palette
+              </span>
+            </div>
+
+            {/* Embedded VS Code Lookalike IDE */}
+            <CollaborativeEditor projectId="landing-demo" />
           </div>
         </section>
 
-        {/* Features Grid */}
-        <section id="features" className="py-20 px-6 max-w-6xl mx-auto border-t border-divider space-y-12">
+        {/* 3. Core Capabilities Section */}
+        <section id="capabilities" aria-labelledby="capabilities-heading" className="py-20 px-6 max-w-6xl mx-auto border-t border-divider space-y-12">
           <div className="text-center space-y-2">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-coral font-mono">Engineered For Developers</h2>
-            <h3 className="text-2xl sm:text-3xl font-black text-carbon">Tactile speed and deterministic consensus</h3>
+            <h2 className="text-xs font-bold uppercase tracking-widest text-coral font-mono">
+              Designed For High-Velocity Teams
+            </h2>
+            <h3 id="capabilities-heading" className="text-2xl sm:text-3xl font-black text-carbon">
+              Everything your team needs to build with confidence
+            </h3>
             <p className="text-muted text-xs sm:text-sm max-w-xl mx-auto">
-              Every interaction designed for software teams: instant peer propagation, robust OCC conflict prevention, and zero AI gimmicks.
+              A cohesive architecture connecting user accounts, project access control, task kanban, and developer tools in a unified interface.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            <div className="card-developer p-6 space-y-3">
-              <div className="w-9 h-9 rounded-lg bg-coral/15 border border-coral/30 flex items-center justify-center text-coral">
-                <Zap className="w-4.5 h-4.5" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Card 1 */}
+            <div className="card-developer p-6 space-y-3.5 bg-editor border border-divider rounded-2xl shadow-xs">
+              <div className="w-10 h-10 rounded-xl bg-coral/15 border border-coral/30 flex items-center justify-center text-coral">
+                <Code2 className="w-5 h-5" />
               </div>
-              <h4 className="font-bold text-carbon text-sm">Sub-10ms CRDT Sync</h4>
+              <h4 className="font-bold text-carbon text-base">Full VS Code Web IDE</h4>
               <p className="text-xs text-muted leading-relaxed">
-                Code edits, cursor coordinates, and document selections synchronize live across all connected peers with vector clocks.
+                Activity Bar with Explorer, Search & Replace, Source Control, Extensions, split live HTML preview, and responsive multi-file tabs.
               </p>
             </div>
 
-            <div className="card-developer p-6 space-y-3">
-              <div className="w-9 h-9 rounded-lg bg-periwinkle border border-[#bec5ea] flex items-center justify-center text-carbon">
-                <RefreshCw className="w-4.5 h-4.5" />
+            {/* Card 2 */}
+            <div className="card-developer p-6 space-y-3.5 bg-editor border border-divider rounded-2xl shadow-xs">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-600">
+                <Bug className="w-5 h-5" />
               </div>
-              <h4 className="font-bold text-carbon text-sm">Conflict Prevention (OCC)</h4>
+              <h4 className="font-bold text-carbon text-base">Live Run & Step-by-Step Debugger</h4>
               <p className="text-xs text-muted leading-relaxed">
-                Optimistic Concurrency Control rejects stale writes with HTTP 409 and presents side-by-side visual diffs for clean resolution.
+                Click in the gutter to set breakpoints, step through lines (F10), inspect live variables, evaluate watch expressions, and inspect call stacks.
               </p>
             </div>
 
-            <div className="card-developer p-6 space-y-3">
-              <div className="w-9 h-9 rounded-lg bg-moss border border-[#b5cea8] flex items-center justify-center text-[#254622]">
-                <Shield className="w-4.5 h-4.5" />
+            {/* Card 3 */}
+            <div className="card-developer p-6 space-y-3.5 bg-editor border border-divider rounded-2xl shadow-xs">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-700">
+                <Mail className="w-5 h-5" />
               </div>
-              <h4 className="font-bold text-carbon text-sm">Server RBAC Governance</h4>
+              <h4 className="font-bold text-carbon text-base">Direct Email Invitations</h4>
               <p className="text-xs text-muted leading-relaxed">
-                Strict server-enforced role authorizations across Admin, Project Manager, Developer, and Viewer permissions.
+                Invite any teammate by typing their email. The system dispatches secure tokens and welcome guides with single-click acceptance.
               </p>
             </div>
 
-            <div className="card-developer p-6 space-y-3">
-              <div className="w-9 h-9 rounded-lg bg-paper border border-divider flex items-center justify-center text-carbon">
-                <Terminal className="w-4.5 h-4.5 text-carbon" />
+            {/* Card 4 */}
+            <div className="card-developer p-6 space-y-3.5 bg-editor border border-divider rounded-2xl shadow-xs">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-700">
+                <Shield className="w-5 h-5" />
               </div>
-              <h4 className="font-bold text-carbon text-sm">Integrated Terminal & Run</h4>
+              <h4 className="font-bold text-carbon text-base">Private Project Workspaces</h4>
               <p className="text-xs text-muted leading-relaxed">
-                Collapsible terminal drawer with test execution, compilation diagnostics, and command history at your fingertips.
+                Strict server-side role enforcement (Project Owner, Member, Viewer). Non-members cannot access project data or mutate code files.
               </p>
             </div>
 
-            <div className="card-developer p-6 space-y-3">
-              <div className="w-9 h-9 rounded-lg bg-periwinkle border border-[#bec5ea] flex items-center justify-center text-carbon">
-                <BarChart3 className="w-4.5 h-4.5" />
+            {/* Card 5 */}
+            <div className="card-developer p-6 space-y-3.5 bg-editor border border-divider rounded-2xl shadow-xs">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-700">
+                <RefreshCw className="w-5 h-5" />
               </div>
-              <h4 className="font-bold text-carbon text-sm">Sprint & Task Velocity</h4>
+              <h4 className="font-bold text-carbon text-base">Optimistic Concurrency (OCC)</h4>
               <p className="text-xs text-muted leading-relaxed">
-                Integrated sprint boards, issue tracking, and completion velocity metrics linked directly to project branches.
+                Deterministic version counters reject stale overwrites with HTTP 409 and provide interactive side-by-side diff resolution.
               </p>
             </div>
 
-            <div className="card-developer p-6 space-y-3">
-              <div className="w-9 h-9 rounded-lg bg-moss border border-[#b5cea8] flex items-center justify-center text-[#254622]">
-                <MessageSquare className="w-4.5 h-4.5" />
+            {/* Card 6 */}
+            <div className="card-developer p-6 space-y-3.5 bg-editor border border-divider rounded-2xl shadow-xs">
+              <div className="w-10 h-10 rounded-xl bg-paper border border-divider flex items-center justify-center text-carbon">
+                <Terminal className="w-5 h-5" />
               </div>
-              <h4 className="font-bold text-carbon text-sm">Peer Mentions & Alerts</h4>
+              <h4 className="font-bold text-carbon text-base">Integrated Multi-Tab Terminal</h4>
               <p className="text-xs text-muted leading-relaxed">
-                Contextual code comments, live peer presence avatars with identity colors, and real-time team notifications.
+                Problems tab with error jump, Output logs, Debug Console with expression REPL, and an integrated bash shell with command history.
               </p>
             </div>
           </div>
         </section>
 
-        {/* Workflow Section */}
-        <section id="workflow" className="py-20 px-6 max-w-5xl mx-auto border-t border-divider space-y-12">
+        {/* 4. Workflow Section */}
+        <section id="workflow" aria-labelledby="workflow-heading" className="py-20 px-6 max-w-5xl mx-auto border-t border-divider space-y-12">
           <div className="text-center space-y-2">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-coral font-mono">Workflow Architecture</h2>
-            <h3 className="text-2xl sm:text-3xl font-black text-carbon">From branch commit to shared execution</h3>
+            <h2 className="text-xs font-bold uppercase tracking-widest text-coral font-mono">
+              Step-by-Step Teaming
+            </h2>
+            <h3 id="workflow-heading" className="text-2xl sm:text-3xl font-black text-carbon">
+              How project collaboration works on LetsCollab
+            </h3>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
-            <div className="card-developer p-6 space-y-3">
-              <div className="w-7 h-7 rounded-md bg-coral text-white font-mono font-bold flex items-center justify-center text-xs">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="card-developer p-6 space-y-3 bg-editor border border-divider rounded-2xl">
+              <div className="w-8 h-8 rounded-lg bg-coral text-white font-mono font-bold flex items-center justify-center text-xs shadow-xs">
                 01
               </div>
-              <h4 className="font-bold text-carbon text-sm">Join Project Room</h4>
+              <h4 className="font-bold text-carbon text-sm">Create Project & Add Teammates</h4>
               <p className="text-xs text-muted leading-relaxed">
-                Developers connect via Socket.IO, establish active peer presence, and sync file trees instantly.
+                Create a project name and description. You automatically become the Project Owner, and can invite teammates by typing their email addresses.
               </p>
             </div>
 
-            <div className="card-developer p-6 space-y-3">
-              <div className="w-7 h-7 rounded-md bg-carbon text-paper font-mono font-bold flex items-center justify-center text-xs">
+            <div className="card-developer p-6 space-y-3 bg-editor border border-divider rounded-2xl">
+              <div className="w-8 h-8 rounded-lg bg-carbon text-paper font-mono font-bold flex items-center justify-center text-xs shadow-xs">
                 02
               </div>
-              <h4 className="font-bold text-carbon text-sm">Collaborative Edit & Format</h4>
+              <h4 className="font-bold text-carbon text-sm">Accept Invitation via Email</h4>
               <p className="text-xs text-muted leading-relaxed">
-                See teammate cursors in real time with distinct identity colors, format code with keyboard shortcuts, and resolve vector clocks.
+                Invited members receive an email with project details and a secure link. Existing users accept with one click; new users register their verified account.
               </p>
             </div>
 
-            <div className="card-developer p-6 space-y-3">
-              <div className="w-7 h-7 rounded-md bg-moss text-[#254622] font-mono font-bold flex items-center justify-center text-xs border border-[#3B5A38]/30">
+            <div className="card-developer p-6 space-y-3 bg-editor border border-divider rounded-2xl">
+              <div className="w-8 h-8 rounded-lg bg-emerald-700 text-white font-mono font-bold flex items-center justify-center text-xs shadow-xs">
                 03
               </div>
-              <h4 className="font-bold text-carbon text-sm">Run & Audit</h4>
+              <h4 className="font-bold text-carbon text-sm">Build, Run & Debug Together</h4>
               <p className="text-xs text-muted leading-relaxed">
-                Execute tests in the terminal drawer while immutable audit records track every milestone state.
+                All authorized members access the private workspace, view shared files and tasks, track progress on sprint boards, and code simultaneously.
               </p>
             </div>
           </div>
         </section>
 
-        {/* CTA Banner */}
-        <section id="governance" className="py-14 px-6 max-w-4xl mx-auto text-center space-y-5 bg-carbon text-paper rounded-2xl my-12 shadow-xl">
-          <h2 className="text-2xl sm:text-3xl font-black text-paper">Ready to code with your team in real time?</h2>
-          <p className="text-xs sm:text-sm text-paper/80 max-w-lg mx-auto">
-            Open your collaborative workspace and start coding simultaneously with zero latency.
-          </p>
-          <div className="pt-2">
+        {/* 5. Security & Governance Matrix */}
+        <section id="security" aria-labelledby="security-heading" className="py-20 px-6 max-w-5xl mx-auto border-t border-divider space-y-8">
+          <div className="text-center space-y-2">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-coral font-mono">
+              Enterprise Access Control
+            </h2>
+            <h3 id="security-heading" className="text-2xl sm:text-3xl font-black text-carbon">
+              Role-Based Permissions & Isolation
+            </h3>
+          </div>
+
+          <div className="overflow-x-auto rounded-2xl border border-divider bg-editor shadow-sm">
+            <table className="w-full text-left text-xs font-sans">
+              <thead className="bg-paper/80 border-b border-divider text-muted uppercase font-mono text-[11px]">
+                <tr>
+                  <th scope="col" className="p-3.5 font-bold text-carbon">Capability</th>
+                  <th scope="col" className="p-3.5 font-bold text-coral">Project Owner</th>
+                  <th scope="col" className="p-3.5 font-bold text-blue-600">Project Member</th>
+                  <th scope="col" className="p-3.5 font-bold text-muted">Non-Member</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-divider font-mono">
+                <tr>
+                  <td className="p-3.5 font-sans font-medium text-carbon">Invite & Remove Project Members</td>
+                  <td className="p-3.5 text-emerald-700 font-bold">✓ Granted</td>
+                  <td className="p-3.5 text-muted">✕ Blocked</td>
+                  <td className="p-3.5 text-coral">✕ Blocked (403)</td>
+                </tr>
+                <tr>
+                  <td className="p-3.5 font-sans font-medium text-carbon">Edit Files & Run in VS Code IDE</td>
+                  <td className="p-3.5 text-emerald-700 font-bold">✓ Granted</td>
+                  <td className="p-3.5 text-emerald-700 font-bold">✓ Granted</td>
+                  <td className="p-3.5 text-coral">✕ Blocked (403)</td>
+                </tr>
+                <tr>
+                  <td className="p-3.5 font-sans font-medium text-carbon">Manage Tasks & Kanban Sprints</td>
+                  <td className="p-3.5 text-emerald-700 font-bold">✓ Granted</td>
+                  <td className="p-3.5 text-emerald-700 font-bold">✓ Granted</td>
+                  <td className="p-3.5 text-coral">✕ Blocked (403)</td>
+                </tr>
+                <tr>
+                  <td className="p-3.5 font-sans font-medium text-carbon">Delete / Archive Project</td>
+                  <td className="p-3.5 text-emerald-700 font-bold">✓ Owner Only</td>
+                  <td className="p-3.5 text-muted">✕ Blocked</td>
+                  <td className="p-3.5 text-coral">✕ Blocked (403)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* 6. High-Contrast Accessible Call to Action */}
+        <section aria-labelledby="cta-heading" className="py-16 px-6 max-w-4xl mx-auto text-center space-y-6 bg-carbon text-paper rounded-3xl my-12 shadow-2xl">
+          <div className="space-y-2">
+            <h2 id="cta-heading" className="text-2xl sm:text-3xl font-black text-paper">
+              Ready to collaborate on your next project?
+            </h2>
+            <p className="text-xs sm:text-sm text-paper/80 max-w-lg mx-auto leading-relaxed">
+              Create your account, invite your team members with their email addresses, and launch your private workspace in seconds.
+            </p>
+          </div>
+          <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
             <Link href="/register">
-              <Button variant="primary" size="lg" withArrow>
-                Start Coding for Free
+              <Button variant="primary" size="lg" withArrow className="font-bold shadow-md">
+                Get Started Now
               </Button>
+            </Link>
+            <Link href="/login">
+              <button className="px-5 py-3 rounded-xl border border-paper/30 hover:border-paper text-paper text-xs font-bold transition">
+                Sign In to Account
+              </button>
             </Link>
           </div>
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="py-8 px-6 border-t border-divider bg-editor">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted font-mono">
+      {/* 7. Footer Landmark */}
+      <footer className="py-10 px-6 border-t border-divider bg-editor text-xs text-muted">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2.5">
-            <LogoIcon size={20} />
-            <span className="font-bold text-carbon">LetsCollab</span>
-            <span>— Real-Time Collaborative Platform</span>
+            <LogoIcon size={22} />
+            <span className="font-bold text-carbon text-sm">LetsCollab</span>
+            <span className="text-muted">— Collaborative Engineering & Workspace Platform</span>
           </div>
 
-          <div className="flex items-center gap-6">
-            <Link href="/login" className="hover:text-carbon transition-colors duration-140">Sign In</Link>
-            <Link href="/register" className="hover:text-carbon transition-colors duration-140">Create Account</Link>
-            <Link href="/dashboard" className="hover:text-carbon transition-colors duration-140">Dashboard</Link>
-          </div>
+          <nav aria-label="Footer Navigation" className="flex items-center gap-6 font-medium">
+            <Link href="/login" className="hover:text-carbon transition">
+              Sign In
+            </Link>
+            <Link href="/register" className="hover:text-carbon transition">
+              Create Account
+            </Link>
+            <a href="#workspace" className="hover:text-carbon transition">
+              VS Code IDE
+            </a>
+            <a href="#security" className="hover:text-carbon transition">
+              Security Matrix
+            </a>
+          </nav>
+
+          <p className="text-[11px] font-mono text-muted">
+            © {new Date().getFullYear()} LetsCollab. All rights reserved.
+          </p>
         </div>
       </footer>
     </div>

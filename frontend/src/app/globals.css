@@ -60,6 +60,44 @@ code, pre, kbd, .font-mono {
   color: #232722;
 }
 
+/* Universal Accessible Keyboard Focus Rings (WCAG 2.1 AA) */
+:focus-visible {
+  outline: 2px solid #E65F42 !important;
+  outline-offset: 2px !important;
+}
+
+/* Accessible Skip Link / Screen Reader Only Utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.focus\:not-sr-only:focus {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 100;
+  width: auto;
+  height: auto;
+  padding: 0.75rem 1.25rem;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+  background-color: #232722;
+  color: #FCFBF7;
+  font-weight: 700;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+}
+
 /* =========================================================================
    PREMIUM MOTION SYSTEM - TIMINGS & EASINGS
    Micro-interactions: 120-180ms

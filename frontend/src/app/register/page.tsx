@@ -89,7 +89,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-paper flex items-center justify-center p-6 antialiased selection:bg-periwinkle selection:text-carbon">
+    <main className="min-h-screen bg-paper flex items-center justify-center p-6 antialiased selection:bg-periwinkle selection:text-carbon">
       <div className="w-full max-w-md space-y-6">
         {/* Brand Header */}
         <div className="text-center space-y-2">
@@ -102,8 +102,8 @@ export default function RegisterPage() {
 
         {/* Deleted Account Confirmation Notice */}
         {deletedNotice && (
-          <div className="p-3.5 rounded-2xl bg-moss border border-[#b5cea8] flex items-center gap-2.5 text-xs text-[#254622] font-semibold animate-fade-in shadow-sm">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <div role="status" aria-live="polite" className="p-3.5 rounded-2xl bg-moss border border-[#b5cea8] flex items-center gap-2.5 text-xs text-[#254622] font-semibold animate-fade-in shadow-sm">
+            <CheckCircle2 className="w-4 h-4 shrink-0" aria-hidden="true" />
             <span>Your account and credentials were permanently deleted. You may create a fresh account anytime.</span>
           </div>
         )}
@@ -111,8 +111,8 @@ export default function RegisterPage() {
         {/* Card */}
         <div className="p-8 rounded-3xl bg-editor border border-divider shadow-xl space-y-5">
           {errorMsg && (
-            <div className="p-3.5 rounded-xl bg-coral/15 border border-coral/30 flex items-center gap-2.5 text-xs text-coral">
-              <AlertCircle className="w-4 h-4 shrink-0" />
+            <div role="alert" aria-live="assertive" className="p-3.5 rounded-xl bg-coral/15 border border-coral/30 flex items-center gap-2.5 text-xs text-coral">
+              <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
               <span>{errorMsg}</span>
             </div>
           )}
@@ -144,11 +144,13 @@ export default function RegisterPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-xs font-bold text-carbon block mb-1.5">
+              <label htmlFor="reg-name" className="text-xs font-bold text-carbon block mb-1.5">
                 Full Name
               </label>
               <input
+                id="reg-name"
                 type="text"
+                autoComplete="name"
                 required
                 value={name}
                 onChange={(e) => {
@@ -163,11 +165,13 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-carbon block mb-1.5">
+              <label htmlFor="reg-email" className="text-xs font-bold text-carbon block mb-1.5">
                 Work Email
               </label>
               <input
+                id="reg-email"
                 type="email"
+                autoComplete="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -177,10 +181,11 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-carbon block mb-1.5">
+              <label htmlFor="reg-role" className="text-xs font-bold text-carbon block mb-1.5">
                 Role in Organization
               </label>
               <select
+                id="reg-role"
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
                 className="w-full px-3.5 py-2.5 bg-paper border border-divider rounded-xl text-xs text-carbon focus:outline-none focus:border-coral focus:bg-editor"
@@ -193,7 +198,7 @@ export default function RegisterPage() {
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-bold text-carbon">
+                <label htmlFor="reg-org" className="text-xs font-bold text-carbon">
                   Organization / Company
                 </label>
                 <span className="text-[10px] text-muted font-medium bg-paper border border-divider px-2 py-0.5 rounded-full">
@@ -201,7 +206,9 @@ export default function RegisterPage() {
                 </span>
               </div>
               <input
+                id="reg-org"
                 type="text"
+                autoComplete="organization"
                 value={organizationName}
                 onChange={(e) => setOrganizationName(e.target.value)}
                 placeholder="e.g. Acme Corp or Stark Labs"
@@ -214,11 +221,13 @@ export default function RegisterPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-bold text-carbon block mb-1.5">
+                <label htmlFor="reg-password" className="text-xs font-bold text-carbon block mb-1.5">
                   Password
                 </label>
                 <input
+                  id="reg-password"
                   type="password"
+                  autoComplete="new-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -228,11 +237,13 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-carbon block mb-1.5">
+                <label htmlFor="reg-confirm-password" className="text-xs font-bold text-carbon block mb-1.5">
                   Confirm
                 </label>
                 <input
+                  id="reg-confirm-password"
                   type="password"
+                  autoComplete="new-password"
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -243,7 +254,7 @@ export default function RegisterPage() {
             </div>
 
             <div className="flex items-center gap-1.5 pt-1 text-[11px] text-muted">
-              <ShieldCheck className="w-3.5 h-3.5 text-moss shrink-0" />
+              <ShieldCheck className="w-3.5 h-3.5 text-moss shrink-0" aria-hidden="true" />
               <span>Details saved permanently until account is deleted.</span>
             </div>
 
@@ -267,6 +278,6 @@ export default function RegisterPage() {
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

@@ -165,7 +165,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-paper flex items-center justify-center p-6 antialiased selection:bg-periwinkle selection:text-carbon">
+    <main className="min-h-screen bg-paper flex items-center justify-center p-6 antialiased selection:bg-periwinkle selection:text-carbon">
       <div className="w-full max-w-md space-y-6">
         {/* Brand Header */}
         <div className="text-center space-y-2">
@@ -185,15 +185,15 @@ export default function LoginPage() {
         {/* Card */}
         <div className="p-8 rounded-3xl bg-editor border border-divider shadow-xl space-y-5 animate-activity-slide">
           {errorMsg && (
-            <div className="p-3.5 rounded-xl bg-coral/15 border border-coral/30 flex items-center gap-2.5 text-xs text-coral">
-              <AlertCircle className="w-4 h-4 shrink-0" />
+            <div role="alert" aria-live="assertive" className="p-3.5 rounded-xl bg-coral/15 border border-coral/30 flex items-center gap-2.5 text-xs text-coral">
+              <AlertCircle className="w-4 h-4 shrink-0" aria-hidden="true" />
               <span>{errorMsg}</span>
             </div>
           )}
 
           {successMsg && (
-            <div className="p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center gap-2.5 text-xs text-emerald-700">
-              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+            <div role="status" aria-live="polite" className="p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center gap-2.5 text-xs text-emerald-700">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" aria-hidden="true" />
               <span>{successMsg}</span>
             </div>
           )}
@@ -202,11 +202,13 @@ export default function LoginPage() {
           {mode === "LOGIN" && (
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-carbon block mb-1.5">
+                <label htmlFor="login-email" className="text-xs font-bold text-carbon block mb-1.5">
                   Work Email
                 </label>
                 <input
+                  id="login-email"
                   type="email"
+                  autoComplete="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -217,7 +219,7 @@ export default function LoginPage() {
 
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-bold text-carbon">
+                  <label htmlFor="login-password" className="text-xs font-bold text-carbon">
                     Password
                   </label>
                   <button
@@ -234,7 +236,9 @@ export default function LoginPage() {
                   </button>
                 </div>
                 <input
+                  id="login-password"
                   type="password"
+                  autoComplete="current-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -424,6 +428,6 @@ export default function LoginPage() {
           )}
         </div>
       </div>
-    </div>
+    </main>
   );
 }
