@@ -455,19 +455,25 @@ router.post("/forgot-password", async (req, res) => {
     },
   });
 
-  // Dispatch OTP email
-  sendPasswordResetOtpEmail({
+  // Dispatch OTP email strictly to the user's registered email inbox
+  const mailResult = await sendPasswordResetOtpEmail({
     to: user.email,
     name: user.name,
     otp,
-  }).catch((err) => console.error("[Auth] Reset OTP email error:", err));
+  });
+
+  if (!mailResult.success && process.env.NODE_ENV !== "test") {
+    console.error("[Auth] Failed to dispatch OTP email:", mailResult.error);
+    return res.status(500).json({
+      error: "Unable to deliver the verification email right now. Please ensure SMTP email credentials are configured.",
+    });
+  }
 
   return res.json({
-    message: "A 6-digit verification code has been sent to your email address.",
+    message: "A 6-digit verification code has been sent to your registered email address.",
     email: user.email,
     otpSent: true,
-    previewOtp: otp,
-    testOtp: otp,
+    ...(process.env.NODE_ENV === "test" ? { testOtp: otp } : {}),
   });
 });
 

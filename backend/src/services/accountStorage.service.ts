@@ -42,6 +42,7 @@ export function readPersistentUsers(): PersistentUserRecord[] {
 }
 
 export function saveUserToPersistentRegistry(user: PersistentUserRecord): void {
+  if (process.env.NODE_ENV === "test") return;
   ensureRegistryFile();
   try {
     const users = readPersistentUsers();
@@ -59,6 +60,7 @@ export function saveUserToPersistentRegistry(user: PersistentUserRecord): void {
 }
 
 export function removeUserFromPersistentRegistry(emailOrId: string): void {
+  if (process.env.NODE_ENV === "test") return;
   ensureRegistryFile();
   try {
     const users = readPersistentUsers();
