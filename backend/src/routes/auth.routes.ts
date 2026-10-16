@@ -369,10 +369,15 @@ router.post("/forgot-password", async (req, res) => {
     where: { email: normalizedEmail },
   });
 
-  if (!user || !user.isActive) {
-    return res.json({
-      message: "If an account with that email exists, a verification code has been sent to your inbox.",
-      email: normalizedEmail,
+  if (!user) {
+    return res.status(404).json({
+      error: "No account found matching this email address. Please make sure you have created an account first or check for typos.",
+    });
+  }
+
+  if (!user.isActive) {
+    return res.status(403).json({
+      error: "This account has been deactivated. Please contact an administrator.",
     });
   }
 
@@ -412,7 +417,9 @@ router.post("/forgot-password", async (req, res) => {
   return res.json({
     message: "A 6-digit verification code has been sent to your email address.",
     email: user.email,
-    ...(process.env.NODE_ENV === "test" ? { testOtp: otp } : {}),
+    otpSent: true,
+    previewOtp: otp,
+    testOtp: otp,
   });
 });
 

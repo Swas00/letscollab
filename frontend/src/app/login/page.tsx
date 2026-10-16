@@ -37,6 +37,7 @@ export default function LoginPage() {
   // Forgot password form state
   const [resetEmail, setResetEmail] = useState("");
   const [otp, setOtp] = useState("");
+  const [previewOtp, setPreviewOtp] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -98,16 +99,22 @@ export default function LoginPage() {
     setIsLoading(true);
     setErrorMsg(null);
     setSuccessMsg(null);
+    setPreviewOtp(null);
 
     const res = await api.auth.forgotPassword(cleanEmail);
     setIsLoading(false);
 
     if (res.data) {
-      setSuccessMsg(`We've sent a 6-digit verification code to ${cleanEmail}. Please check your inbox.`);
+      const data = res.data as any;
+      if (data.previewOtp) {
+        setPreviewOtp(data.previewOtp);
+        setOtp(data.previewOtp);
+      }
+      setSuccessMsg(`We've dispatched a 6-digit verification code for ${cleanEmail}.`);
       setMode("FORGOT_VERIFY");
       setResendCooldown(60);
     } else {
-      setErrorMsg(res.error || "Failed to send reset code. Please try again.");
+      setErrorMsg(res.error || "Failed to send reset code. Please check your email address.");
     }
   };
 
@@ -120,7 +127,12 @@ export default function LoginPage() {
     setIsLoading(false);
 
     if (res.data) {
-      setSuccessMsg("A fresh 6-digit verification code has been sent to your email!");
+      const data = res.data as any;
+      if (data.previewOtp) {
+        setPreviewOtp(data.previewOtp);
+        setOtp(data.previewOtp);
+      }
+      setSuccessMsg("A fresh 6-digit verification code has been dispatched!");
       setResendCooldown(60);
     } else {
       setErrorMsg(res.error || "Failed to resend code");
@@ -290,14 +302,22 @@ export default function LoginPage() {
                 Send Verification Code
               </Button>
 
+              <div className="pt-2 text-center text-[11px] text-muted">
+                Don&#39;t have an account yet?{" "}
+                <Link href="/register" className="text-coral font-bold hover:underline">
+                  Create account
+                </Link>
+              </div>
+
               <button
                 type="button"
                 onClick={() => {
                   setErrorMsg(null);
                   setSuccessMsg(null);
+                  setPreviewOtp(null);
                   setMode("LOGIN");
                 }}
-                className="flex items-center justify-center gap-1.5 w-full text-xs font-bold text-muted hover:text-carbon pt-2 transition"
+                className="flex items-center justify-center gap-1.5 w-full text-xs font-bold text-muted hover:text-carbon pt-1 transition"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 <span>Back to Sign In</span>
@@ -308,6 +328,35 @@ export default function LoginPage() {
           {/* ===================== MODE 3: FORGOT VERIFY & RESET ===================== */}
           {mode === "FORGOT_VERIFY" && (
             <form onSubmit={handleResetPassword} className="space-y-4">
+              {previewOtp && (
+                <div className="p-3.5 bg-paper rounded-2xl border border-coral/40 space-y-1.5 animate-activity-slide">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-coral flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      Verification OTP
+                    </span>
+                    <span className="text-[10px] text-muted font-mono font-medium bg-editor px-2 py-0.5 rounded-full border border-divider">
+                      Valid 10 min
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between pt-0.5">
+                    <span className="font-mono text-xl font-black tracking-widest text-carbon">
+                      {previewOtp}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setOtp(previewOtp)}
+                      className="text-xs font-bold text-coral hover:underline"
+                    >
+                      Auto-Fill Code
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-muted leading-relaxed">
+                    This verification code was generated for <span className="font-mono text-carbon font-semibold">{resetEmail}</span>. Enter it below to set your new password.
+                  </p>
+                </div>
+              )}
+
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="text-xs font-bold text-carbon flex items-center gap-1.5">
