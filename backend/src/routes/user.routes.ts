@@ -5,6 +5,7 @@ import { prisma } from "../prisma";
 import { AuthRequest, authenticateToken } from "../middleware/auth";
 import { requireSystemRole } from "../middleware/rbac";
 import { logActivity } from "../services/activity.service";
+import { removeUserFromPersistentRegistry } from "../services/accountStorage.service";
 
 const router = Router();
 
@@ -243,6 +244,8 @@ router.delete("/:id", authenticateToken, requireSystemRole("ADMIN"), async (req:
   await prisma.project.updateMany({ where: { creatorId: targetId }, data: { creatorId: null } }).catch(() => {});
   await prisma.task.updateMany({ where: { assigneeId: targetId }, data: { assigneeId: null } }).catch(() => {});
   await prisma.task.updateMany({ where: { creatorId: targetId }, data: { creatorId: null } }).catch(() => {});
+
+  removeUserFromPersistentRegistry(targetId);
 
   await prisma.user.delete({ where: { id: targetId } });
 

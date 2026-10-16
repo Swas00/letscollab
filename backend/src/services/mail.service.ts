@@ -72,19 +72,18 @@ export interface WelcomeEmailParams {
   to: string;
   name: string;
   organizationName?: string | null;
+  role?: string;
 }
 
 /**
  * Sends a welcome email when a user registers on the platform
  */
-export async function sendWelcomeEmail({ to, name, organizationName }: WelcomeEmailParams) {
+export async function sendWelcomeEmail({ to, name, organizationName, role }: WelcomeEmailParams) {
   try {
     const transport = await getTransporter();
 
-    const subject = `Welcome to LetsCollab, ${name}! 🚀`;
-    const orgGreeting = organizationName
-      ? `<p style="margin: 0 0 16px; color: #4A5568; font-size: 14px;">Your organization <strong>${organizationName}</strong> has been configured and is ready for your team.</p>`
-      : "";
+    const subject = `Welcome to LetsCollab, ${name}! 🚀 Your Workspace is Ready`;
+    const formattedRole = (role || "TEAM_MEMBER").replace(/_/g, " ");
 
     const html = `
 <!DOCTYPE html>
@@ -93,49 +92,123 @@ export async function sendWelcomeEmail({ to, name, organizationName }: WelcomeEm
   <meta charset="utf-8">
   <title>Welcome to LetsCollab</title>
 </head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #F8F9FA; margin: 0; padding: 40px 20px;">
-  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background: #FFFFFF; border-radius: 20px; overflow: hidden; border: 1px solid #E2E8F0; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #F8F9FA; margin: 0; padding: 40px 16px;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 620px; margin: 0 auto; background: #FFFFFF; border-radius: 24px; overflow: hidden; border: 1px solid #E2E8F0; box-shadow: 0 8px 24px rgba(0,0,0,0.06);">
     <!-- Header -->
     <tr>
-      <td style="background-color: #E65A38; padding: 32px 40px; text-align: center;">
-        <h1 style="color: #FFFFFF; margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">LetsCollab</h1>
-        <p style="color: rgba(255,255,255,0.9); margin: 6px 0 0; font-size: 14px; font-weight: 500;">Collaborative Project & Team Workspace</p>
+      <td style="background: linear-gradient(135deg, #1E252B 0%, #2B333B 100%); padding: 36px 40px; text-align: center; border-bottom: 4px solid #E65A38;">
+        <h1 style="color: #FFFFFF; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">LetsCollab</h1>
+        <p style="color: #E65A38; margin: 6px 0 0; font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">Real-Time Collaborative Workspace</p>
       </td>
     </tr>
-    <!-- Content -->
+
+    <!-- Main Content -->
     <tr>
       <td style="padding: 40px;">
-        <h2 style="color: #1A202C; margin: 0 0 16px; font-size: 20px; font-weight: 700;">Welcome aboard, ${name}! 👋</h2>
-        <p style="color: #4A5568; margin: 0 0 16px; font-size: 15px; line-height: 1.6;">
-          Thank you for joining <strong>LetsCollab</strong>. Your account has been successfully created and your collaborative workspace is live.
+        <h2 style="color: #1A202C; margin: 0 0 14px; font-size: 22px; font-weight: 800;">Welcome to the team, ${name}! 👋</h2>
+        <p style="color: #4A5568; margin: 0 0 20px; font-size: 15px; line-height: 1.6;">
+          Your individual account has been permanently configured on <strong>LetsCollab</strong>. You can now seamlessly sign in anytime to manage projects, coordinate with teammates, and build in real time.
         </p>
-        ${orgGreeting}
-        
-        <div style="background-color: #F7FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px; margin: 24px 0;">
-          <h3 style="color: #2D3748; margin: 0 0 12px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">What you can do next:</h3>
-          <ul style="margin: 0; padding-left: 20px; color: #4A5568; font-size: 14px; line-height: 1.8;">
-            <li><strong>Create projects</strong> and organize work with interactive Kanban boards.</li>
-            <li><strong>Invite teammates directly by email</strong> to collaborate seamlessly.</li>
-            <li><strong>Real-time updates & activity logs</strong> to keep everyone in sync.</li>
-          </ul>
+
+        <!-- Account Badge Card -->
+        <div style="background-color: #F7FAFC; border: 1px solid #E2E8F0; border-radius: 16px; padding: 20px 24px; margin: 0 0 28px;">
+          <table width="100%" border="0" cellspacing="0" cellpadding="0">
+            <tr>
+              <td style="padding: 4px 0; color: #718096; font-size: 13px; font-weight: 600;">Registered Email:</td>
+              <td style="padding: 4px 0; color: #1A202C; font-size: 13px; font-weight: 700; font-family: monospace; text-align: right;">${to}</td>
+            </tr>
+            <tr>
+              <td style="padding: 4px 0; color: #718096; font-size: 13px; font-weight: 600;">Assigned Role:</td>
+              <td style="padding: 4px 0; color: #E65A38; font-size: 13px; font-weight: 700; text-align: right; text-transform: capitalize;">${formattedRole}</td>
+            </tr>
+            ${organizationName ? `
+            <tr>
+              <td style="padding: 4px 0; color: #718096; font-size: 13px; font-weight: 600;">Organization:</td>
+              <td style="padding: 4px 0; color: #1A202C; font-size: 13px; font-weight: 700; text-align: right;">${organizationName}</td>
+            </tr>
+            ` : ""}
+            <tr>
+              <td style="padding: 4px 0; color: #718096; font-size: 13px; font-weight: 600;">Account Persistence:</td>
+              <td style="padding: 4px 0; color: #254622; font-size: 13px; font-weight: 700; text-align: right;">Permanent (Retained Indefinitely)</td>
+            </tr>
+          </table>
         </div>
 
-        <div style="text-align: center; margin: 32px 0 20px;">
-          <a href="${APP_URL}/dashboard" style="display: inline-block; background-color: #E65A38; color: #FFFFFF; text-decoration: none; font-weight: 700; font-size: 14px; padding: 14px 32px; border-radius: 12px; box-shadow: 0 4px 8px rgba(230,90,56,0.25);">
-            Go to Your Workspace &rarr;
+        <h3 style="color: #1A202C; margin: 0 0 16px; font-size: 16px; font-weight: 800; border-bottom: 2px solid #F0F2F5; padding-bottom: 8px;">
+          What You Can Do on LetsCollab
+        </h3>
+
+        <!-- Feature List with Clean Visual Icons -->
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 28px;">
+          <tr>
+            <td style="vertical-align: top; padding: 12px 0;">
+              <div style="background-color: #FFF5F2; border-radius: 10px; width: 36px; height: 36px; line-height: 36px; text-align: center; font-size: 18px; margin-right: 14px;">📋</div>
+            </td>
+            <td style="vertical-align: top; padding: 10px 0 14px;">
+              <strong style="color: #1A202C; font-size: 14px;">Interactive Kanban & Task Workspaces</strong>
+              <p style="margin: 4px 0 0; color: #718096; font-size: 13px; line-height: 1.5;">Organize development sprints, backlog items, in-review tasks, and deadlines with real-time updates.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="vertical-align: top; padding: 12px 0;">
+              <div style="background-color: #F0FDF4; border-radius: 10px; width: 36px; height: 36px; line-height: 36px; text-align: center; font-size: 18px; margin-right: 14px;">✉️</div>
+            </td>
+            <td style="vertical-align: top; padding: 10px 0 14px;">
+              <strong style="color: #1A202C; font-size: 14px;">Direct Email Project Invitations</strong>
+              <p style="margin: 4px 0 0; color: #718096; font-size: 13px; line-height: 1.5;">Invite teammates and partners directly by their email ID with secure, tokenized acceptance links.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="vertical-align: top; padding: 12px 0;">
+              <div style="background-color: #EFF6FF; border-radius: 10px; width: 36px; height: 36px; line-height: 36px; text-align: center; font-size: 18px; margin-right: 14px;">🛡️</div>
+            </td>
+            <td style="vertical-align: top; padding: 10px 0 14px;">
+              <strong style="color: #1A202C; font-size: 14px;">Server-Side Role Governance (RBAC)</strong>
+              <p style="margin: 4px 0 0; color: #718096; font-size: 13px; line-height: 1.5;">Every task modification, member management, and workspace deletion is strictly verified by server security guards.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="vertical-align: top; padding: 12px 0;">
+              <div style="background-color: #FAF5FF; border-radius: 10px; width: 36px; height: 36px; line-height: 36px; text-align: center; font-size: 18px; margin-right: 14px;">⚡</div>
+            </td>
+            <td style="vertical-align: top; padding: 10px 0 14px;">
+              <strong style="color: #1A202C; font-size: 14px;">Conflict-Free Concurrent Collaboration (OCC)</strong>
+              <p style="margin: 4px 0 0; color: #718096; font-size: 13px; line-height: 1.5;">Smart versioning prevents team members from accidentally overwriting concurrent edits on the same project task.</p>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Quick 3-Step Guide -->
+        <div style="background-color: #F8FAFC; border: 1px dashed #CBD5E1; border-radius: 16px; padding: 20px; margin: 0 0 32px;">
+          <h4 style="color: #1E293B; margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">🚀 3 Steps to Get Started:</h4>
+          <ol style="margin: 0; padding-left: 20px; color: #475569; font-size: 13px; line-height: 1.8;">
+            <li>Sign in to your dashboard anytime using your registered email and password.</li>
+            <li>Create your first project workspace from the <strong>Projects</strong> tab.</li>
+            <li>Invite your collaborators by entering their email address.</li>
+          </ol>
+        </div>
+
+        <!-- CTA Button -->
+        <div style="text-align: center; margin: 32px 0 16px;">
+          <a href="${APP_URL}/dashboard" style="display: inline-block; background-color: #E65A38; color: #FFFFFF; text-decoration: none; font-weight: 700; font-size: 15px; padding: 16px 36px; border-radius: 14px; box-shadow: 0 6px 14px rgba(230,90,56,0.3);">
+            Open Your Workspace &rarr;
           </a>
         </div>
 
-        <p style="color: #718096; margin: 24px 0 0; font-size: 13px; line-height: 1.5;">
-          Have questions or need assistance? Reply directly to this email or visit our help center.
+        <p style="color: #94A3B8; text-align: center; margin: 16px 0 0; font-size: 12px;">
+          Direct Dashboard URL: <a href="${APP_URL}/dashboard" style="color: #E65A38; text-decoration: underline;">${APP_URL}/dashboard</a>
         </p>
       </td>
     </tr>
+
     <!-- Footer -->
     <tr>
-      <td style="background-color: #F7FAFC; border-top: 1px solid #E2E8F0; padding: 20px 40px; text-align: center;">
-        <p style="color: #A0AEC0; margin: 0; font-size: 12px;">
-          &copy; ${new Date().getFullYear()} LetsCollab Inc. All rights reserved.
+      <td style="background-color: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 24px 40px; text-align: center;">
+        <p style="color: #64748B; margin: 0 0 4px; font-size: 12px; font-weight: 600;">
+          LetsCollab &bull; Collaborative Project Management Platform
+        </p>
+        <p style="color: #94A3B8; margin: 0; font-size: 11px;">
+          &copy; ${new Date().getFullYear()} LetsCollab Inc. Your account details are securely stored.
         </p>
       </td>
     </tr>
@@ -147,15 +220,21 @@ export async function sendWelcomeEmail({ to, name, organizationName }: WelcomeEm
     const text = `
 Welcome to LetsCollab, ${name}!
 
-Thank you for joining LetsCollab. Your account is active and ready for teamwork.
-${organizationName ? `Organization: ${organizationName}` : ""}
+Your account has been permanently configured and is ready for team collaboration.
 
-What you can do:
-- Create projects with interactive Kanban boards
-- Invite team members directly using their email ID
-- Real-time updates and task tracking
+Account Details:
+- Email: ${to}
+- Role: ${formattedRole}
+${organizationName ? `- Organization: ${organizationName}` : ""}
+- Account Retention: Permanent (preserved indefinitely across sessions)
 
-Visit your workspace: ${APP_URL}/dashboard
+Core Platform Features:
+1. Interactive Kanban Workspaces: Manage tasks across backlog, todo, in progress, review, and done.
+2. Email-Based Collaboration: Invite teammates by entering their email addresses.
+3. Conflict Detection (OCC): Never lose concurrent work with automatic version conflict protection.
+4. Server-Side RBAC: Strict access rules for Admins, Project Managers, Members, and Viewers.
+
+Open your workspace: ${APP_URL}/dashboard
 
 Best regards,
 The LetsCollab Team

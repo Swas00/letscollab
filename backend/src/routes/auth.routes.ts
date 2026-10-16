@@ -8,6 +8,10 @@ import { AuthRequest, authenticateToken } from "../middleware/auth";
 import { logActivity } from "../services/activity.service";
 import { createNotification } from "../services/notification.service";
 import { sendWelcomeEmail, sendPasswordResetOtpEmail } from "../services/mail.service";
+import {
+  saveUserToPersistentRegistry,
+  removeUserFromPersistentRegistry,
+} from "../services/accountStorage.service";
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || "super-secret-jwt-key-for-neostats-hackathon-2026";
@@ -86,6 +90,19 @@ router.post("/register", async (req, res) => {
     },
   });
 
+  // Permanently record user in registry so account is preserved across server container restarts
+  saveUserToPersistentRegistry({
+    id: user.id,
+    email: user.email,
+    password: user.password,
+    name: user.name,
+    role: user.role,
+    avatarUrl: user.avatarUrl,
+    isActive: user.isActive,
+    createdAt: user.createdAt.toISOString(),
+    updatedAt: user.updatedAt.toISOString(),
+  });
+
   // Handle optional organization creation / joining
   let createdOrg = null;
   if (organizationName && organizationName.trim()) {
@@ -129,11 +146,12 @@ router.post("/register", async (req, res) => {
     metadata: { name: user.name, email: user.email, role: user.role, organization: createdOrg?.name },
   });
 
-  // 1. Send Welcome Email asynchronously
+  // 1. Send Welcome Email asynchronously with platform details and uses
   sendWelcomeEmail({
     to: user.email,
     name: user.name,
     organizationName: createdOrg?.name,
+    role: user.role,
   }).catch((err) => console.error("[Auth] Welcome email send error:", err));
 
   // 2. Create In-App Welcome Notification
@@ -268,6 +286,21 @@ router.put("/profile", authenticateToken, async (req: AuthRequest, res: Response
     },
   });
 
+  const fullUser = await prisma.user.findUnique({ where: { id: updated.id } });
+  if (fullUser) {
+    saveUserToPersistentRegistry({
+      id: fullUser.id,
+      email: fullUser.email,
+      password: fullUser.password,
+      name: fullUser.name,
+      role: fullUser.role,
+      avatarUrl: fullUser.avatarUrl,
+      isActive: fullUser.isActive,
+      createdAt: fullUser.createdAt.toISOString(),
+      updatedAt: fullUser.updatedAt.toISOString(),
+    });
+  }
+
   return res.json({ user: updated });
 });
 
@@ -290,9 +323,21 @@ router.put("/change-password", authenticateToken, async (req: AuthRequest, res: 
   }
 
   const newHashed = await bcrypt.hash(parse.data.newPassword, 10);
-  await prisma.user.update({
+  const updatedWithPass = await prisma.user.update({
     where: { id: req.user!.id },
     data: { password: newHashed },
+  });
+
+  saveUserToPersistentRegistry({
+    id: updatedWithPass.id,
+    email: updatedWithPass.email,
+    password: updatedWithPass.password,
+    name: updatedWithPass.name,
+    role: updatedWithPass.role,
+    avatarUrl: updatedWithPass.avatarUrl,
+    isActive: updatedWithPass.isActive,
+    createdAt: updatedWithPass.createdAt.toISOString(),
+    updatedAt: updatedWithPass.updatedAt.toISOString(),
   });
 
   return res.json({ message: "Password updated successfully" });
@@ -318,6 +363,9 @@ router.delete("/account", authenticateToken, async (req: AuthRequest, res: Respo
   if (!isMatch) {
     return res.status(400).json({ error: "Incorrect password. Account deletion aborted." });
   }
+
+  // Remove from persistent registry
+  removeUserFromPersistentRegistry(userId);
 
   // 1. Clean up password reset OTPs for this user's email
   await prisma.passwordResetOtp.deleteMany({

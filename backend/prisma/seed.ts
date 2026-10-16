@@ -4,17 +4,16 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🌱 Cleaning database...");
-  await prisma.activityLog.deleteMany();
-  await prisma.notification.deleteMany();
-  await prisma.comment.deleteMany();
-  await prisma.task.deleteMany();
-  await prisma.projectInvitation.deleteMany();
-  await prisma.projectMember.deleteMany();
-  await prisma.project.deleteMany();
-  await prisma.organizationMember.deleteMany();
-  await prisma.organization.deleteMany();
-  await prisma.user.deleteMany();
+  console.log("🌱 Checking database and seeding initial accounts safely...");
+
+  const existingAdmin = await prisma.user.findUnique({
+    where: { email: "admin@neostats.com" },
+  });
+
+  if (existingAdmin) {
+    console.log("🌱 Database already initialized. Preserving all existing registered accounts.");
+    return;
+  }
 
   const hashedPassword = await bcrypt.hash("password123", 10);
 
