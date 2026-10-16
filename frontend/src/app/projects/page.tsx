@@ -17,6 +17,7 @@ import {
   AlertCircle,
   Trash2,
   Building,
+  Mail,
 } from "lucide-react";
 import { PRIORITY_CONFIG, cn } from "../../lib/utils";
 import { Button } from "../../components/ui/Button";
@@ -31,6 +32,10 @@ export default function ProjectsPage() {
   const [orgFilter, setOrgFilter] = useState("ALL");
   const [isLoading, setIsLoading] = useState(true);
 
+  // Pending Invitations for logged in user
+  const [myInvitations, setMyInvitations] = useState<any[]>([]);
+  const [acceptingInviteId, setAcceptingInviteId] = useState<string | null>(null);
+
   // Create Project Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [name, setName] = useState("");
@@ -38,9 +43,7 @@ export default function ProjectsPage() {
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("MEDIUM");
   const [selectedOrgId, setSelectedOrgId] = useState("");
-  const [allUsers, setAllUsers] = useState<any[]>([]);
-  const [managerId, setManagerId] = useState("");
-  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const [inviteEmailsInput, setInviteEmailsInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
@@ -59,19 +62,17 @@ export default function ProjectsPage() {
     setIsLoading(false);
   };
 
-  useEffect(() => {
-    fetchProjects();
-  }, [statusFilter, orgFilter, user?.id]);
+  const fetchMyInvitations = async () => {
+    const res = await api.projects.myInvitations();
+    if (res.data?.invitations) {
+      setMyInvitations(res.data.invitations);
+    }
+  };
 
   useEffect(() => {
-    if (user) {
-      api.users.list().then((res) => {
-        if (res.data?.users) {
-          setAllUsers(res.data.users);
-        }
-      });
-    }
-  }, [user]);
+    fetchProjects();
+    fetchMyInvitations();
+  }, [statusFilter, orgFilter, user?.id]);
 
   // Real-time project updates via socket (strictly respecting assignment and creator)
   useEffect(() => {
@@ -108,21 +109,49 @@ export default function ProjectsPage() {
       setProjects((prev) => prev.filter((p) => p.id !== projectId));
     };
 
+    const handleInvitationReceived = () => {
+      fetchMyInvitations();
+    };
+
     socket.on("project:created", handleProjectCreated);
     socket.on("project:updated", handleProjectUpdated);
     socket.on("project:deleted", handleProjectDeleted);
+    socket.on("project:invitation_received", handleInvitationReceived);
 
     return () => {
       socket.off("project:created", handleProjectCreated);
       socket.off("project:updated", handleProjectUpdated);
       socket.off("project:deleted", handleProjectDeleted);
+      socket.off("project:invitation_received", handleInvitationReceived);
     };
   }, [socket, user?.id, user?.role]);
+
+  const handleAcceptInvite = async (invitationId: string) => {
+    setAcceptingInviteId(invitationId);
+    const res = await api.projects.acceptInvitation(invitationId);
+    setAcceptingInviteId(null);
+    if (res.data?.success) {
+      setMyInvitations((prev) => prev.filter((inv) => inv.id !== invitationId));
+      fetchProjects();
+    }
+  };
+
+  const handleDeclineInvite = async (invitationId: string) => {
+    const res = await api.projects.declineInvitation(invitationId);
+    if (res.data?.success) {
+      setMyInvitations((prev) => prev.filter((inv) => inv.id !== invitationId));
+    }
+  };
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setModalError(null);
+
+    const parsedEmails = inviteEmailsInput
+      .split(/[\s,]+/)
+      .map((e) => e.trim().toLowerCase())
+      .filter((e) => e && e.includes("@"));
 
     const payload = {
       name,
@@ -130,8 +159,7 @@ export default function ProjectsPage() {
       description,
       priority,
       organizationId: selectedOrgId || undefined,
-      managerId: managerId || undefined,
-      memberIds: selectedMemberIds,
+      inviteEmails: parsedEmails.length > 0 ? parsedEmails : undefined,
     };
 
     const res = await api.projects.create(payload);
@@ -143,8 +171,7 @@ export default function ProjectsPage() {
       setKey("");
       setDescription("");
       setSelectedOrgId("");
-      setManagerId("");
-      setSelectedMemberIds([]);
+      setInviteEmailsInput("");
       fetchProjects();
     } else {
       setModalError(res.error || "Failed to create project");
@@ -269,6 +296,61 @@ export default function ProjectsPage() {
             />
           </form>
         </div>
+
+        {/* Pending Invitations Banner */}
+        {myInvitations.length > 0 && (
+          <div className="p-5 bg-periwinkle/30 border border-[#bec5ea] rounded-3xl space-y-3 shadow-sm animate-activity-slide">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <h2 className="text-sm font-bold text-carbon flex items-center gap-2">
+                <Mail className="w-4 h-4 text-coral" />
+                Pending Project Invitations ({myInvitations.length})
+              </h2>
+              <span className="text-xs text-muted">
+                Accept invitations to collaborate and access these projects
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+              {myInvitations.map((inv) => (
+                <div
+                  key={inv.id}
+                  className="p-4 bg-editor border border-divider rounded-2xl flex items-center justify-between gap-3 shadow-xs"
+                >
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md bg-paper border border-divider text-coral">
+                        {inv.project.key}
+                      </span>
+                      <h3 className="text-xs font-bold text-carbon truncate">
+                        {inv.project.name}
+                      </h3>
+                    </div>
+                    <p className="text-[11px] text-muted">
+                      Invited by <strong className="text-carbon">{inv.inviter?.name || inv.inviter?.email}</strong> as{" "}
+                      <span className="font-semibold text-coral">{inv.role?.replace("_", " ")}</span>
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => handleAcceptInvite(inv.id)}
+                      disabled={acceptingInviteId === inv.id}
+                      className="px-3 py-1.5 bg-coral hover:bg-[#d34628] disabled:opacity-50 text-white text-xs font-bold rounded-xl transition shadow-xs"
+                    >
+                      {acceptingInviteId === inv.id ? "Accepting..." : "Accept"}
+                    </button>
+                    <button
+                      onClick={() => handleDeclineInvite(inv.id)}
+                      className="px-3 py-1.5 bg-paper hover:bg-divider border border-divider text-muted hover:text-carbon text-xs font-semibold rounded-xl transition"
+                    >
+                      Decline
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Project Cards Grid */}
         {isLoading ? (
@@ -511,57 +593,18 @@ export default function ProjectsPage() {
 
               <div>
                 <label className="text-xs font-bold text-carbon block mb-1">
-                  Assign Project Manager
+                  Invite Teammates by Email (Optional)
                 </label>
-                <select
-                  value={managerId}
-                  onChange={(e) => setManagerId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-paper border border-divider rounded-xl text-xs text-carbon focus:outline-none focus:border-coral focus:bg-editor font-medium"
-                >
-                  <option value="">Select Project Manager</option>
-                  {allUsers.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name} ({u.role})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-carbon block mb-1">
-                  Assign Team Members (Who can see & work on this project)
-                </label>
-                <div className="max-h-32 overflow-y-auto space-y-1.5 p-2 bg-paper border border-divider rounded-xl">
-                  {allUsers
-                    .filter((u) => u.id !== user?.id && u.id !== managerId)
-                    .map((u) => {
-                      const isChecked = selectedMemberIds.includes(u.id);
-                      return (
-                        <label
-                          key={u.id}
-                          className="flex items-center gap-2.5 p-1.5 rounded-lg hover:bg-editor cursor-pointer text-xs transition"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedMemberIds((prev) => [...prev, u.id]);
-                              } else {
-                                setSelectedMemberIds((prev) => prev.filter((id) => id !== u.id));
-                              }
-                            }}
-                            className="rounded border-divider text-coral focus:ring-coral/20"
-                          />
-                          <span className="font-semibold text-carbon">{u.name}</span>
-                          <span className="text-[10px] text-muted font-mono">({u.role})</span>
-                        </label>
-                      );
-                    })}
-                  {allUsers.filter((u) => u.id !== user?.id && u.id !== managerId).length === 0 && (
-                    <p className="text-[11px] text-muted p-1">No other users available to assign.</p>
-                  )}
-                </div>
+                <input
+                  type="text"
+                  value={inviteEmailsInput}
+                  onChange={(e) => setInviteEmailsInput(e.target.value)}
+                  placeholder="e.g. colleague@example.com, developer@company.com"
+                  className="w-full px-3.5 py-2.5 bg-paper border border-divider rounded-xl text-xs text-carbon placeholder-muted focus:outline-none focus:border-coral focus:bg-editor"
+                />
+                <p className="text-[11px] text-muted mt-1 leading-relaxed">
+                  Enter email addresses separated by commas. Invited users will receive an in-app invitation to collaborate and gain access once accepted.
+                </p>
               </div>
 
               <div>

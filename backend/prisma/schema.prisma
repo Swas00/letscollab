@@ -28,6 +28,7 @@ model User {
   actedNotifications Notification[] @relation("NotificationActor")
   activityLogs    ActivityLog[]
   organizationMemberships OrganizationMember[]
+  sentProjectInvitations  ProjectInvitation[]  @relation("SentProjectInvitations")
 }
 
 model Project {
@@ -49,6 +50,7 @@ model Project {
   updatedAt   DateTime        @updatedAt
 
   members      ProjectMember[]
+  invitations  ProjectInvitation[]
   tasks        Task[]
   activityLogs ActivityLog[]
 }
@@ -64,6 +66,21 @@ model ProjectMember {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, userId])
+}
+
+model ProjectInvitation {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  email     String
+  role      String   @default("TEAM_MEMBER") // PROJECT_MANAGER, TEAM_MEMBER, VIEWER
+  status    String   @default("PENDING") // PENDING, ACCEPTED, DECLINED
+  inviterId String
+  inviter   User     @relation("SentProjectInvitations", fields: [inviterId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, email])
 }
 
 model Task {

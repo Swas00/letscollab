@@ -8,6 +8,9 @@ import {
   Bell,
   CheckCheck,
   Check,
+  Mail,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { formatRelativeTime, cn } from "../../lib/utils";
 import { Button } from "../../components/ui/Button";
@@ -16,15 +19,31 @@ export default function NotificationsPage() {
   const { unreadCount, setUnreadCount, socket } = useSocket();
 
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<"ALL" | "UNREAD">("ALL");
   const [isLoading, setIsLoading] = useState(true);
 
+  const fetchInvitations = async () => {
+    const res = await api.projects.myInvitations();
+    if (res.data?.invitations) {
+      setPendingInvitations(res.data.invitations);
+    }
+  };
+
   const fetchNotifications = async () => {
     setIsLoading(true);
-    const res = await api.notifications.list();
-    if (res.data) {
-      setNotifications(res.data.notifications);
-      setUnreadCount(res.data.unreadCount);
+    const [notifRes, invRes] = await Promise.all([
+      api.notifications.list(),
+      api.projects.myInvitations(),
+    ]);
+
+    if (notifRes.data) {
+      setNotifications(notifRes.data.notifications);
+      setUnreadCount(notifRes.data.unreadCount);
+    }
+    if (invRes.data?.invitations) {
+      setPendingInvitations(invRes.data.invitations);
     }
     setIsLoading(false);
   };
@@ -39,14 +58,42 @@ export default function NotificationsPage() {
 
     const handleNewNotification = (notif: any) => {
       setNotifications((prev) => [notif, ...prev]);
+      if (notif.type === "PROJECT_INVITE") {
+        fetchInvitations();
+      }
+    };
+
+    const handleInvitationReceived = () => {
+      fetchInvitations();
     };
 
     socket.on("notification:new", handleNewNotification);
+    socket.on("project:invitation_received", handleInvitationReceived);
 
     return () => {
       socket.off("notification:new", handleNewNotification);
+      socket.off("project:invitation_received", handleInvitationReceived);
     };
   }, [socket]);
+
+  const handleAcceptInvite = async (invitationId: string) => {
+    setActionLoadingId(invitationId);
+    const res = await api.projects.acceptInvitation(invitationId);
+    setActionLoadingId(null);
+    if (res.data?.success) {
+      setPendingInvitations((prev) => prev.filter((i) => i.id !== invitationId));
+      fetchNotifications();
+    }
+  };
+
+  const handleDeclineInvite = async (invitationId: string) => {
+    setActionLoadingId(invitationId);
+    const res = await api.projects.declineInvitation(invitationId);
+    setActionLoadingId(null);
+    if (res.data?.success) {
+      setPendingInvitations((prev) => prev.filter((i) => i.id !== invitationId));
+    }
+  };
 
   const handleMarkAsRead = async (id: string) => {
     const res = await api.notifications.markRead(id);
@@ -102,6 +149,67 @@ export default function NotificationsPage() {
             )}
           </div>
         </div>
+
+        {/* Pending Project Invitations Section */}
+        {pendingInvitations.length > 0 && (
+          <div className="p-5 bg-periwinkle/30 border border-[#bec5ea] rounded-3xl space-y-3 shadow-sm animate-activity-slide">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <h2 className="text-sm font-bold text-carbon flex items-center gap-2">
+                <Mail className="w-4 h-4 text-coral" />
+                Project Collaboration Invitations ({pendingInvitations.length})
+              </h2>
+              <span className="text-xs text-muted">
+                You have been invited to collaborate on these projects
+              </span>
+            </div>
+
+            <div className="space-y-2.5 pt-1">
+              {pendingInvitations.map((inv) => (
+                <div
+                  key={inv.id}
+                  className="p-4 bg-editor border border-divider rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs"
+                >
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md bg-paper border border-divider text-coral">
+                        {inv.project?.key}
+                      </span>
+                      <h3 className="text-xs font-bold text-carbon">
+                        {inv.project?.name}
+                      </h3>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-periwinkle/20 border border-periwinkle/40 text-navy font-semibold">
+                        Role: {inv.role?.replace("_", " ")}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted">
+                      Invited by <strong className="text-carbon">{inv.inviter?.name || inv.inviter?.email}</strong> &bull;{" "}
+                      {formatRelativeTime(inv.createdAt)}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => handleAcceptInvite(inv.id)}
+                      disabled={actionLoadingId === inv.id}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 bg-coral hover:bg-[#d34628] disabled:opacity-50 text-white text-xs font-bold rounded-xl transition shadow-xs"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>{actionLoadingId === inv.id ? "Accepting..." : "Accept"}</span>
+                    </button>
+                    <button
+                      onClick={() => handleDeclineInvite(inv.id)}
+                      disabled={actionLoadingId === inv.id}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 bg-paper hover:bg-divider border border-divider text-muted hover:text-carbon text-xs font-semibold rounded-xl transition"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                      <span>Decline</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Filter Tabs */}
         <div className="flex items-center gap-2 p-1.5 bg-editor border border-divider rounded-2xl w-fit shadow-xs">

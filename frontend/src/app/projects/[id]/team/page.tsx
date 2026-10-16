@@ -13,6 +13,9 @@ import {
   Users,
   AlertCircle,
   X,
+  Mail,
+  Clock,
+  Send,
 } from "lucide-react";
 import { formatDate } from "../../../../lib/utils";
 import { Button } from "../../../../components/ui/Button";
@@ -26,22 +29,22 @@ export default function ProjectTeamPage() {
   const [project, setProject] = useState<any>(null);
   const [userAccess, setUserAccess] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
-  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [invitations, setInvitations] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Add Member Modal State
+  // Invite Modal State
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
   const [selectedRole, setSelectedRole] = useState("TEAM_MEMBER");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
   const loadData = async () => {
     setIsLoading(true);
-    const [pRes, uRes] = await Promise.all([
+    const [pRes, invRes] = await Promise.all([
       api.projects.get(projectId),
-      api.users.list(),
+      api.projects.listInvitations(projectId),
     ]);
 
     if (pRes.data?.project) {
@@ -52,8 +55,8 @@ export default function ProjectTeamPage() {
       setErrorMsg(pRes.error || "Failed to load project team");
     }
 
-    if (uRes.data?.users) {
-      setAllUsers(uRes.data.users);
+    if (invRes.data?.invitations) {
+      setInvitations(invRes.data.invitations);
     }
     setIsLoading(false);
   };
@@ -79,6 +82,9 @@ export default function ProjectTeamPage() {
           if (prev.some((m) => m.userId === member.userId)) return prev;
           return [...prev, member];
         });
+        setInvitations((prev) =>
+          prev.filter((inv) => inv.email.toLowerCase() !== member.user?.email?.toLowerCase())
+        );
       }
     };
 
@@ -121,26 +127,41 @@ export default function ProjectTeamPage() {
     }
   };
 
-  const handleAddMember = async (e: React.FormEvent) => {
+  const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUserId) return;
+    const cleanEmail = inviteEmail.trim().toLowerCase();
+    if (!cleanEmail) return;
 
     setIsSubmitting(true);
     setModalError(null);
 
-    const res = await api.projects.addMember(projectId, {
-      userId: selectedUserId,
+    const res = await api.projects.sendInvitation(projectId, {
+      email: cleanEmail,
       role: selectedRole,
     });
     setIsSubmitting(false);
 
-    if (res.data?.member) {
+    if (res.data?.invitation) {
       setIsAddOpen(false);
-      setSelectedUserId("");
+      setInviteEmail("");
       setSelectedRole("TEAM_MEMBER");
-      setMembers((prev) => [...prev, res.data!.member]);
+      setInvitations((prev) => [
+        res.data!.invitation,
+        ...prev.filter((i) => i.id !== res.data!.invitation.id),
+      ]);
     } else {
-      setModalError(res.error || "Failed to add member");
+      setModalError(res.error || "Failed to send invitation");
+    }
+  };
+
+  const handleRevokeInvitation = async (invitationId: string) => {
+    if (!confirm("Are you sure you want to cancel and revoke this invitation?")) return;
+
+    const res = await api.projects.revokeInvitation(projectId, invitationId);
+    if (!res.error) {
+      setInvitations((prev) => prev.filter((i) => i.id !== invitationId));
+    } else {
+      setErrorMsg(res.error || "Failed to revoke invitation");
     }
   };
 
@@ -154,10 +175,6 @@ export default function ProjectTeamPage() {
       setErrorMsg(res.error || "Failed to remove member");
     }
   };
-
-  const availableUsers = allUsers.filter(
-    (u) => !members.some((m) => m.userId === u.id)
-  );
 
   return (
     <AppLayout>
@@ -181,8 +198,8 @@ export default function ProjectTeamPage() {
               onClick={() => setIsAddOpen(true)}
               className="flex items-center gap-2 px-4 py-2 bg-coral hover:bg-[#d34628] text-white text-xs font-bold rounded-xl shadow-md shadow-coral/20 transition"
             >
-              <UserPlus className="w-4 h-4" />
-              <span>Add Member</span>
+              <Mail className="w-4 h-4" />
+              <span>Invite by Email</span>
             </button>
           )}
         </div>
@@ -272,16 +289,86 @@ export default function ProjectTeamPage() {
             </table>
           </div>
         </div>
+
+        {/* Pending Invitations Section */}
+        {invitations.length > 0 && (
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-carbon flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-coral" />
+                  Pending Invitations ({invitations.length})
+                </h3>
+                <p className="text-xs text-muted mt-0.5">
+                  Invited users who have not yet accepted their invitation.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-editor border border-divider rounded-3xl overflow-hidden shadow-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-paper text-muted uppercase font-mono border-b border-divider">
+                    <tr>
+                      <th className="py-3 px-4">Invited Email</th>
+                      <th className="py-3 px-4">Invited Role</th>
+                      <th className="py-3 px-4">Invited By</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4">Sent Date</th>
+                      {canManageTeam && <th className="py-3 px-4 text-right">Action</th>}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-divider">
+                    {invitations.map((inv) => (
+                      <tr key={inv.id} className="hover:bg-paper transition">
+                        <td className="py-3.5 px-4 font-mono font-medium text-carbon">
+                          {inv.email}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-periwinkle/20 border border-periwinkle/40 text-navy font-semibold">
+                            {inv.role?.replace("_", " ")}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-muted">
+                          {inv.inviter?.name || inv.inviter?.email || "Manager"}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-700 font-bold">
+                            PENDING
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-muted">
+                          {formatDate(inv.createdAt)}
+                        </td>
+                        {canManageTeam && (
+                          <td className="py-3.5 px-4 text-right">
+                            <button
+                              onClick={() => handleRevokeInvitation(inv.id)}
+                              title="Revoke Invitation"
+                              className="px-2.5 py-1 text-xs text-coral hover:bg-coral/10 rounded-lg transition font-medium"
+                            >
+                              Revoke
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Add Member Modal */}
+      {/* Invite Member Modal */}
       {isAddOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-carbon/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="w-full max-w-md bg-editor border border-divider rounded-3xl shadow-2xl overflow-hidden p-6 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-divider">
               <h2 className="text-base font-bold text-carbon flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-coral" />
-                Add Team Member
+                <Mail className="w-5 h-5 text-coral" />
+                Invite Teammate by Email
               </h2>
               <button
                 onClick={() => setIsAddOpen(false)}
@@ -298,22 +385,22 @@ export default function ProjectTeamPage() {
               </div>
             )}
 
-            <form onSubmit={handleAddMember} className="space-y-4">
+            <form onSubmit={handleSendInvite} className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-carbon block mb-1">Select User</label>
-                <select
+                <label className="text-xs font-bold text-carbon block mb-1">
+                  Collaborator Email Address
+                </label>
+                <input
+                  type="email"
                   required
-                  value={selectedUserId}
-                  onChange={(e) => setSelectedUserId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-paper border border-divider rounded-xl text-xs text-carbon focus:outline-none focus:border-coral font-medium"
-                >
-                  <option value="">Choose a user...</option>
-                  {availableUsers.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name} ({u.email})
-                    </option>
-                  ))}
-                </select>
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="colleague@example.com"
+                  className="w-full px-3.5 py-2.5 bg-paper border border-divider rounded-xl text-xs text-carbon focus:outline-none focus:border-coral font-medium placeholder-muted"
+                />
+                <p className="text-[11px] text-muted mt-1 leading-relaxed">
+                  Enter the email address of the person you want to invite. They will receive an invitation in their account to join this project.
+                </p>
               </div>
 
               <div>
@@ -339,10 +426,11 @@ export default function ProjectTeamPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting || !selectedUserId}
-                  className="px-5 py-2.5 bg-coral hover:bg-[#d34628] disabled:opacity-50 text-white text-xs font-bold rounded-xl transition shadow-md shadow-coral/20"
+                  disabled={isSubmitting || !inviteEmail.trim()}
+                  className="px-5 py-2.5 bg-coral hover:bg-[#d34628] disabled:opacity-50 text-white text-xs font-bold rounded-xl transition shadow-md shadow-coral/20 flex items-center gap-1.5"
                 >
-                  {isSubmitting ? "Adding..." : "Add to Project"}
+                  <Send className="w-3.5 h-3.5" />
+                  <span>{isSubmitting ? "Sending..." : "Send Invitation"}</span>
                 </button>
               </div>
             </form>

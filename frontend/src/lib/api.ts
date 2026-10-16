@@ -163,6 +163,30 @@ export const api = {
       apiFetch<{ message: string }>(`/projects/${projectId}/members/${userId}`, {
         method: "DELETE",
       }),
+    // Project Invitations
+    listInvitations: (projectId: string) =>
+      apiFetch<{ invitations: any[] }>(`/projects/${projectId}/invitations`),
+    sendInvitation: (projectId: string, data: { email: string; role?: string }) =>
+      apiFetch<{ invitation: any; message: string }>(`/projects/${projectId}/invitations`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    revokeInvitation: (projectId: string, invitationId: string) =>
+      apiFetch<{ message: string }>(`/projects/${projectId}/invitations/${invitationId}`, {
+        method: "DELETE",
+      }),
+    myInvitations: () =>
+      apiFetch<{ invitations: any[] }>("/projects/my-invitations"),
+    acceptInvitation: (invitationId: string) =>
+      apiFetch<{ success: boolean; member: any; message: string }>(
+        `/projects/invitations/${invitationId}/accept`,
+        { method: "POST" }
+      ),
+    declineInvitation: (invitationId: string) =>
+      apiFetch<{ success: boolean; message: string }>(
+        `/projects/invitations/${invitationId}/decline`,
+        { method: "POST" }
+      ),
   },
   tasks: {
     listByProject: (projectId: string, params?: { search?: string; status?: string; priority?: string; assigneeId?: string }) => {

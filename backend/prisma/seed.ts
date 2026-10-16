@@ -9,6 +9,7 @@ async function main() {
   await prisma.notification.deleteMany();
   await prisma.comment.deleteMany();
   await prisma.task.deleteMany();
+  await prisma.projectInvitation.deleteMany();
   await prisma.projectMember.deleteMany();
   await prisma.project.deleteMany();
   await prisma.organizationMember.deleteMany();

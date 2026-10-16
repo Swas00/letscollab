@@ -390,4 +390,66 @@ describe("LetsCollab Collaborative Platform Core Test Suite", () => {
       expect(res.body.member.user.email).toBe("dev@neostats.com");
     });
   });
+
+  describe("6. Email-Based Project Invitations & Access Control", () => {
+    let inviteId: string;
+    let inviteProjectId: string;
+
+    it("PM can create a project and invite a user to collaborate by their email address", async () => {
+      // 1. Create a fresh project with no extra members
+      const createRes = await request(app)
+        .post("/api/projects")
+        .set("Authorization", `Bearer ${pmToken}`)
+        .send({
+          name: "Invite Test Project",
+          key: "INVITE",
+          priority: "MEDIUM",
+        });
+      expect(createRes.status).toBe(201);
+      inviteProjectId = createRes.body.project.id;
+
+      // 2. Invite viewer@neostats.com by email
+      const res = await request(app)
+        .post(`/api/projects/${inviteProjectId}/invitations`)
+        .set("Authorization", `Bearer ${pmToken}`)
+        .send({
+          email: "viewer@neostats.com",
+          role: "TEAM_MEMBER",
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.invitation).toBeDefined();
+      expect(res.body.invitation.email).toBe("viewer@neostats.com");
+      expect(res.body.invitation.status).toBe("PENDING");
+      inviteId = res.body.invitation.id;
+    });
+
+    it("Invited user can see their pending invitations via /api/projects/my-invitations", async () => {
+      const res = await request(app)
+        .get("/api/projects/my-invitations")
+        .set("Authorization", `Bearer ${viewerToken}`);
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body.invitations)).toBe(true);
+      expect(res.body.invitations.some((inv: any) => inv.id === inviteId)).toBe(true);
+    });
+
+    it("Invited user can accept the invitation to gain access to the project", async () => {
+      const res = await request(app)
+        .post(`/api/projects/invitations/${inviteId}/accept`)
+        .set("Authorization", `Bearer ${viewerToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.member).toBeDefined();
+      expect(res.body.member.role).toBe("TEAM_MEMBER");
+
+      // Verify the user is now listed as a member of the project
+      const projectRes = await request(app)
+        .get(`/api/projects/${inviteProjectId}`)
+        .set("Authorization", `Bearer ${viewerToken}`);
+      expect(projectRes.status).toBe(200);
+      expect(projectRes.body.project.members.some((m: any) => m.userId === res.body.member.userId)).toBe(true);
+    });
+  });
 });
