@@ -42,8 +42,22 @@ export default function LoginPage() {
   const [resendCooldown, setResendCooldown] = useState(0);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const q = new URLSearchParams(window.location.search);
+      const emailParam = q.get("email");
+      if (emailParam) {
+        setEmail(emailParam);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     if (user) {
-      router.push("/dashboard");
+      const redirectUrl =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("redirect") || "/dashboard"
+          : "/dashboard";
+      router.push(redirectUrl);
     }
   }, [user, router]);
 
@@ -66,7 +80,11 @@ export default function LoginPage() {
     setIsLoading(false);
 
     if (res.success) {
-      router.push("/dashboard");
+      const redirectUrl =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("redirect") || "/dashboard"
+          : "/dashboard";
+      router.push(redirectUrl);
     } else {
       setErrorMsg(res.error || "Invalid email or password");
     }

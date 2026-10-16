@@ -174,19 +174,42 @@ export const api = {
         method: "DELETE",
       }),
     // Project Invitations
-    listInvitations: (projectId: string) =>
-      apiFetch<{ invitations: any[] }>(`/projects/${projectId}/invitations`),
-    sendInvitation: (projectId: string, data: { email: string; role?: string }) =>
-      apiFetch<{ invitation: any; message: string }>(`/projects/${projectId}/invitations`, {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
+    listInvitations: (projectId: string, params?: { status?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.status) q.set("status", params.status);
+      return apiFetch<{ invitations: any[] }>(`/projects/${projectId}/invitations?${q.toString()}`);
+    },
+    sendInvitation: (projectId: string, data: { email?: string; emails?: string[]; role?: string }) =>
+      apiFetch<{ success?: boolean; invitation: any; invitations?: any[]; count?: number; message: string; skipped?: any[] }>(
+        `/projects/${projectId}/invitations`,
+        {
+          method: "POST",
+          body: JSON.stringify(data),
+        }
+      ),
+    resendInvitation: (projectId: string, invitationId: string) =>
+      apiFetch<{ success: boolean; invitation: any; message: string }>(
+        `/projects/${projectId}/invitations/${invitationId}/resend`,
+        { method: "POST" }
+      ),
     revokeInvitation: (projectId: string, invitationId: string) =>
       apiFetch<{ message: string }>(`/projects/${projectId}/invitations/${invitationId}`, {
         method: "DELETE",
       }),
     myInvitations: () =>
       apiFetch<{ invitations: any[] }>("/projects/my-invitations"),
+    getInvitationByToken: (token: string) =>
+      apiFetch<{ invitation: any }>(`/projects/invitations/token/${token}`),
+    acceptInvitationByToken: (token: string) =>
+      apiFetch<{ success: boolean; message: string; project: any; member?: any }>(
+        `/projects/invitations/token/${token}/accept`,
+        { method: "POST" }
+      ),
+    declineInvitationByToken: (token: string) =>
+      apiFetch<{ success: boolean; message: string }>(
+        `/projects/invitations/token/${token}/decline`,
+        { method: "POST" }
+      ),
     acceptInvitation: (invitationId: string) =>
       apiFetch<{ success: boolean; member: any; message: string }>(
         `/projects/invitations/${invitationId}/accept`,

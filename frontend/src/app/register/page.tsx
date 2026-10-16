@@ -22,8 +22,22 @@ export default function RegisterPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const q = new URLSearchParams(window.location.search);
+      const emailParam = q.get("email");
+      if (emailParam) {
+        setEmail(emailParam);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     if (user) {
-      router.push("/dashboard");
+      const redirectUrl =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("redirect") || "/dashboard"
+          : "/dashboard";
+      router.push(redirectUrl);
     }
   }, [user, router]);
 
@@ -46,7 +60,11 @@ export default function RegisterPage() {
     setIsLoading(false);
 
     if (res.success) {
-      router.push("/dashboard");
+      const redirectUrl =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("redirect") || "/dashboard"
+          : "/dashboard";
+      router.push(redirectUrl);
     } else {
       setErrorMsg(res.error || "Registration failed");
     }

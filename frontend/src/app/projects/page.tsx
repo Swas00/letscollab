@@ -226,16 +226,14 @@ export default function ProjectsPage() {
             </p>
           </div>
 
-          {user?.role !== "VIEWER" && (
-            <Button
-              onClick={() => setIsModalOpen(true)}
-              variant="primary"
-              size="md"
-              icon={<Plus className="w-4 h-4" />}
-            >
-              Create Project
-            </Button>
-          )}
+          <Button
+            onClick={() => setIsModalOpen(true)}
+            variant="primary"
+            size="md"
+            icon={<Plus className="w-4 h-4" />}
+          >
+            Create Project
+          </Button>
         </div>
 
         {/* Filters & Search Toolbar */}

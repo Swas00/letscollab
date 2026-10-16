@@ -188,6 +188,8 @@ export interface ProjectInviteEmailParams {
   projectName: string;
   projectKey: string;
   role: string;
+  token?: string;
+  expiresAt?: Date | null;
 }
 
 /**
@@ -199,12 +201,23 @@ export async function sendProjectInviteEmail({
   projectName,
   projectKey,
   role,
+  token,
+  expiresAt,
 }: ProjectInviteEmailParams) {
   try {
     const transport = await getTransporter();
 
     const formattedRole = role.replace(/_/g, " ");
     const subject = `${inviterName} invited you to collaborate on "${projectName}" [${projectKey}]`;
+    const inviteUrl = token ? `${APP_URL}/invite/${token}` : `${APP_URL}/projects`;
+
+    const expirationHtml = expiresAt
+      ? `<p style="color: #E65A38; font-size: 13px; font-weight: 600; margin: 12px 0 0;">⏱ This invitation link expires on ${new Date(expiresAt).toLocaleDateString(undefined, { dateStyle: "medium" })}.</p>`
+      : "";
+
+    const expirationText = expiresAt
+      ? `\nThis invitation link expires on ${new Date(expiresAt).toLocaleDateString(undefined, { dateStyle: "medium" })}.`
+      : "";
 
     const html = `
 <!DOCTYPE html>
@@ -237,14 +250,20 @@ export async function sendProjectInviteEmail({
         </div>
 
         <p style="color: #4A5568; margin: 20px 0; font-size: 14px; line-height: 1.6;">
-          Log in or create your account to view your pending invitations and start working on the project board with your team.
+          Click the button below to view the project details and accept the invitation to collaborate with your team.
         </p>
 
         <div style="text-align: center; margin: 32px 0 24px;">
-          <a href="${APP_URL}/projects" style="display: inline-block; background-color: #E65A38; color: #FFFFFF; text-decoration: none; font-weight: 700; font-size: 14px; padding: 14px 32px; border-radius: 12px; box-shadow: 0 4px 8px rgba(230,90,56,0.25);">
+          <a href="${inviteUrl}" style="display: inline-block; background-color: #E65A38; color: #FFFFFF; text-decoration: none; font-weight: 700; font-size: 14px; padding: 14px 32px; border-radius: 12px; box-shadow: 0 4px 8px rgba(230,90,56,0.25);">
             Accept Invitation & View Project &rarr;
           </a>
+          ${expirationHtml}
         </div>
+
+        <p style="color: #A0AEC0; font-size: 12px; margin: 24px 0 0; text-align: center;">
+          Or copy and paste this link in your browser: <br>
+          <span style="color: #718096; word-break: break-all;">${inviteUrl}</span>
+        </p>
       </td>
     </tr>
     <!-- Footer -->
@@ -264,9 +283,10 @@ export async function sendProjectInviteEmail({
 You've been invited to collaborate on "${projectName}" [${projectKey}] on LetsCollab!
 
 ${inviterName} has invited your email (${to}) as ${formattedRole}.
+${expirationText}
 
 To accept this invitation and collaborate with your team, visit:
-${APP_URL}/projects
+${inviteUrl}
 
 Best regards,
 The LetsCollab Team

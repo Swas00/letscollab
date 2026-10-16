@@ -1719,6 +1719,11 @@ video {
   background-color: rgb(25 28 24 / var(--tw-bg-opacity, 1));
 }
 
+.bg-\[\#1A202C\]{
+  --tw-bg-opacity: 1;
+  background-color: rgb(26 32 44 / var(--tw-bg-opacity, 1));
+}
+
 .bg-\[\#1e221d\]{
   --tw-bg-opacity: 1;
   background-color: rgb(30 34 29 / var(--tw-bg-opacity, 1));
@@ -1754,6 +1759,10 @@ video {
   background-color: rgb(227 176 75 / var(--tw-bg-opacity, 1));
 }
 
+.bg-amber-500\/10{
+  background-color: rgb(245 158 11 / 0.1);
+}
+
 .bg-amber-500\/15{
   background-color: rgb(245 158 11 / 0.15);
 }
@@ -1761,6 +1770,10 @@ video {
 .bg-carbon{
   --tw-bg-opacity: 1;
   background-color: rgb(35 39 34 / var(--tw-bg-opacity, 1));
+}
+
+.bg-carbon\/10{
+  background-color: rgb(35 39 34 / 0.1);
 }
 
 .bg-carbon\/40{
@@ -1830,8 +1843,17 @@ video {
   background-color: rgb(252 251 247 / 0.95);
 }
 
+.bg-emerald-500\/10{
+  background-color: rgb(16 185 129 / 0.1);
+}
+
 .bg-emerald-500\/15{
   background-color: rgb(16 185 129 / 0.15);
+}
+
+.bg-emerald-600{
+  --tw-bg-opacity: 1;
+  background-color: rgb(5 150 105 / var(--tw-bg-opacity, 1));
 }
 
 .bg-moss{
@@ -1862,6 +1884,10 @@ video {
 .bg-muted{
   --tw-bg-opacity: 1;
   background-color: rgb(104 109 100 / var(--tw-bg-opacity, 1));
+}
+
+.bg-muted\/20{
+  background-color: rgb(104 109 100 / 0.2);
 }
 
 .bg-paper{
@@ -1925,6 +1951,10 @@ video {
 
 .bg-transparent{
   background-color: transparent;
+}
+
+.bg-white\/10{
+  background-color: rgb(255 255 255 / 0.1);
 }
 
 .bg-\[radial-gradient\(circle_at_50\%_40\%\2c rgba\(230\2c 95\2c 66\2c 0\.12\)_0\%\2c rgba\(0\2c 229\2c 255\2c 0\.08\)_40\%\2c transparent_75\%\)\]{
@@ -2453,9 +2483,24 @@ video {
   color: rgb(255 107 107 / var(--tw-text-opacity, 1));
 }
 
+.text-amber-600{
+  --tw-text-opacity: 1;
+  color: rgb(217 119 6 / var(--tw-text-opacity, 1));
+}
+
 .text-amber-700{
   --tw-text-opacity: 1;
   color: rgb(180 83 9 / var(--tw-text-opacity, 1));
+}
+
+.text-amber-800{
+  --tw-text-opacity: 1;
+  color: rgb(146 64 14 / var(--tw-text-opacity, 1));
+}
+
+.text-amber-900{
+  --tw-text-opacity: 1;
+  color: rgb(120 53 15 / var(--tw-text-opacity, 1));
 }
 
 .text-carbon{
@@ -2481,6 +2526,16 @@ video {
 .text-emerald-700{
   --tw-text-opacity: 1;
   color: rgb(4 120 87 / var(--tw-text-opacity, 1));
+}
+
+.text-emerald-800{
+  --tw-text-opacity: 1;
+  color: rgb(6 95 70 / var(--tw-text-opacity, 1));
+}
+
+.text-gray-400{
+  --tw-text-opacity: 1;
+  color: rgb(156 163 175 / var(--tw-text-opacity, 1));
 }
 
 .text-moss{
@@ -2593,6 +2648,16 @@ video {
 
 .shadow-coral\/20{
   --tw-shadow-color: rgb(230 95 66 / 0.2);
+  --tw-shadow: var(--tw-shadow-colored);
+}
+
+.shadow-coral\/25{
+  --tw-shadow-color: rgb(230 95 66 / 0.25);
+  --tw-shadow: var(--tw-shadow-colored);
+}
+
+.shadow-emerald-600\/20{
+  --tw-shadow-color: rgb(5 150 105 / 0.2);
   --tw-shadow: var(--tw-shadow-colored);
 }
 
@@ -2994,6 +3059,14 @@ code, pre, kbd, .font-mono {
   color: rgb(35 39 34 / var(--tw-text-opacity, 1));
 }
 
+.placeholder\:font-sans::-moz-placeholder{
+  font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif;
+}
+
+.placeholder\:font-sans::placeholder{
+  font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif;
+}
+
 .placeholder\:text-\[\#5e6459\]::-moz-placeholder{
   --tw-text-opacity: 1;
   color: rgb(94 100 89 / var(--tw-text-opacity, 1));
@@ -3067,8 +3140,16 @@ code, pre, kbd, .font-mono {
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
 
+.hover\:border-amber-600\/40:hover{
+  border-color: rgb(217 119 6 / 0.4);
+}
+
 .hover\:border-carbon\/30:hover{
   border-color: rgb(35 39 34 / 0.3);
+}
+
+.hover\:border-carbon\/40:hover{
+  border-color: rgb(35 39 34 / 0.4);
 }
 
 .hover\:border-coral:hover{
@@ -3147,6 +3228,11 @@ code, pre, kbd, .font-mono {
   background-color: rgb(252 251 247 / var(--tw-bg-opacity, 1));
 }
 
+.hover\:bg-emerald-700:hover{
+  --tw-bg-opacity: 1;
+  background-color: rgb(4 120 87 / var(--tw-bg-opacity, 1));
+}
+
 .hover\:bg-moss:hover{
   --tw-bg-opacity: 1;
   background-color: rgb(217 231 213 / var(--tw-bg-opacity, 1));
@@ -3167,6 +3253,10 @@ code, pre, kbd, .font-mono {
 
 .hover\:bg-paper\/70:hover{
   background-color: rgb(242 239 230 / 0.7);
+}
+
+.hover\:bg-periwinkle\/15:hover{
+  background-color: rgb(216 221 245 / 0.15);
 }
 
 .hover\:bg-periwinkle\/40:hover{
@@ -3387,8 +3477,21 @@ code, pre, kbd, .font-mono {
     justify-content: flex-start;
   }
 
+  .sm\:p-6{
+    padding: 1.5rem;
+  }
+
+  .sm\:p-8{
+    padding: 2rem;
+  }
+
   .sm\:text-left{
     text-align: left;
+  }
+
+  .sm\:text-2xl{
+    font-size: 1.5rem;
+    line-height: 2rem;
   }
 
   .sm\:text-3xl{

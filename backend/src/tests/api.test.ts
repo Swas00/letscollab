@@ -606,4 +606,227 @@ describe("LetsCollab Collaborative Platform Core Test Suite", () => {
         });
     });
   });
+
+  describe("8. End-to-End Team-Based Project Collaboration & Token Invitation System", () => {
+    let personAToken: string;
+    let personBToken: string;
+    let personCToken: string;
+    let personFToken: string;
+    let createdProjectId: string;
+    let tokenB: string;
+    let tokenC: string;
+    let tokenD: string;
+    let tokenE: string;
+    let invitationEId: string;
+
+    const emailA = `persona_${Date.now()}@test.com`;
+    const emailB = `personb_${Date.now()}@test.com`;
+    const emailC = `personc_${Date.now()}@test.com`;
+    const emailD = `persond_${Date.now()}@test.com`; // Registers later
+    const emailE = `persone_${Date.now()}@test.com`;
+    const emailF = `personf_${Date.now()}@test.com`; // Non-member intruder
+
+    beforeAll(async () => {
+      // Register Person A (Owner), Person B (Member), Person C (Decliner), Person F (Non-member)
+      const regA = await request(app)
+        .post("/api/auth/register")
+        .send({ name: "Person A", email: emailA, password: "password123" });
+      personAToken = regA.body.token;
+
+      const regB = await request(app)
+        .post("/api/auth/register")
+        .send({ name: "Person B", email: emailB, password: "password123" });
+      personBToken = regB.body.token;
+
+      const regC = await request(app)
+        .post("/api/auth/register")
+        .send({ name: "Person C", email: emailC, password: "password123" });
+      personCToken = regC.body.token;
+
+      const regF = await request(app)
+        .post("/api/auth/register")
+        .send({ name: "Person F", email: emailF, password: "password123" });
+      personFToken = regF.body.token;
+    });
+
+    it("Step 1: Person A creates project and automatically becomes Project Owner", async () => {
+      const res = await request(app)
+        .post("/api/projects")
+        .set("Authorization", `Bearer ${personAToken}`)
+        .send({
+          name: "Campus Event Management System",
+          key: `CEMS${Math.floor(100 + Math.random() * 899)}`,
+          description: "Full collaboration hub for campus fest & hackathon organizers",
+          priority: "HIGH",
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.project).toBeDefined();
+      createdProjectId = res.body.project.id;
+      expect(res.body.project.creatorId).toBeDefined();
+
+      // Check Person A is in project members with PROJECT_MANAGER role
+      const memberA = res.body.project.members.find((m: any) => m.userId === res.body.project.creatorId);
+      expect(memberA).toBeDefined();
+      expect(memberA.role).toBe("PROJECT_MANAGER");
+    });
+
+    it("Step 2: Person A invites Persons B, C, D, and E in a batch via email with secure tokens", async () => {
+      const res = await request(app)
+        .post(`/api/projects/${createdProjectId}/invitations`)
+        .set("Authorization", `Bearer ${personAToken}`)
+        .send({
+          emails: [emailB, emailC, emailD, emailE],
+          role: "TEAM_MEMBER",
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.count).toBe(4);
+      expect(res.body.invitations).toHaveLength(4);
+
+      const invB = res.body.invitations.find((i: any) => i.email === emailB);
+      const invC = res.body.invitations.find((i: any) => i.email === emailC);
+      const invD = res.body.invitations.find((i: any) => i.email === emailD);
+      const invE = res.body.invitations.find((i: any) => i.email === emailE);
+
+      expect(invB.token).toBeDefined();
+      expect(invB.status).toBe("PENDING");
+      expect(invB.expiresAt).toBeDefined();
+
+      tokenB = invB.token;
+      tokenC = invC.token;
+      tokenD = invD.token;
+      tokenE = invE.token;
+      invitationEId = invE.id;
+    });
+
+    it("Step 3: Publicly inspect invitation details via GET /api/projects/invitations/token/:token", async () => {
+      const res = await request(app).get(`/api/projects/invitations/token/${tokenB}`);
+      expect(res.status).toBe(200);
+      expect(res.body.invitation).toBeDefined();
+      expect(res.body.invitation.email).toBe(emailB);
+      expect(res.body.invitation.project.name).toBe("Campus Event Management System");
+      expect(res.body.invitation.isExpired).toBe(false);
+      expect(res.body.invitation.inviter.name).toBe("Person A");
+    });
+
+    it("Step 4: Case A - Person B (existing account) accepts invitation via token and gains project access", async () => {
+      const acceptRes = await request(app)
+        .post(`/api/projects/invitations/token/${tokenB}/accept`)
+        .set("Authorization", `Bearer ${personBToken}`);
+
+      expect(acceptRes.status).toBe(200);
+      expect(acceptRes.body.success).toBe(true);
+      expect(acceptRes.body.member.role).toBe("TEAM_MEMBER");
+
+      // Verify Person B can now fetch the private project workspace
+      const projectRes = await request(app)
+        .get(`/api/projects/${createdProjectId}`)
+        .set("Authorization", `Bearer ${personBToken}`);
+
+      expect(projectRes.status).toBe(200);
+      expect(projectRes.body.project.name).toBe("Campus Event Management System");
+    });
+
+    it("Step 5: Person C declines invitation via token", async () => {
+      const declineRes = await request(app)
+        .post(`/api/projects/invitations/token/${tokenC}/decline`)
+        .set("Authorization", `Bearer ${personCToken}`);
+
+      expect(declineRes.status).toBe(200);
+      expect(declineRes.body.success).toBe(true);
+
+      // Person C should NOT have access to the project workspace
+      const projectRes = await request(app)
+        .get(`/api/projects/${createdProjectId}`)
+        .set("Authorization", `Bearer ${personCToken}`);
+
+      expect(projectRes.status).toBe(403);
+    });
+
+    it("Step 6: Case B - Person D (not yet registered) registers with invited email then accepts via token", async () => {
+      // Step 6a: Register Person D
+      const regD = await request(app)
+        .post("/api/auth/register")
+        .send({ name: "Person D", email: emailD, password: "password123" });
+      expect(regD.status).toBe(201);
+      const personDToken = regD.body.token;
+
+      // Before accepting, Person D is NOT in the project
+      const preCheck = await request(app)
+        .get(`/api/projects/${createdProjectId}`)
+        .set("Authorization", `Bearer ${personDToken}`);
+      expect(preCheck.status).toBe(403);
+
+      // Step 6b: Person D accepts the invitation via token
+      const acceptD = await request(app)
+        .post(`/api/projects/invitations/token/${tokenD}/accept`)
+        .set("Authorization", `Bearer ${personDToken}`);
+      expect(acceptD.status).toBe(200);
+
+      // Step 6c: Person D now has full access to the project workspace
+      const postCheck = await request(app)
+        .get(`/api/projects/${createdProjectId}`)
+        .set("Authorization", `Bearer ${personDToken}`);
+      expect(postCheck.status).toBe(200);
+      expect(postCheck.body.project.id).toBe(createdProjectId);
+    });
+
+    it("Step 7: Case C - Revoke, Resend, and Unauthorized email acceptance handling", async () => {
+      // Intruding user (Person F) attempts to accept Person E's invitation
+      const wrongEmailRes = await request(app)
+        .post(`/api/projects/invitations/token/${tokenE}/accept`)
+        .set("Authorization", `Bearer ${personFToken}`);
+      expect(wrongEmailRes.status).toBe(403);
+      expect(wrongEmailRes.body.error).toMatch(/different email address|signed in as/i);
+
+      // Person A revokes Person E's invitation
+      const revokeRes = await request(app)
+        .delete(`/api/projects/${createdProjectId}/invitations/${invitationEId}`)
+        .set("Authorization", `Bearer ${personAToken}`);
+      expect(revokeRes.status).toBe(200);
+
+      // Inspecting revoked token indicates revoked status
+      const inspectRevoked = await request(app).get(`/api/projects/invitations/token/${tokenE}`);
+      expect(inspectRevoked.status).toBe(200);
+      expect(inspectRevoked.body.invitation.status).toBe("REVOKED");
+
+      // Attempting to accept a revoked token is rejected
+      const acceptRevoked = await request(app)
+        .post(`/api/projects/invitations/token/${tokenE}/accept`)
+        .set("Authorization", `Bearer ${personAToken}`); // Even with correct or incorrect user
+      expect(acceptRevoked.status).toBe(400);
+      expect(acceptRevoked.body.error).toMatch(/revoked/i);
+
+      // Person A resends the invitation to Person E
+      const resendRes = await request(app)
+        .post(`/api/projects/${createdProjectId}/invitations/${invitationEId}/resend`)
+        .set("Authorization", `Bearer ${personAToken}`);
+      expect(resendRes.status).toBe(200);
+      expect(resendRes.body.success).toBe(true);
+      expect(resendRes.body.invitation.status).toBe("PENDING");
+    });
+
+    it("Step 8: Non-member Person F is strictly blocked from the project workspace and tasks", async () => {
+      // Workspace access forbidden
+      const projRes = await request(app)
+        .get(`/api/projects/${createdProjectId}`)
+        .set("Authorization", `Bearer ${personFToken}`);
+      expect(projRes.status).toBe(403);
+
+      // Tasks listing for this project forbidden
+      const taskRes = await request(app)
+        .get(`/api/tasks/project/${createdProjectId}`)
+        .set("Authorization", `Bearer ${personFToken}`);
+      expect(taskRes.status).toBe(403);
+
+      // Non-member cannot manage members or invite anyone
+      const inviteRes = await request(app)
+        .post(`/api/projects/${createdProjectId}/invitations`)
+        .set("Authorization", `Bearer ${personFToken}`)
+        .send({ email: "intruder_friend@test.com" });
+      expect(inviteRes.status).toBe(403);
+    });
+  });
 });
