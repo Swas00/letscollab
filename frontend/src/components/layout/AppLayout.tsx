@@ -29,6 +29,7 @@ import { ROLE_CONFIG, cn } from "../../lib/utils";
 import { api } from "../../lib/api";
 import { SyncStatusBadge } from "../ui/SyncStatusBadge";
 import { CommandPalette } from "../ui/CommandPalette";
+import { Logo } from "../ui/Logo";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, logout, refreshUser } = useAuth();
@@ -167,17 +168,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <div>
           {/* Logo & App Title */}
           <div className="p-5 border-b border-divider flex items-center justify-between">
-            <Link href="/dashboard" className="flex items-center gap-3 group">
-              <div className="w-9 h-9 rounded-xl bg-coral flex items-center justify-center text-white shadow-md shadow-coral/20 group-hover:scale-105 transition-transform duration-200">
-                <Layers className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-extrabold text-lg tracking-tight text-carbon">LetsCollab</span>
-                </div>
-                <span className="text-[11px] text-muted block -mt-0.5 font-medium">Project Workspace</span>
-              </div>
-            </Link>
+            <Logo href="/dashboard" size="md" subtitle="Project Workspace" />
           </div>
 
           {/* Organization Switcher / Workspace Badge */}

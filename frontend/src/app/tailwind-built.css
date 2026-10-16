@@ -1029,6 +1029,10 @@ video {
   width: 2.5rem;
 }
 
+.w-11{
+  width: 2.75rem;
+}
+
 .w-12{
   width: 3rem;
 }
@@ -2240,6 +2244,11 @@ video {
   line-height: 2rem;
 }
 
+.text-3xl{
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+}
+
 .text-4xl{
   font-size: 2.25rem;
   line-height: 2.5rem;
@@ -2320,6 +2329,10 @@ video {
 
 .leading-relaxed{
   line-height: 1.625;
+}
+
+.tracking-normal{
+  letter-spacing: 0em;
 }
 
 .tracking-tight{

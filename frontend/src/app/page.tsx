@@ -22,6 +22,7 @@ import {
 import { CollaborativeEditor } from "../components/editor/CollaborativeEditor";
 import { Button } from "../components/ui/Button";
 import BackgroundCarousel from "../components/hero/BackgroundCarousel";
+import { Logo, LogoIcon } from "../components/ui/Logo";
 
 export default function HomePage() {
   return (
@@ -29,17 +30,7 @@ export default function HomePage() {
       {/* Navigation Bar */}
       <header className="sticky top-0 z-40 w-full border-b border-divider bg-editor/95 backdrop-blur-md shadow-xs">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-8 h-8 rounded-lg bg-coral flex items-center justify-center text-white shadow-xs transition-transform duration-150 group-hover:scale-105">
-              <Code2 className="w-4 h-4 text-white" />
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold text-lg tracking-tight text-carbon">LetsCollab</span>
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-moss border border-[#b5cea8] text-[#254622] font-semibold">
-                v1.4 • CRDT
-              </span>
-            </div>
-          </Link>
+          <Logo href="/" size="md" badge="v1.4 • CRDT" />
 
           {/* Desktop Nav Links */}
           <nav className="hidden md:flex items-center gap-7 text-xs font-semibold text-muted">
@@ -250,10 +241,10 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="py-8 px-6 border-t border-divider bg-editor">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted font-mono">
-          <div className="flex items-center gap-2">
-            <Code2 className="w-4 h-4 text-coral" />
+          <div className="flex items-center gap-2.5">
+            <LogoIcon size={20} />
             <span className="font-bold text-carbon">LetsCollab</span>
-            <span>— Real-Time Collaborative Code Platform</span>
+            <span>— Real-Time Collaborative Platform</span>
           </div>
 
           <div className="flex items-center gap-6">

@@ -3,9 +3,10 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Layers, ArrowRight, AlertCircle } from "lucide-react";
+import { ArrowRight, AlertCircle } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { Button } from "../../components/ui/Button";
+import { Logo } from "../../components/ui/Logo";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -56,12 +57,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-md space-y-6">
         {/* Brand Header */}
         <div className="text-center space-y-2">
-          <Link href="/" className="inline-flex items-center gap-2.5 group">
-            <div className="w-10 h-10 rounded-xl bg-coral flex items-center justify-center text-white shadow-md shadow-coral/20 group-hover:scale-105 transition-transform">
-              <Layers className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-2xl font-black text-carbon tracking-tight">LetsCollab</span>
-          </Link>
+          <Logo href="/" size="lg" className="justify-center" />
           <h1 className="text-xl font-extrabold text-carbon">Create your account</h1>
           <p className="text-xs text-muted">
             Start collaborating with your team in real time.

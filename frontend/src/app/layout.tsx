@@ -8,6 +8,14 @@ export const metadata: Metadata = {
   title: "LetsCollab | Real-Time Collaborative Workspace & Project Platform",
   description:
     "Real-time multi-user collaborative platform with RBAC, optimistic concurrency conflict detection, and live synchronization.",
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: "/apple-icon.svg",
+    shortcut: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
