@@ -30,6 +30,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   register: (name: string, email: string, password: string, role?: string, organizationName?: string) => Promise<{ success: boolean; error?: string }>;
+  setSession: (token: string, user: User) => void;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -97,6 +98,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { success: false, error: res.error || "Registration failed" };
   };
 
+  const setSession = (newToken: string, newUser: User) => {
+    setToken(newToken);
+    setUser(newUser);
+    localStorage.setItem("neostats_token", newToken);
+    localStorage.setItem("neostats_user", JSON.stringify(newUser));
+  };
+
   const logout = () => {
     setUser(null);
     setToken(null);
@@ -120,6 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         login,
         register,
+        setSession,
         logout,
         refreshUser,
       }}

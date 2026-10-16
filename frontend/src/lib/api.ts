@@ -78,6 +78,16 @@ export const api = {
         method: "PUT",
         body: JSON.stringify(data),
       }),
+    forgotPassword: (email: string) =>
+      apiFetch<{ message: string; email?: string }>("/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      }),
+    resetPassword: (data: { email: string; otp: string; newPassword: string }) =>
+      apiFetch<{ message: string; token: string; user: any }>("/auth/reset-password", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
   },
   organizations: {
     list: () => apiFetch<{ organizations: any[] }>("/organizations"),

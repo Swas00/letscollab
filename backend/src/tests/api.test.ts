@@ -543,4 +543,67 @@ describe("LetsCollab Collaborative Platform Core Test Suite", () => {
       expect(getCommentsRes.body.comments[0].user.name).toBe("Rohan Verma");
     });
   });
+
+  describe("7. Password Reset with Email OTP", () => {
+    let sentOtp: string;
+
+    it("User can request a 6-digit OTP for password reset", async () => {
+      const res = await request(app)
+        .post("/api/auth/forgot-password")
+        .send({ email: "dev@neostats.com" });
+
+      expect(res.status).toBe(200);
+      expect(res.body.message).toMatch(/verification code has been sent/i);
+      expect(res.body.testOtp).toBeDefined();
+      expect(res.body.testOtp).toHaveLength(6);
+      sentOtp = res.body.testOtp;
+    });
+
+    it("Rejects incorrect or expired OTP with HTTP 400", async () => {
+      const res = await request(app)
+        .post("/api/auth/reset-password")
+        .send({
+          email: "dev@neostats.com",
+          otp: "999999", // wrong OTP
+          newPassword: "brandnewpassword123",
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/Invalid or expired/i);
+    });
+
+    it("User can reset password with valid OTP and receives instant login session", async () => {
+      const res = await request(app)
+        .post("/api/auth/reset-password")
+        .send({
+          email: "dev@neostats.com",
+          otp: sentOtp,
+          newPassword: "brandnewpassword123",
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.token).toBeDefined();
+      expect(res.body.user.email).toBe("dev@neostats.com");
+
+      // Verify user can now authenticate with the new password
+      const loginRes = await request(app)
+        .post("/api/auth/login")
+        .send({ email: "dev@neostats.com", password: "brandnewpassword123" });
+
+      expect(loginRes.status).toBe(200);
+      expect(loginRes.body.token).toBeDefined();
+
+      // Reset password back to password123 for other tests
+      const resetBackRes = await request(app)
+        .post("/api/auth/forgot-password")
+        .send({ email: "dev@neostats.com" });
+      await request(app)
+        .post("/api/auth/reset-password")
+        .send({
+          email: "dev@neostats.com",
+          otp: resetBackRes.body.testOtp,
+          newPassword: "password123",
+        });
+    });
+  });
 });

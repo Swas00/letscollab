@@ -6,7 +6,7 @@ import { prisma } from "../prisma";
 import { AuthRequest, authenticateToken } from "../middleware/auth";
 import { logActivity } from "../services/activity.service";
 import { createNotification } from "../services/notification.service";
-import { sendWelcomeEmail } from "../services/mail.service";
+import { sendWelcomeEmail, sendPasswordResetOtpEmail } from "../services/mail.service";
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || "super-secret-jwt-key-for-neostats-hackathon-2026";
@@ -23,6 +23,16 @@ const registerSchema = z.object({
   role: z.enum(["ADMIN", "PROJECT_MANAGER", "TEAM_MEMBER", "VIEWER"]).optional(),
   avatarUrl: z.string().optional(),
   organizationName: z.string().optional(),
+});
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email("Please provide a valid email address"),
+});
+
+const resetPasswordSchema = z.object({
+  email: z.string().email("Please provide a valid email address"),
+  otp: z.string().min(4, "OTP verification code is required"),
+  newPassword: z.string().min(6, "New password must be at least 6 characters"),
 });
 
 const updateProfileSchema = z.object({
@@ -278,6 +288,144 @@ router.put("/change-password", authenticateToken, async (req: AuthRequest, res: 
   });
 
   return res.json({ message: "Password updated successfully" });
+});
+
+// =================== FORGOT & RESET PASSWORD VIA OTP ===================
+
+// Request 6-digit OTP for password reset
+router.post("/forgot-password", async (req, res) => {
+  const parse = forgotPasswordSchema.safeParse(req.body);
+  if (!parse.success) {
+    return res.status(400).json({ error: "Validation failed", details: parse.error.issues });
+  }
+
+  const normalizedEmail = parse.data.email.toLowerCase().trim();
+  const user = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+  });
+
+  if (!user || !user.isActive) {
+    return res.json({
+      message: "If an account with that email exists, a verification code has been sent to your inbox.",
+      email: normalizedEmail,
+    });
+  }
+
+  // Generate secure 6-digit numeric OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+  // Invalidate any previous pending OTPs for this email
+  await prisma.passwordResetOtp.updateMany({
+    where: { email: normalizedEmail, used: false },
+    data: { used: true },
+  });
+
+  // Store new OTP
+  await prisma.passwordResetOtp.create({
+    data: {
+      email: normalizedEmail,
+      otp,
+      expiresAt,
+    },
+  });
+
+  // Dispatch OTP email
+  sendPasswordResetOtpEmail({
+    to: user.email,
+    name: user.name,
+    otp,
+  }).catch((err) => console.error("[Auth] Reset OTP email error:", err));
+
+  return res.json({
+    message: "A 6-digit verification code has been sent to your email address.",
+    email: user.email,
+    ...(process.env.NODE_ENV === "test" ? { testOtp: otp } : {}),
+  });
+});
+
+// Reset Password with OTP & Log In
+router.post("/reset-password", async (req, res) => {
+  const parse = resetPasswordSchema.safeParse(req.body);
+  if (!parse.success) {
+    return res.status(400).json({ error: "Validation failed", details: parse.error.issues });
+  }
+
+  const { email, otp, newPassword } = parse.data;
+  const normalizedEmail = email.toLowerCase().trim();
+
+  // Find valid, unused OTP that hasn't expired
+  const validOtp = await prisma.passwordResetOtp.findFirst({
+    where: {
+      email: normalizedEmail,
+      otp: otp.trim(),
+      used: false,
+      expiresAt: { gt: new Date() },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (!validOtp) {
+    return res.status(400).json({
+      error: "Invalid or expired verification code. Please check the code or request a new one.",
+    });
+  }
+
+  // Mark OTP as used
+  await prisma.passwordResetOtp.update({
+    where: { id: validOtp.id },
+    data: { used: true },
+  });
+
+  // Hash new password
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+  const updatedUser = await prisma.user.update({
+    where: { email: normalizedEmail },
+    data: { password: hashedPassword },
+    include: {
+      organizationMemberships: {
+        include: { organization: true },
+      },
+    },
+  });
+
+  // Create in-app security notification
+  await createNotification({
+    userId: updatedUser.id,
+    type: "SYSTEM_ALERT",
+    title: "Password Changed",
+    message: "Your account password was successfully reset using email OTP verification.",
+    entityType: "USER",
+    entityId: updatedUser.id,
+  });
+
+  await logActivity({
+    userId: updatedUser.id,
+    action: "PASSWORD_RESET",
+    entityType: "USER",
+    entityId: updatedUser.id,
+    metadata: { email: updatedUser.email },
+  });
+
+  // Automatically authenticate user
+  const token = jwt.sign({ userId: updatedUser.id }, JWT_SECRET, { expiresIn: "7d" });
+
+  const safeUser = {
+    id: updatedUser.id,
+    email: updatedUser.email,
+    name: updatedUser.name,
+    role: updatedUser.role,
+    avatarUrl: updatedUser.avatarUrl,
+    isActive: updatedUser.isActive,
+    organizationMemberships: updatedUser.organizationMemberships,
+  };
+
+  return res.json({
+    message: "Password reset successful! You are now logged in.",
+    token,
+    user: safeUser,
+  });
 });
 
 export default router;

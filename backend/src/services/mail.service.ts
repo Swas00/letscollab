@@ -36,7 +36,15 @@ async function getTransporter(): Promise<Transporter> {
     return transporter;
   }
 
-  // 2. Fallback in development/test: Use Ethereal test account or json stream
+  // In test environment, use fast simulated transport without external network requests
+  if (process.env.NODE_ENV === "test") {
+    transporter = nodemailer.createTransport({
+      jsonTransport: true,
+    });
+    return transporter;
+  }
+
+  // 2. Fallback in development: Use Ethereal test account or json stream
   try {
     const testAccount = await nodemailer.createTestAccount();
     transporter = nodemailer.createTransport({
@@ -279,3 +287,109 @@ The LetsCollab Team
     return { success: false, error: err };
   }
 }
+
+export interface PasswordResetOtpEmailParams {
+  to: string;
+  name: string;
+  otp: string;
+}
+
+/**
+ * Sends a 6-digit OTP email for password reset
+ */
+export async function sendPasswordResetOtpEmail({
+  to,
+  name,
+  otp,
+}: PasswordResetOtpEmailParams) {
+  try {
+    const transport = await getTransporter();
+
+    const subject = `Your LetsCollab Verification Code: ${otp}`;
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Password Reset OTP</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #F8F9FA; margin: 0; padding: 40px 20px;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 560px; margin: 0 auto; background: #FFFFFF; border-radius: 20px; overflow: hidden; border: 1px solid #E2E8F0; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+    <!-- Header -->
+    <tr>
+      <td style="background-color: #1A202C; padding: 28px 40px; text-align: center;">
+        <h1 style="color: #FFFFFF; margin: 0; font-size: 24px; font-weight: 800;">LetsCollab</h1>
+        <p style="color: #E65A38; margin: 4px 0 0; font-size: 13px; font-weight: 700; letter-spacing: 0.5px;">ACCOUNT SECURITY</p>
+      </td>
+    </tr>
+    <!-- Content -->
+    <tr>
+      <td style="padding: 40px;">
+        <h2 style="color: #1A202C; margin: 0 0 14px; font-size: 19px; font-weight: 700;">Password Reset Request</h2>
+        <p style="color: #4A5568; margin: 0 0 20px; font-size: 14px; line-height: 1.6;">
+          Hello ${name},<br>
+          We received a request to reset the password for your LetsCollab account (<strong>${to}</strong>).
+        </p>
+        <p style="color: #4A5568; margin: 0 0 16px; font-size: 14px;">
+          Use the following verification code (OTP) to complete your password reset:
+        </p>
+
+        <!-- OTP Card -->
+        <div style="background-color: #FFF5F2; border: 2px dashed #E65A38; border-radius: 14px; padding: 24px; text-align: center; margin: 24px 0;">
+          <span style="font-family: 'Courier New', Courier, monospace; font-size: 34px; font-weight: 800; letter-spacing: 8px; color: #E65A38; display: inline-block;">
+            ${otp}
+          </span>
+          <p style="margin: 10px 0 0; color: #718096; font-size: 12px; font-weight: 600;">
+            ⏱ Valid for 10 minutes only
+          </p>
+        </div>
+
+        <p style="color: #718096; margin: 20px 0 0; font-size: 13px; line-height: 1.5;">
+          <strong>Security Notice:</strong> If you did not initiate this request, someone else may have entered your email address by mistake. Your account remains completely secure and no changes have been made.
+        </p>
+      </td>
+    </tr>
+    <!-- Footer -->
+    <tr>
+      <td style="background-color: #F7FAFC; border-top: 1px solid #E2E8F0; padding: 20px 40px; text-align: center;">
+        <p style="color: #A0AEC0; margin: 0; font-size: 12px;">
+          &copy; ${new Date().getFullYear()} LetsCollab Inc. &bull; Account Protection
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `;
+
+    const text = `
+Hello ${name},
+
+We received a request to reset your LetsCollab password.
+Your verification code (OTP) is:
+
+${otp}
+
+This code is valid for 10 minutes. If you did not request this, you can safely ignore this message.
+
+Best regards,
+The LetsCollab Team
+    `;
+
+    const info = await transport.sendMail({
+      from: FROM_EMAIL,
+      to,
+      subject,
+      text,
+      html,
+    });
+
+    console.log(`[MailService] Password reset OTP email sent to ${to} (MessageId: ${info.messageId || "simulated"})`);
+    return { success: true, messageId: info.messageId };
+  } catch (err) {
+    console.error(`[MailService] Error sending password reset OTP email to ${to}:`, err);
+    return { success: false, error: err };
+  }
+}
+
