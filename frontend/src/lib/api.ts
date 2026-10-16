@@ -62,7 +62,7 @@ export const api = {
         method: "POST",
         body: JSON.stringify(credentials),
       }),
-    register: (data: { name: string; email: string; password: string; role?: string; organizationName?: string }) =>
+    register: (data: { name: string; email: string; password: string; role?: string; organizationName?: string; avatarUrl?: string }) =>
       apiFetch<{ token: string; user: any }>("/auth/register", {
         method: "POST",
         body: JSON.stringify(data),
@@ -87,6 +87,11 @@ export const api = {
       apiFetch<{ message: string; token: string; user: any }>("/auth/reset-password", {
         method: "POST",
         body: JSON.stringify(data),
+      }),
+    deleteAccount: (password: string) =>
+      apiFetch<{ message: string }>("/auth/account", {
+        method: "DELETE",
+        body: JSON.stringify({ password }),
       }),
   },
   organizations: {

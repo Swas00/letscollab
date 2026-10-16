@@ -46,6 +46,10 @@ const changePasswordSchema = z.object({
   newPassword: z.string().min(6),
 });
 
+const deleteAccountSchema = z.object({
+  password: z.string().min(1, "Password is required to confirm permanent account deletion"),
+});
+
 // User Registration
 router.post("/register", async (req, res) => {
   const parse = registerSchema.safeParse(req.body);
@@ -292,6 +296,63 @@ router.put("/change-password", authenticateToken, async (req: AuthRequest, res: 
   });
 
   return res.json({ message: "Password updated successfully" });
+});
+
+// Permanently Delete User Account
+router.delete("/account", authenticateToken, async (req: AuthRequest, res: Response) => {
+  const parse = deleteAccountSchema.safeParse(req.body);
+  if (!parse.success) {
+    return res.status(400).json({
+      error: "Password is required to confirm permanent account deletion",
+      details: parse.error.issues,
+    });
+  }
+
+  const userId = req.user!.id;
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  const isMatch = await bcrypt.compare(parse.data.password, user.password);
+  if (!isMatch) {
+    return res.status(400).json({ error: "Incorrect password. Account deletion aborted." });
+  }
+
+  // 1. Clean up password reset OTPs for this user's email
+  await prisma.passwordResetOtp.deleteMany({
+    where: { email: user.email },
+  }).catch(() => {});
+
+  // 2. Clear out foreign key links on managed/created entities
+  await prisma.project.updateMany({
+    where: { managerId: userId },
+    data: { managerId: null },
+  }).catch(() => {});
+
+  await prisma.project.updateMany({
+    where: { creatorId: userId },
+    data: { creatorId: null },
+  }).catch(() => {});
+
+  await prisma.task.updateMany({
+    where: { assigneeId: userId },
+    data: { assigneeId: null },
+  }).catch(() => {});
+
+  await prisma.task.updateMany({
+    where: { creatorId: userId },
+    data: { creatorId: null },
+  }).catch(() => {});
+
+  // 3. Permanently remove the user record (Prisma cascades memberships, comments, notifications, etc.)
+  await prisma.user.delete({
+    where: { id: userId },
+  });
+
+  return res.json({
+    message: "Your account, credentials, and profile have been permanently deleted.",
+  });
 });
 
 // =================== FORGOT & RESET PASSWORD VIA OTP ===================

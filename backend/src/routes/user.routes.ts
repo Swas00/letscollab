@@ -226,4 +226,35 @@ router.patch("/:id/status", authenticateToken, requireSystemRole("ADMIN"), async
   return res.json({ user: updated, message: `User successfully ${isActive ? "activated" : "deactivated"}` });
 });
 
+// Delete user permanently (Admin only)
+router.delete("/:id", authenticateToken, requireSystemRole("ADMIN"), async (req: AuthRequest, res: Response) => {
+  const targetId = req.params.id;
+  const user = await prisma.user.findUnique({ where: { id: targetId } });
+  if (!user) {
+    return res.status(404).json({ error: "User not found" });
+  }
+
+  if (targetId === req.user?.id) {
+    return res.status(400).json({ error: "Admins cannot delete their own account from the user directory. Use the profile account deletion flow instead." });
+  }
+
+  await prisma.passwordResetOtp.deleteMany({ where: { email: user.email } }).catch(() => {});
+  await prisma.project.updateMany({ where: { managerId: targetId }, data: { managerId: null } }).catch(() => {});
+  await prisma.project.updateMany({ where: { creatorId: targetId }, data: { creatorId: null } }).catch(() => {});
+  await prisma.task.updateMany({ where: { assigneeId: targetId }, data: { assigneeId: null } }).catch(() => {});
+  await prisma.task.updateMany({ where: { creatorId: targetId }, data: { creatorId: null } }).catch(() => {});
+
+  await prisma.user.delete({ where: { id: targetId } });
+
+  await logActivity({
+    userId: req.user?.id,
+    action: "USER_DELETED_PERMANENTLY",
+    entityType: "USER",
+    entityId: targetId,
+    metadata: { email: user.email, name: user.name },
+  });
+
+  return res.json({ message: `User ${user.name} permanently deleted.` });
+});
+
 export default router;

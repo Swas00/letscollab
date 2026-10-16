@@ -829,4 +829,82 @@ describe("LetsCollab Collaborative Platform Core Test Suite", () => {
       expect(inviteRes.status).toBe(403);
     });
   });
+
+  describe("9. Account Details Persistence & Permanent Account Deletion Lifecycle", () => {
+    const userEmail = `persist_user_${Date.now()}@neostats.com`;
+    let userToken: string;
+    let userId: string;
+
+    it("Step 1: Account creation details are saved into the database and preserved across sessions", async () => {
+      const regRes = await request(app)
+        .post("/api/auth/register")
+        .send({
+          name: "Persistent User",
+          email: userEmail,
+          password: "MySecurePassword123",
+          role: "TEAM_MEMBER",
+        });
+      expect(regRes.status).toBe(201);
+      expect(regRes.body.user.email).toBe(userEmail);
+      userToken = regRes.body.token;
+      userId = regRes.body.user.id;
+
+      // Log in again from another session - details must be intact
+      const loginRes = await request(app)
+        .post("/api/auth/login")
+        .send({
+          email: userEmail,
+          password: "MySecurePassword123",
+        });
+      expect(loginRes.status).toBe(200);
+      expect(loginRes.body.user.name).toBe("Persistent User");
+      expect(loginRes.body.user.id).toBe(userId);
+    });
+
+    it("Step 2: User can customize and change avatar options", async () => {
+      const newAvatar = "https://api.dicebear.com/7.x/bottts/svg?seed=RoboNeo";
+      const updateRes = await request(app)
+        .put("/api/auth/profile")
+        .set("Authorization", `Bearer ${userToken}`)
+        .send({
+          avatarUrl: newAvatar,
+        });
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.user.avatarUrl).toBe(newAvatar);
+
+      // Verify persistent avatar from profile endpoint
+      const meRes = await request(app)
+        .get("/api/auth/me")
+        .set("Authorization", `Bearer ${userToken}`);
+      expect(meRes.status).toBe(200);
+      expect(meRes.body.user.avatarUrl).toBe(newAvatar);
+    });
+
+    it("Step 3: Permanent account deletion requires password verification", async () => {
+      // Wrong password fails
+      const wrongPassRes = await request(app)
+        .delete("/api/auth/account")
+        .set("Authorization", `Bearer ${userToken}`)
+        .send({ password: "WrongPassword" });
+      expect(wrongPassRes.status).toBe(400);
+      expect(wrongPassRes.body.error).toMatch(/incorrect password/i);
+
+      // Correct password permanently deletes account
+      const deleteRes = await request(app)
+        .delete("/api/auth/account")
+        .set("Authorization", `Bearer ${userToken}`)
+        .send({ password: "MySecurePassword123" });
+      expect(deleteRes.status).toBe(200);
+      expect(deleteRes.body.message).toMatch(/permanently deleted/i);
+
+      // Account is gone from database; cannot log in anymore
+      const deadLoginRes = await request(app)
+        .post("/api/auth/login")
+        .send({
+          email: userEmail,
+          password: "MySecurePassword123",
+        });
+      expect(deadLoginRes.status).toBe(401);
+    });
+  });
 });
