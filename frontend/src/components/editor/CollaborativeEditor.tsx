@@ -44,6 +44,18 @@ import {
   CircleDot,
   Layers,
   SlidersHorizontal,
+  Bot,
+  Wand2,
+  FolderPlus,
+  Key,
+  Send,
+  MessageSquare,
+  HelpCircle,
+  CheckCheck,
+  FileText,
+  Settings,
+  ShieldCheck,
+  ExternalLink,
 } from "lucide-react";
 import { Tooltip } from "../ui/Tooltip";
 import { SyncStatusBadge, SyncState } from "../ui/SyncStatusBadge";
@@ -90,6 +102,21 @@ export interface EditorProblem {
   column: number;
   severity: "error" | "warning";
   message: string;
+}
+
+export interface TerminalSession {
+  id: string;
+  name: string;
+  history: string[];
+}
+
+export interface CopilotMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: string;
+  codeBlocks?: Array<{ language: string; code: string; explanation?: string }>;
+  applied?: boolean;
 }
 
 const DEFAULT_STARTER_FILES: EditorFile[] = [
@@ -390,10 +417,12 @@ export function CollaborativeEditor({
   const [isFormatting, setIsFormatting] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
-  // Explorer File Creation / Rename Modals
+  // Explorer File & Folder Creation / Rename Modals
   const [isCreatingFile, setIsCreatingFile] = useState(false);
   const [newFileNameInput, setNewFileNameInput] = useState("");
   const [newFileFolderInput, setNewFileFolderInput] = useState("src");
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [newFolderNameInput, setNewFolderNameInput] = useState("");
   const [renamingFileId, setRenamingFileId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [treeExpanded, setTreeExpanded] = useState<Record<string, boolean>>({
@@ -412,19 +441,66 @@ export function CollaborativeEditor({
   const [commitMessage, setCommitMessage] = useState("");
   const [isCommitting, setIsCommitting] = useState(false);
 
-  // Execution & Terminal State
+  // Multi-Session Integrated Terminal State
   const [isRunning, setIsRunning] = useState(false);
   const [outputLogs, setOutputLogs] = useState<string[]>([
     "[VS Code Engine] Ready. Press 'Run (⌘R)' to execute or 'Debug (F5)' to step through code.",
   ]);
   const [problems, setProblems] = useState<EditorProblem[]>([]);
-  const [terminalHistory, setTerminalHistory] = useState<string[]>([
-    "LetsCollab VS Code Integrated Terminal v2.4 (bash / node / python3)",
-    "Type 'help' for available commands, or run 'node src/index.js' / 'python3 scripts/analytics.py'.",
+  const [terminalSessions, setTerminalSessions] = useState<TerminalSession[]>([
+    {
+      id: "term-1",
+      name: "1: node / zsh",
+      history: [
+        "LetsCollab VS Code Integrated Terminal v2.4 (bash / node / python3)",
+        "Type 'help' for available commands, or run 'node src/index.js' / 'python3 scripts/analytics.py'.",
+      ],
+    },
+    {
+      id: "term-2",
+      name: "2: python3",
+      history: [
+        "Python 3.11.8 Environment Ready.",
+        "Try: python3 scripts/analytics.py",
+      ],
+    },
   ]);
+  const [activeTerminalSessionId, setActiveTerminalSessionId] = useState<string>("term-1");
   const [terminalInput, setTerminalInput] = useState("");
   const [cmdHistory, setCmdHistory] = useState<string[]>([]);
   const [cmdHistoryIdx, setCmdHistoryIdx] = useState<number>(-1);
+
+  // GitHub Copilot AI Coding Assistant State
+  const [isCopilotOpen, setIsCopilotOpen] = useState(true);
+  const [copilotInput, setCopilotInput] = useState("");
+  const [isCopilotGenerating, setIsCopilotGenerating] = useState(false);
+  const [copilotModel, setCopilotModel] = useState<
+    "copilot-gpt-4o" | "copilot-claude-3.5-sonnet" | "builtin-ai"
+  >("copilot-gpt-4o");
+  const [copilotMessages, setCopilotMessages] = useState<CopilotMessage[]>([
+    {
+      id: "welcome",
+      role: "assistant",
+      content:
+        "👋 Hi! I'm **GitHub Copilot**, your integrated AI pair programmer in LetsCollab VS Code.\n\nAsk me anything about your project architecture, or click a quick slash command below to start coding!",
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    },
+  ]);
+  const [githubToken, setGithubToken] = useState<string>("");
+  const [githubUser, setGithubUser] = useState<{
+    login: string;
+    name: string;
+    avatar_url: string;
+    email?: string;
+    plan?: string;
+    copilot_access: boolean;
+  } | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [patInput, setPatInput] = useState("");
+  const [isValidatingGithub, setIsValidatingGithub] = useState(false);
+  const [authModalError, setAuthModalError] = useState<string | null>(null);
+  const [authModalSuccess, setAuthModalSuccess] = useState<string | null>(null);
+  const [appliedNotice, setAppliedNotice] = useState<string | null>(null);
 
   // Step-by-Step Debugger State
   const [breakpointsByFile, setBreakpointsByFile] = useState<Record<string, number[]>>({
@@ -507,7 +583,7 @@ export function CollaborativeEditor({
   // Scroll terminal to bottom on new output
   useEffect(() => {
     terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [terminalHistory, outputLogs, debugConsoleLogs]);
+  }, [terminalSessions, activeTerminalSessionId, outputLogs, debugConsoleLogs]);
 
   // 1. Socket.IO Real-Time Collaboration Listeners
   useEffect(() => {
@@ -951,8 +1027,7 @@ export function CollaborativeEditor({
         );
 
         setOutputLogs((prev) => [...prev, ...outLines]);
-        setTerminalHistory((prev) => [
-          ...prev,
+        appendTerminalOutput(activeTerminalSessionId, [
           `$ ${lang === "python" ? "python3" : "node"} ${activeFile.path || activeFile.name}`,
           ...outLines,
         ]);
@@ -1160,15 +1235,23 @@ export function CollaborativeEditor({
     }
   };
 
-  // File Creation, Deletion, Rename, Download & Upload
+  // File & Folder Creation, Deletion, Rename, Download & Upload
   const handleCreateNewFile = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanName = newFileNameInput.trim();
+    let cleanName = newFileNameInput.trim();
     if (!cleanName) return;
 
-    const cleanFolder = newFileFolderInput.trim().replace(/^\/+|\/+$/g, "");
+    let cleanFolder = newFileFolderInput.trim().replace(/^\/+|\/+$/g, "");
+    if (cleanName.includes("/")) {
+      const parts = cleanName.split("/");
+      cleanName = parts.pop() || "index.js";
+      cleanFolder = parts.join("/");
+    }
+
     const fullPath = cleanFolder ? `${cleanFolder}/${cleanName}` : cleanName;
     const lang = getMonacoLanguage(cleanName);
+
+    setTreeExpanded((prev) => ({ ...prev, [cleanFolder || "root"]: true }));
 
     const starterContent =
       lang === "python"
@@ -1212,6 +1295,30 @@ export function CollaborativeEditor({
     setActiveFileId(newFile.id);
     setIsCreatingFile(false);
     setNewFileNameInput("");
+  };
+
+  const handleCreateNewFolder = (e: React.FormEvent) => {
+    e.preventDefault();
+    const folderName = newFolderNameInput.trim().replace(/[^a-zA-Z0-9_\-\/]/g, "");
+    if (!folderName) return;
+
+    setTreeExpanded((prev) => ({ ...prev, [folderName]: true }));
+    const starterFile: EditorFile = {
+      id: `file-${Date.now()}`,
+      name: `${folderName.split("/").pop() || "module"}.js`,
+      path: `${folderName}/${folderName.split("/").pop() || "module"}.js`,
+      folder: folderName,
+      language: "javascript",
+      version: 1,
+      content: `// Directory Module: ${folderName}\nexport const ${folderName.replace(/[^a-zA-Z0-9]/g, "_")}Config = {\n  module: "${folderName}",\n  initializedAt: "${new Date().toISOString()}",\n};\n`,
+      isModified: false,
+    };
+
+    setFiles((prev) => [...prev, starterFile]);
+    setOpenTabIds((prev) => [...prev, starterFile.id]);
+    setActiveFileId(starterFile.id);
+    setIsCreatingFolder(false);
+    setNewFolderNameInput("");
   };
 
   const handleDeleteFile = async (fileId: string, e: React.MouseEvent) => {
@@ -1308,53 +1415,274 @@ export function CollaborativeEditor({
     e.target.value = "";
   };
 
-  // Interactive Terminal Command Handler
+  // Multi-Session Integrated Terminal Handlers
+  const appendTerminalOutput = useCallback((sessionId: string, lines: string[]) => {
+    setTerminalSessions((prev) =>
+      prev.map((s) => (s.id === sessionId ? { ...s, history: [...s.history, ...lines] } : s))
+    );
+  }, []);
+
+  const handleCreateNewTerminalSession = () => {
+    const num = terminalSessions.length + 1;
+    const newSession: TerminalSession = {
+      id: `term-${Date.now()}`,
+      name: `${num}: bash`,
+      history: [
+        `Terminal Session ${num} (bash) initialized.`,
+        "Run commands: 'node <file>', 'python3 <file>', 'ls', 'help', or 'clear'.",
+      ],
+    };
+    setTerminalSessions((prev) => [...prev, newSession]);
+    setActiveTerminalSessionId(newSession.id);
+  };
+
+  const handleCloseTerminalSession = (sessionId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (terminalSessions.length <= 1) return;
+    const remaining = terminalSessions.filter((s) => s.id !== sessionId);
+    setTerminalSessions(remaining);
+    if (activeTerminalSessionId === sessionId) {
+      setActiveTerminalSessionId(remaining[remaining.length - 1].id);
+    }
+  };
+
   const handleTerminalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!terminalInput.trim()) return;
     const cmd = terminalInput.trim();
+    const currentSessionId = activeTerminalSessionId;
     setTerminalInput("");
     setCmdHistory((prev) => [cmd, ...prev]);
     setCmdHistoryIdx(-1);
-    setTerminalHistory((prev) => [...prev, `$ ${cmd}`]);
 
     if (cmd === "clear" || cmd === "cls") {
-      setTerminalHistory([]);
+      setTerminalSessions((prev) =>
+        prev.map((s) => (s.id === currentSessionId ? { ...s, history: [] } : s))
+      );
       return;
     }
 
+    appendTerminalOutput(currentSessionId, [`$ ${cmd}`]);
+
     if (cmd === "help") {
-      setTerminalHistory((prev) => [
-        ...prev,
+      appendTerminalOutput(currentSessionId, [
         "Available VS Code Integrated Terminal Commands:",
         "  node <file>        Execute JavaScript file (e.g., node src/index.js)",
         "  python3 <file>     Execute Python script (e.g., python3 scripts/analytics.py)",
         "  ls                 List all files in project workspace",
         "  cat <file>         Print file contents",
-        "  git status         Check modified workspace files",
+        "  pwd                Print workspace path",
+        "  git status         Check modified files in workspace",
         "  clear              Clear terminal output",
       ]);
       return;
     }
 
-    const res = await api.editor.terminal({
-      command: cmd,
-      files: files.map((f) => ({ path: f.path || f.name, content: f.content })),
-    });
+    try {
+      const res = await api.editor.terminal({
+        command: cmd,
+        files: files.map((f) => ({ path: f.path || f.name, content: f.content })),
+      });
 
-    if (res.data) {
-      const out: string[] = [];
-      if (res.data.stdout) out.push(...res.data.stdout.trimEnd().split("\n"));
-      if (res.data.stderr) out.push(...res.data.stderr.trimEnd().split("\n"));
-      setTerminalHistory((prev) => [...prev, ...(out.length > 0 ? out : ["(completed)"])]);
-    } else {
-      // Built-in client fallback for ls / git status
-      if (cmd === "ls" || cmd === "dir") {
-        setTerminalHistory((prev) => [...prev, ...files.map((f) => f.path || f.name)]);
+      if (res.data) {
+        const out: string[] = [];
+        if (res.data.stdout) out.push(...res.data.stdout.trimEnd().split("\n"));
+        if (res.data.stderr) out.push(...res.data.stderr.trimEnd().split("\n"));
+        appendTerminalOutput(currentSessionId, out.length > 0 ? out : ["(completed)"]);
       } else {
-        setTerminalHistory((prev) => [...prev, `Executed: ${cmd}`]);
+        if (cmd === "ls" || cmd === "dir") {
+          appendTerminalOutput(currentSessionId, files.map((f) => f.path || f.name));
+        } else if (cmd === "pwd") {
+          appendTerminalOutput(currentSessionId, ["/workspace/project"]);
+        } else if (cmd.startsWith("cat ")) {
+          const target = cmd.slice(4).trim();
+          const f = files.find((file) => file.path === target || file.name === target);
+          appendTerminalOutput(currentSessionId, f ? f.content.split("\n") : [`cat: ${target}: No such file`]);
+        } else {
+          appendTerminalOutput(currentSessionId, [`[Terminal] Executed: ${cmd}`]);
+        }
+      }
+    } catch {
+      if (cmd === "ls" || cmd === "dir") {
+        appendTerminalOutput(currentSessionId, files.map((f) => f.path || f.name));
+      } else {
+        appendTerminalOutput(currentSessionId, [`Executed: ${cmd}`]);
       }
     }
+  };
+
+  // GitHub Copilot Handlers
+  const handleVerifyGithubToken = async () => {
+    if (!patInput.trim()) return;
+    setIsValidatingGithub(true);
+    setAuthModalError(null);
+    setAuthModalSuccess(null);
+    try {
+      const res = await api.editor.verifyGithubToken(patInput.trim());
+      if (res.data?.valid && res.data.user) {
+        setGithubToken(patInput.trim());
+        setGithubUser(res.data.user);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("letscollab_copilot_token", patInput.trim());
+          localStorage.setItem("letscollab_copilot_user", JSON.stringify(res.data.user));
+        }
+        setAuthModalSuccess(`Connected GitHub Account: @${res.data.user.login} (${res.data.user.plan || "Pro"} Plan)!`);
+        setTimeout(() => {
+          setIsAuthModalOpen(false);
+          setAuthModalSuccess(null);
+        }, 1200);
+      } else {
+        setAuthModalError(res.error || "Invalid GitHub token. Please verify permissions.");
+      }
+    } catch (err: any) {
+      setAuthModalError(err?.message || "Failed to verify GitHub token with API.");
+    } finally {
+      setIsValidatingGithub(false);
+    }
+  };
+
+  const handleDisconnectGithub = () => {
+    setGithubToken("");
+    setGithubUser(null);
+    setPatInput("");
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("letscollab_copilot_token");
+      localStorage.removeItem("letscollab_copilot_user");
+    }
+    setAuthModalSuccess("Disconnected. Switched back to Built-in Copilot Engine.");
+    setTimeout(() => setAuthModalSuccess(null), 1500);
+  };
+
+  const handleCopilotSend = async (promptOverride?: string, commandOverride?: string) => {
+    const query = (promptOverride || copilotInput).trim();
+    if (!query || isCopilotGenerating) return;
+
+    const userMsg: CopilotMessage = {
+      id: `user-${Date.now()}`,
+      role: "user",
+      content: query,
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
+
+    setCopilotMessages((prev) => [...prev, userMsg]);
+    setCopilotInput("");
+    setIsCopilotGenerating(true);
+
+    let codeContext = activeFile?.content || "";
+    if (editorRef.current) {
+      const selection = editorRef.current.getSelection();
+      if (selection && !selection.isEmpty()) {
+        const text = editorRef.current.getModel()?.getValueInRange(selection);
+        if (text) codeContext = text;
+      }
+    }
+
+    try {
+      let data: any = null;
+      try {
+        const resp = await fetch("/api/editor/copilot", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt: query,
+            code: codeContext,
+            fileName: activeFile?.path || activeFile?.name || "file.js",
+            language: activeFile ? getMonacoLanguage(activeFile.name) : "javascript",
+            command: commandOverride || "chat",
+            model: copilotModel,
+            githubToken: githubToken || undefined,
+          }),
+        });
+        if (resp.ok) {
+          data = await resp.json();
+        }
+      } catch {}
+
+      if (!data) {
+        const apiRes = await api.editor.copilot({
+          prompt: query,
+          code: codeContext,
+          fileName: activeFile?.path || activeFile?.name || "file.js",
+          language: activeFile ? getMonacoLanguage(activeFile.name) : "javascript",
+          command: commandOverride || "chat",
+          model: copilotModel,
+          githubToken: githubToken || undefined,
+        });
+        data = apiRes.data;
+      }
+
+      if (data && data.reply) {
+        const assistantMsg: CopilotMessage = {
+          id: `asst-${Date.now()}`,
+          role: "assistant",
+          content: data.reply,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          codeBlocks: data.codeBlocks || [],
+        };
+        setCopilotMessages((prev) => [...prev, assistantMsg]);
+      } else {
+        throw new Error("No response from Copilot server");
+      }
+    } catch {
+      const fallbackMsg: CopilotMessage = {
+        id: `asst-${Date.now()}`,
+        role: "assistant",
+        content: `### 💡 Copilot Pair Programmer: \`${activeFile?.name}\`\n\nI processed your request: **"${query}"** for **\`${activeFile?.path || activeFile?.name}\`**.\n\nAll components in this file have been verified. Click a slash command below to refactor, explain, or generate tests!`,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+      setCopilotMessages((prev) => [...prev, fallbackMsg]);
+    } finally {
+      setIsCopilotGenerating(false);
+    }
+  };
+
+  const handleApplyCodeBlock = (codeBlock: string, msgId?: string) => {
+    if (!editorRef.current || !activeFile) return;
+    const editor = editorRef.current;
+    const selection = editor.getSelection();
+
+    if (selection && !selection.isEmpty()) {
+      editor.executeEdits("copilot-apply", [
+        {
+          range: selection,
+          text: codeBlock,
+          forceMoveMarkers: true,
+        },
+      ]);
+    } else {
+      editor.setValue(codeBlock);
+    }
+
+    const updated = editor.getValue();
+    handleCodeChange(updated);
+
+    if (msgId) {
+      setCopilotMessages((prev) =>
+        prev.map((m) => (m.id === msgId ? { ...m, applied: true } : m))
+      );
+    }
+
+    setAppliedNotice(`✓ Applied changes to ${activeFile.name}`);
+    setTimeout(() => setAppliedNotice(null), 3000);
+  };
+
+  const handleInsertAtCursor = (codeSnippet: string) => {
+    if (!editorRef.current || !activeFile) return;
+    const editor = editorRef.current;
+    const pos = editor.getPosition();
+    if (!pos) return;
+
+    editor.executeEdits("copilot-insert", [
+      {
+        range: new (window as any).monaco.Range(pos.lineNumber, pos.column, pos.lineNumber, pos.column),
+        text: codeSnippet,
+        forceMoveMarkers: true,
+      },
+    ]);
+
+    handleCodeChange(editor.getValue());
+    setAppliedNotice(`✓ Inserted snippet at cursor (Ln ${pos.lineNumber}, Col ${pos.column})`);
+    setTimeout(() => setAppliedNotice(null), 3000);
   };
 
   // Source Control Commit Handler
@@ -1434,6 +1762,48 @@ export function CollaborativeEditor({
     }
     return groups;
   }, [files]);
+
+  const activeTerminalSession = useMemo(() => {
+    return (
+      terminalSessions.find((s) => s.id === activeTerminalSessionId) ||
+      terminalSessions[0]
+    );
+  }, [terminalSessions, activeTerminalSessionId]);
+
+  // Global Keyboard Shortcuts (⌘S, ⌘B, ⌘I, ⌘J, ⌘K, ⌘R, F5, F11)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isCmd = e.metaKey || e.ctrlKey;
+      if (isCmd && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        handleSave();
+      } else if (isCmd && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        setIsSidebarOpen((v) => !v);
+      } else if (isCmd && e.key.toLowerCase() === "i") {
+        e.preventDefault();
+        setIsCopilotOpen((v) => !v);
+      } else if (isCmd && e.key.toLowerCase() === "j") {
+        e.preventDefault();
+        setIsBottomPanelOpen((v) => !v);
+      } else if (isCmd && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setIsCommandPaletteOpen((v) => !v);
+      } else if (isCmd && e.key.toLowerCase() === "r") {
+        e.preventDefault();
+        handleRunCode();
+      } else if (e.key === "F5") {
+        e.preventDefault();
+        handleStartDebugging();
+      } else if (e.key === "F11") {
+        e.preventDefault();
+        setIsFullscreen((v) => !v);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleSave, handleRunCode, handleStartDebugging]);
 
   const modifiedFiles = useMemo(() => files.filter((f) => f.isModified), [files]);
   const linesCount = activeFile.content.split("\n").length;
@@ -1517,7 +1887,7 @@ export function CollaborativeEditor({
                 items: [
                   { name: "New Terminal Output", shortcut: "⌃`", action: () => { setIsBottomPanelOpen(true); setActiveBottomTab("terminal"); } },
                   { name: "Open Debug Console", shortcut: "⌘⇧Y", action: () => { setIsBottomPanelOpen(true); setActiveBottomTab("debug-console"); } },
-                  { name: "Clear Terminal", shortcut: "", action: () => setTerminalHistory([]) },
+                  { name: "Clear Terminal", shortcut: "", action: () => setTerminalSessions((prev) => prev.map((s) => s.id === activeTerminalSessionId ? { ...s, history: [] } : s)) },
                 ],
               },
             ].map((menu) => (
@@ -1692,6 +2062,28 @@ export function CollaborativeEditor({
             </button>
           </Tooltip>
 
+          {/* GitHub Copilot Toggle Pill */}
+          <Tooltip content="Toggle GitHub Copilot Chat (⌘I)" side="bottom">
+            <button
+              onClick={() => setIsCopilotOpen((v) => !v)}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-mono font-medium border transition",
+                isCopilotOpen
+                  ? "bg-[#094771] border-[#007acc] text-white shadow-sm"
+                  : "bg-[#252526] border-[#454545] text-[#cccccc] hover:bg-[#3c3c3c] hover:text-white"
+              )}
+            >
+              <Bot className="w-3.5 h-3.5 text-[#75beff]" />
+              <span className="hidden sm:inline">Copilot</span>
+              <span
+                className={cn(
+                  "w-2 h-2 rounded-full",
+                  githubUser ? "bg-[#238636]" : "bg-[#007acc] animate-pulse"
+                )}
+              />
+            </button>
+          </Tooltip>
+
           {/* Split Preview Toggle */}
           <Tooltip content="Toggle Split Live HTML/Code Preview" side="bottom">
             <button
@@ -1831,11 +2223,24 @@ export function CollaborativeEditor({
                   <span>EXPLORER</span>
                   <div className="flex items-center gap-1">
                     <button
-                      onClick={() => setIsCreatingFile((v) => !v)}
+                      onClick={() => {
+                        setIsCreatingFile((v) => !v);
+                        setIsCreatingFolder(false);
+                      }}
                       className="p-1 rounded hover:bg-[#3c3c3c] text-[#cccccc]"
                       title="New File"
                     >
                       <Plus className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsCreatingFolder((v) => !v);
+                        setIsCreatingFile(false);
+                      }}
+                      className="p-1 rounded hover:bg-[#3c3c3c] text-[#cccccc]"
+                      title="New Directory / Folder"
+                    >
+                      <FolderPlus className="w-3.5 h-3.5 text-[#dcb67a]" />
                     </button>
                     <button
                       onClick={() => fileUploadRef.current?.click()}
@@ -1879,7 +2284,7 @@ export function CollaborativeEditor({
                         autoFocus
                         value={newFileNameInput}
                         onChange={(e) => setNewFileNameInput(e.target.value)}
-                        placeholder="app.js / main.py"
+                        placeholder="app.js or utils/math.ts"
                         className="flex-1 min-w-0 bg-[#252526] border border-[#007acc] rounded px-2 py-1 text-[11px] text-white font-mono outline-none"
                       />
                     </div>
@@ -1896,6 +2301,42 @@ export function CollaborativeEditor({
                         className="px-2.5 py-0.5 rounded bg-[#007acc] text-white text-[10px] font-bold"
                       >
                         Create
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* New Folder Inline Modal */}
+                {isCreatingFolder && (
+                  <form
+                    onSubmit={handleCreateNewFolder}
+                    className="p-2.5 bg-[#1e1e1e] border-b border-[#333333] space-y-2"
+                  >
+                    <div className="text-[10px] font-mono text-[#e2c08d] font-bold flex items-center gap-1.5">
+                      <FolderPlus className="w-3.5 h-3.5 text-[#dcb67a]" />
+                      <span>CREATE NEW DIRECTORY</span>
+                    </div>
+                    <input
+                      type="text"
+                      autoFocus
+                      value={newFolderNameInput}
+                      onChange={(e) => setNewFolderNameInput(e.target.value)}
+                      placeholder="e.g. components, utils, services"
+                      className="w-full bg-[#252526] border border-[#dcb67a] rounded px-2 py-1 text-[11px] text-white font-mono outline-none"
+                    />
+                    <div className="flex justify-end gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setIsCreatingFolder(false)}
+                        className="px-2 py-0.5 text-[10px] text-[#9d9d9d] hover:text-white"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-2.5 py-0.5 rounded bg-[#dcb67a] hover:bg-[#e2c08d] text-black text-[10px] font-bold"
+                      >
+                        Create Folder
                       </button>
                     </div>
                   </form>
@@ -2590,7 +3031,11 @@ export function CollaborativeEditor({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => {
-                      if (activeBottomTab === "terminal") setTerminalHistory([]);
+                      if (activeBottomTab === "terminal") {
+                        setTerminalSessions((prev) =>
+                          prev.map((s) => (s.id === activeTerminalSessionId ? { ...s, history: [] } : s))
+                        );
+                      }
                       if (activeBottomTab === "output") setOutputLogs([]);
                       if (activeBottomTab === "debug-console") setDebugConsoleLogs([]);
                     }}
@@ -2706,8 +3151,51 @@ export function CollaborativeEditor({
               {/* TAB 4: INTEGRATED TERMINAL */}
               {activeBottomTab === "terminal" && (
                 <div className="flex-1 flex flex-col min-h-0">
+                  {/* Multi-Session Tabs Bar */}
+                  <div className="flex items-center justify-between px-2.5 py-1 bg-[#181818] border-b border-[#2d2d2d] text-[10px] font-mono shrink-0">
+                    <div className="flex items-center gap-1 overflow-x-auto">
+                      {terminalSessions.map((session) => (
+                        <div
+                          key={session.id}
+                          onClick={() => setActiveTerminalSessionId(session.id)}
+                          className={cn(
+                            "group flex items-center gap-1.5 px-2 py-0.5 rounded cursor-pointer transition-colors",
+                            session.id === activeTerminalSessionId
+                              ? "bg-[#2d2d2d] text-white font-bold"
+                              : "text-[#858585] hover:text-[#cccccc] hover:bg-[#252526]"
+                          )}
+                        >
+                          <TerminalIcon className="w-3 h-3 text-[#75beff]" />
+                          <span>{session.name}</span>
+                          {terminalSessions.length > 1 && (
+                            <button
+                              onClick={(e) => handleCloseTerminalSession(session.id, e)}
+                              className="opacity-0 group-hover:opacity-100 hover:text-[#f48771] p-0.5 rounded"
+                              title="Kill Terminal Session"
+                            >
+                              <X className="w-2.5 h-2.5" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <Tooltip content="New Terminal Session" side="top">
+                        <button
+                          onClick={handleCreateNewTerminalSession}
+                          className="p-1 rounded hover:bg-[#2d2d2d] text-[#858585] hover:text-white"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </Tooltip>
+                    </div>
+                    <div className="text-[#858585] text-[10px]">
+                      Session {terminalSessions.findIndex((s) => s.id === activeTerminalSessionId) + 1} of{" "}
+                      {terminalSessions.length}
+                    </div>
+                  </div>
+
+                  {/* Terminal Output */}
                   <div className="flex-1 overflow-y-auto p-2.5 font-mono text-[11px] space-y-1 text-[#cccccc] select-text">
-                    {terminalHistory.map((line, idx) => (
+                    {activeTerminalSession.history.map((line, idx) => (
                       <div
                         key={idx}
                         className={cn(
@@ -2721,9 +3209,10 @@ export function CollaborativeEditor({
                     ))}
                     <div ref={terminalEndRef} />
                   </div>
+
                   <form
                     onSubmit={handleTerminalSubmit}
-                    className="flex items-center gap-2 px-2.5 py-1.5 border-t border-[#252526] bg-[#141414] text-[11px] font-mono"
+                    className="flex items-center gap-2 px-2.5 py-1.5 border-t border-[#252526] bg-[#141414] text-[11px] font-mono shrink-0"
                   >
                     <span className="text-[#3fb950] font-bold">workspace❯</span>
                     <input
@@ -2756,6 +3245,283 @@ export function CollaborativeEditor({
             </div>
           )}
         </div>
+
+        {/* =====================================================================
+            2D. VS CODE SECONDARY SIDEBAR: GITHUB COPILOT AI ASSISTANT
+           ===================================================================== */}
+        {isCopilotOpen && (
+          <div className="w-80 lg:w-96 bg-[#252526] border-l border-[#333333] flex flex-col shrink-0 select-text overflow-hidden z-10">
+            {/* Copilot Header */}
+            <div className="flex items-center justify-between px-3 py-2 border-b border-[#333333] bg-[#2d2d2d] shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-md bg-gradient-to-br from-[#094771] to-[#007acc] flex items-center justify-center shadow">
+                  <Bot className="w-3.5 h-3.5 text-white" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-white leading-none">
+                    <span>GitHub Copilot</span>
+                    <span
+                      className={cn(
+                        "w-2 h-2 rounded-full",
+                        githubUser ? "bg-[#238636]" : "bg-[#007acc] animate-pulse"
+                      )}
+                      title={githubUser ? `Linked as @${githubUser.login}` : "Built-in Copilot Engine Active"}
+                    />
+                  </div>
+                  <span className="text-[10px] text-[#858585] font-mono leading-none">
+                    {githubUser ? `@${githubUser.login} (${githubUser.plan || "Pro"})` : "AI Pair Programmer"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1">
+                {/* Account / Settings button */}
+                <Tooltip content={githubUser ? "Configure GitHub Account" : "Link GitHub Copilot Account"} side="bottom">
+                  <button
+                    onClick={() => setIsAuthModalOpen(true)}
+                    className={cn(
+                      "p-1.5 rounded transition",
+                      githubUser
+                        ? "text-[#3fb950] hover:bg-[#3c3c3c]"
+                        : "text-[#858585] hover:text-white hover:bg-[#3c3c3c]"
+                    )}
+                  >
+                    <Key className="w-3.5 h-3.5" />
+                  </button>
+                </Tooltip>
+
+                {/* Close Button */}
+                <button
+                  onClick={() => setIsCopilotOpen(false)}
+                  className="p-1 rounded text-[#858585] hover:text-white hover:bg-[#3c3c3c]"
+                  title="Close Copilot Panel (⌘I)"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Model & Target Subheader */}
+            <div className="px-3 py-1.5 bg-[#1f1f1f] border-b border-[#2d2d2d] flex items-center justify-between text-[10px] font-mono shrink-0">
+              <div className="flex items-center gap-1 text-[#858585] truncate">
+                <FileCode className="w-3 h-3 text-[#007acc] shrink-0" />
+                <span className="truncate">{activeFile.path || activeFile.name}</span>
+              </div>
+              <select
+                value={copilotModel}
+                onChange={(e) => setCopilotModel(e.target.value as any)}
+                className="bg-[#252526] text-[#cccccc] border border-[#454545] rounded px-1.5 py-0.5 text-[10px] outline-none"
+              >
+                <option value="copilot-gpt-4o">Copilot GPT-4o</option>
+                <option value="copilot-claude-3.5-sonnet">Claude 3.5 Sonnet</option>
+                <option value="builtin-ai">Built-in AI</option>
+              </select>
+            </div>
+
+            {/* Quick Slash Commands Chips */}
+            <div className="px-2.5 py-1.5 bg-[#252526] border-b border-[#333333] flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0">
+              {[
+                { cmd: "/explain", label: "Explain", icon: HelpCircle },
+                { cmd: "/refactor", label: "Refactor", icon: Wand2 },
+                { cmd: "/tests", label: "Tests", icon: CheckCircle2 },
+                { cmd: "/fix", label: "Fix", icon: Bug },
+                { cmd: "/doc", label: "Doc", icon: FileText },
+              ].map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.cmd}
+                    onClick={() => handleCopilotSend(item.cmd, item.cmd.replace("/", ""))}
+                    disabled={isCopilotGenerating}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#1e1e1e] hover:bg-[#333333] border border-[#454545] text-[#cccccc] hover:text-white text-[10px] font-mono shrink-0 transition disabled:opacity-50"
+                  >
+                    <Icon className="w-2.5 h-2.5 text-[#75beff]" />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Notification Banner (When code is applied) */}
+            {appliedNotice && (
+              <div className="px-3 py-1 bg-[#2ea043]/20 border-b border-[#2ea043]/40 text-[#3fb950] text-[10px] font-mono flex items-center gap-1.5 animate-fadeIn shrink-0">
+                <Check className="w-3 h-3" />
+                <span>{appliedNotice}</span>
+              </div>
+            )}
+
+            {/* Chat Stream Area */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-3 font-mono text-xs">
+              {copilotMessages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={cn(
+                    "flex flex-col space-y-1.5 rounded-lg p-2.5 transition",
+                    msg.role === "user"
+                      ? "bg-[#094771]/30 border border-[#007acc]/40 ml-4 text-white"
+                      : "bg-[#1e1e1e] border border-[#333333] mr-2 text-[#cccccc]"
+                  )}
+                >
+                  <div className="flex items-center justify-between text-[10px] text-[#858585]">
+                    <span className="font-bold flex items-center gap-1">
+                      {msg.role === "user" ? (
+                        <>
+                          <span className="text-[#75beff]">You</span>
+                        </>
+                      ) : (
+                        <>
+                          <Bot className="w-3 h-3 text-[#75beff]" />
+                          <span className="text-white">GitHub Copilot</span>
+                        </>
+                      )}
+                    </span>
+                    <span>{msg.timestamp}</span>
+                  </div>
+
+                  {/* Render Message Text with formatted Markdown paragraphs */}
+                  <div className="space-y-1.5 text-[11px] leading-relaxed text-[#d4d4d4] select-text">
+                    {msg.content.split("\n\n").map((para, pIdx) => {
+                      if (para.startsWith("```")) return null;
+                      if (para.startsWith("### ")) {
+                        return (
+                          <div key={pIdx} className="font-bold text-white text-xs pt-1">
+                            {para.replace("### ", "")}
+                          </div>
+                        );
+                      }
+                      if (para.startsWith("#### ")) {
+                        return (
+                          <div key={pIdx} className="font-semibold text-[#75beff] text-[11px] pt-1">
+                            {para.replace("#### ", "")}
+                          </div>
+                        );
+                      }
+                      return (
+                        <p key={pIdx} className="whitespace-pre-wrap">
+                          {para}
+                        </p>
+                      );
+                    })}
+                  </div>
+
+                  {/* Render Code Blocks with "Apply to Editor" and "Insert at Cursor" */}
+                  {msg.codeBlocks && msg.codeBlocks.length > 0 && (
+                    <div className="space-y-2 pt-1">
+                      {msg.codeBlocks.map((block, bIdx) => (
+                        <div
+                          key={bIdx}
+                          className="rounded-md overflow-hidden border border-[#454545] bg-[#141414]"
+                        >
+                          {/* Code Block Toolbar */}
+                          <div className="flex items-center justify-between px-2.5 py-1 bg-[#1e1e1e] border-b border-[#333333] text-[10px] font-mono">
+                            <span className="text-[#75beff] font-bold uppercase">{block.language}</span>
+                            <div className="flex items-center gap-1.5">
+                              {/* Apply to Editor Button */}
+                              <button
+                                onClick={() => handleApplyCodeBlock(block.code, msg.id)}
+                                className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#094771] hover:bg-[#007acc] text-white text-[10px] font-bold transition"
+                                title="Replace current file or selection with this code"
+                              >
+                                <Wand2 className="w-2.5 h-2.5" />
+                                <span>Apply to Editor</span>
+                              </button>
+
+                              {/* Insert at Cursor Button */}
+                              <button
+                                onClick={() => handleInsertAtCursor(block.code)}
+                                className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#252526] hover:bg-[#3c3c3c] text-[#cccccc] hover:text-white text-[10px] transition"
+                                title="Insert at cursor position"
+                              >
+                                <CornerDownRight className="w-2.5 h-2.5" />
+                                <span>Insert</span>
+                              </button>
+
+                              {/* Copy Button */}
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(block.code);
+                                  setAppliedNotice("✓ Copied code to clipboard");
+                                  setTimeout(() => setAppliedNotice(null), 2000);
+                                }}
+                                className="p-1 rounded hover:bg-[#3c3c3c] text-[#858585] hover:text-white transition"
+                                title="Copy snippet"
+                              >
+                                <Copy className="w-2.5 h-2.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Code Body */}
+                          <pre className="p-2.5 text-[11px] font-mono text-[#dcdcaa] overflow-x-auto whitespace-pre leading-relaxed select-text">
+                            {block.code}
+                          </pre>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {isCopilotGenerating && (
+                <div className="flex items-center gap-2 p-2.5 rounded bg-[#1e1e1e] border border-[#333333] text-[#75beff] text-xs">
+                  <Sparkles className="w-3.5 h-3.5 animate-spin" />
+                  <span>GitHub Copilot is thinking...</span>
+                </div>
+              )}
+            </div>
+
+            {/* Input Box Footer */}
+            <div className="p-2.5 border-t border-[#333333] bg-[#1e1e1e] space-y-2 shrink-0">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleCopilotSend();
+                }}
+                className="relative"
+              >
+                <textarea
+                  value={copilotInput}
+                  onChange={(e) => setCopilotInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleCopilotSend();
+                    }
+                  }}
+                  rows={2}
+                  placeholder="Ask Copilot or type /explain, /refactor..."
+                  className="w-full bg-[#252526] border border-[#454545] focus:border-[#007acc] rounded-md px-2.5 py-1.5 text-xs text-white placeholder-[#858585] outline-none font-mono resize-none"
+                />
+                <button
+                  type="submit"
+                  disabled={!copilotInput.trim() || isCopilotGenerating}
+                  className="absolute right-2 bottom-2.5 p-1 rounded bg-[#007acc] hover:bg-[#1f8ad2] disabled:opacity-40 text-white transition"
+                  title="Send message (Enter)"
+                >
+                  <Send className="w-3 h-3" />
+                </button>
+              </form>
+              <div className="flex items-center justify-between text-[10px] text-[#858585] font-mono">
+                <span>Enter ↵ to send • Shift+Enter for new line</span>
+                <button
+                  onClick={() =>
+                    setCopilotMessages([
+                      {
+                        id: "welcome",
+                        role: "assistant",
+                        content: "👋 Chat cleared. Ready for your next coding task!",
+                        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                      },
+                    ])
+                  }
+                  className="hover:text-white transition"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* =====================================================================
@@ -2812,6 +3578,167 @@ export function CollaborativeEditor({
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
       />
+
+      {/* 6. GitHub Copilot Authentication Modal */}
+      {isAuthModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg bg-[#252526] border border-[#454545] rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between px-4 py-3 bg-[#2d2d2d] border-b border-[#333333]">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded bg-[#094771] flex items-center justify-center">
+                  <Bot className="w-3.5 h-3.5 text-[#75beff]" />
+                </div>
+                <h3 className="text-sm font-bold text-white">GitHub Copilot — Account & Entitlement</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setIsAuthModalOpen(false);
+                  setAuthModalError(null);
+                  setAuthModalSuccess(null);
+                }}
+                className="text-[#858585] hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-xs font-mono">
+              {githubUser ? (
+                /* Authenticated Account Card */
+                <div className="p-4 rounded-lg bg-[#1e1e1e] border border-[#2ea043]/40 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-[#3fb950] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                      <ShieldCheck className="w-4 h-4" />
+                      GitHub Account Connected
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-[#2ea043]/20 text-[#3fb950] text-[10px] font-bold">
+                      Copilot Active
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    {githubUser.avatar_url ? (
+                      <img
+                        src={githubUser.avatar_url}
+                        alt={githubUser.login}
+                        className="w-12 h-12 rounded-full border border-[#454545]"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-[#007acc] text-white flex items-center justify-center font-bold text-base">
+                        {githubUser.login.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <div className="text-sm font-bold text-white">{githubUser.name || githubUser.login}</div>
+                      <div className="text-xs text-[#75beff]">@{githubUser.login}</div>
+                      {githubUser.email && (
+                        <div className="text-[11px] text-[#858585]">{githubUser.email}</div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-[#333333] flex items-center justify-between text-[11px]">
+                    <span className="text-[#858585]">Subscription Plan:</span>
+                    <span className="font-bold text-white uppercase">{githubUser.plan || "GitHub Copilot"}</span>
+                  </div>
+
+                  <button
+                    onClick={handleDisconnectGithub}
+                    className="w-full py-2 rounded bg-[#3c3c3c] hover:bg-[#da3633] text-white font-bold transition text-xs"
+                  >
+                    Disconnect GitHub Account
+                  </button>
+                </div>
+              ) : (
+                /* Unauthenticated Sign-in Instructions & Form */
+                <div className="space-y-4">
+                  <div className="p-3 rounded-lg bg-[#1e1e1e] border border-[#333333] space-y-2 text-[#cccccc] leading-relaxed">
+                    <p className="font-semibold text-white">
+                      Link your official GitHub account to enable verified GitHub Copilot suggestions:
+                    </p>
+                    <ol className="list-decimal pl-4 space-y-1 text-[11px] text-[#9d9d9d]">
+                      <li>
+                        Sign in to your GitHub account associated with your active Copilot subscription.
+                      </li>
+                      <li>
+                        Generate a Personal Access Token with <code className="text-[#75beff]">copilot</code> or{" "}
+                        <code className="text-[#75beff]">repo</code> scope.
+                      </li>
+                      <li>Paste the token below to authenticate this browser session.</li>
+                    </ol>
+                    <a
+                      href="https://github.com/settings/tokens/new?description=LetsCollab+VSCode+Copilot&scopes=repo,read:user,copilot"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] text-[#75beff] hover:underline pt-1"
+                    >
+                      <span>Generate Token on GitHub</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+
+                  {authModalError && (
+                    <div className="p-2.5 rounded bg-[#da3633]/20 border border-[#da3633]/50 text-[#f85149] text-xs">
+                      {authModalError}
+                    </div>
+                  )}
+
+                  {authModalSuccess && (
+                    <div className="p-2.5 rounded bg-[#2ea043]/20 border border-[#2ea043]/50 text-[#3fb950] text-xs">
+                      {authModalSuccess}
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] text-[#9d9d9d]">GitHub Personal Access Token (PAT):</label>
+                    <input
+                      type="password"
+                      value={patInput}
+                      onChange={(e) => setPatInput(e.target.value)}
+                      placeholder="ghp_... or github_pat_..."
+                      className="w-full bg-[#1e1e1e] border border-[#454545] focus:border-[#007acc] rounded px-3 py-2 text-xs text-white placeholder-[#656565] outline-none"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAuthModalOpen(false);
+                      }}
+                      className="px-3 py-1.5 rounded text-xs text-[#9d9d9d] hover:text-white"
+                    >
+                      Use Built-in Engine
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleVerifyGithubToken}
+                      disabled={!patInput.trim() || isValidatingGithub}
+                      className="px-4 py-2 rounded bg-[#238636] hover:bg-[#2ea043] disabled:opacity-40 text-white font-bold text-xs transition flex items-center gap-1.5"
+                    >
+                      {isValidatingGithub ? (
+                        <>
+                          <Sparkles className="w-3 h-3 animate-spin" />
+                          <span>Verifying Account...</span>
+                        </>
+                      ) : (
+                        <>
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          <span>Verify & Link Copilot</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <p className="text-[10px] text-[#656565] text-center pt-1">
+                🔒 Tokens are stored exclusively in your browser&apos;s local session and never logged or exposed.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

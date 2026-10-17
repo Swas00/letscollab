@@ -1069,6 +1069,40 @@ describe("LetsCollab Collaborative Platform Core Test Suite", () => {
       expect(Array.isArray(pyDebugRes.body.steps)).toBe(true);
       expect(pyDebugRes.body.steps.length).toBeGreaterThan(0);
     });
+
+    it("should respond to GitHub Copilot chat requests with contextual analysis", async () => {
+      const explainRes = await request(app)
+        .post("/api/editor/copilot/chat")
+        .send({
+          prompt: "/explain",
+          fileName: "src/index.js",
+          language: "javascript",
+          code: "function add(a, b) { return a + b; }",
+        });
+
+      expect(explainRes.status).toBe(200);
+      expect(explainRes.body.reply).toContain("Copilot Code Explanation");
+
+      const refactorRes = await request(app)
+        .post("/api/editor/copilot/chat")
+        .send({
+          prompt: "/refactor",
+          fileName: "src/index.js",
+          language: "javascript",
+          code: "var x = 10; var y = 20;",
+        });
+
+      expect(refactorRes.status).toBe(200);
+      expect(refactorRes.body.codeBlocks.length).toBeGreaterThan(0);
+
+      const verifyRes = await request(app)
+        .post("/api/editor/copilot/verify-github")
+        .send({ token: "invalid_dummy_token" });
+
+      expect(verifyRes.status).toBe(401);
+      expect(verifyRes.body.valid).toBe(false);
+    });
   });
 });
+
 

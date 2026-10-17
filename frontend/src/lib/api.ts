@@ -358,6 +358,40 @@ export const api = {
         method: "POST",
         body: JSON.stringify(data),
       }),
+    copilot: (data: {
+      prompt: string;
+      code?: string;
+      fileName?: string;
+      language?: string;
+      command?: string;
+      model?: string;
+      githubToken?: string;
+      chatHistory?: any[];
+    }) =>
+      apiFetch<{
+        reply: string;
+        codeBlocks: Array<{ language: string; code: string; explanation?: string }>;
+        suggestions?: string[];
+        modelUsed: string;
+      }>("/editor/copilot/chat", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    verifyGithubToken: (token: string) =>
+      apiFetch<{
+        valid: boolean;
+        user: {
+          login: string;
+          name: string;
+          avatar_url: string;
+          email?: string;
+          plan?: string;
+          copilot_access: boolean;
+        };
+      }>("/editor/copilot/verify-github", {
+        method: "POST",
+        body: JSON.stringify({ token }),
+      }),
   },
 };
 
