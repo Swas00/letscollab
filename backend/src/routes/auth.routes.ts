@@ -11,6 +11,7 @@ import { sendWelcomeEmail, sendPasswordResetOtpEmail } from "../services/mail.se
 import {
   saveUserToPersistentRegistry,
   removeUserFromPersistentRegistry,
+  restoreUserFromRegistry,
 } from "../services/accountStorage.service";
 
 const router = Router();
@@ -216,7 +217,7 @@ router.post("/login", async (req, res) => {
 
   const { email, password } = parse.data;
   const normalizedEmail = email.toLowerCase().trim();
-  const user = await prisma.user.findUnique({
+  let user = await prisma.user.findUnique({
     where: { email: normalizedEmail },
     include: {
       organizationMemberships: {
@@ -229,6 +230,26 @@ router.post("/login", async (req, res) => {
       },
     },
   });
+
+  // If user is not yet in the active database (e.g. after container restart), restore from persistent registry
+  if (!user) {
+    const restored = await restoreUserFromRegistry(normalizedEmail);
+    if (restored) {
+      user = await prisma.user.findUnique({
+        where: { id: restored.id },
+        include: {
+          organizationMemberships: {
+            select: {
+              id: true,
+              organizationId: true,
+              role: true,
+              organization: { select: { id: true, name: true, slug: true } },
+            },
+          },
+        },
+      });
+    }
+  }
 
   if (!user) {
     return res.status(401).json({ error: "Invalid email or password" });
@@ -413,9 +434,13 @@ router.post("/forgot-password", async (req, res) => {
   }
 
   const normalizedEmail = parse.data.email.toLowerCase().trim();
-  const user = await prisma.user.findUnique({
+  let user = await prisma.user.findUnique({
     where: { email: normalizedEmail },
   });
+
+  if (!user) {
+    user = await restoreUserFromRegistry(normalizedEmail);
+  }
 
   if (!user) {
     return res.status(404).json({

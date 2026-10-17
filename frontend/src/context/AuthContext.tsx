@@ -55,9 +55,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (res.data?.user) {
             setUser(res.data.user);
             localStorage.setItem("neostats_user", JSON.stringify(res.data.user));
-          } else if (res.status === 401 || res.status === 403) {
+            if (res.data.user.email) {
+              localStorage.setItem("neostats_last_email", res.data.user.email);
+            }
+          } else if (res.status === 401) {
             logout();
           }
+        }).catch(() => {
+          // Retain session if backend server is temporarily spinning up
         });
       } catch (e) {
         logout();
@@ -76,6 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(res.data.user);
       localStorage.setItem("neostats_token", res.data.token);
       localStorage.setItem("neostats_user", JSON.stringify(res.data.user));
+      localStorage.setItem("neostats_last_email", res.data.user.email);
       return { success: true };
     }
 
@@ -92,6 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(res.data.user);
       localStorage.setItem("neostats_token", res.data.token);
       localStorage.setItem("neostats_user", JSON.stringify(res.data.user));
+      localStorage.setItem("neostats_last_email", res.data.user.email);
       return { success: true };
     }
 
@@ -103,6 +110,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(newUser);
     localStorage.setItem("neostats_token", newToken);
     localStorage.setItem("neostats_user", JSON.stringify(newUser));
+    if (newUser.email) {
+      localStorage.setItem("neostats_last_email", newUser.email);
+    }
   };
 
   const logout = () => {
@@ -110,6 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(null);
     localStorage.removeItem("neostats_token");
     localStorage.removeItem("neostats_user");
+    // Preserve neostats_last_email so user doesn't have to retype on next login
   };
 
   const refreshUser = async () => {

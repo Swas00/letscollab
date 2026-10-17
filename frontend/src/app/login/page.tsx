@@ -47,6 +47,11 @@ export default function LoginPage() {
       const emailParam = q.get("email");
       if (emailParam) {
         setEmail(emailParam);
+      } else {
+        const lastEmail = localStorage.getItem("neostats_last_email");
+        if (lastEmail) {
+          setEmail(lastEmail);
+        }
       }
     }
   }, []);
@@ -76,10 +81,14 @@ export default function LoginPage() {
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    const res = await login(email, password);
+    const cleanEmail = email.trim().toLowerCase();
+    const res = await login(cleanEmail, password);
     setIsLoading(false);
 
     if (res.success) {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("neostats_last_email", cleanEmail);
+      }
       const redirectUrl =
         typeof window !== "undefined"
           ? new URLSearchParams(window.location.search).get("redirect") || "/dashboard"
