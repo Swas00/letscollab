@@ -56,6 +56,7 @@ import {
   Settings,
   ShieldCheck,
   ExternalLink,
+  Users,
 } from "lucide-react";
 import { Tooltip } from "../ui/Tooltip";
 import { SyncStatusBadge, SyncState } from "../ui/SyncStatusBadge";
@@ -119,214 +120,223 @@ export interface CopilotMessage {
   applied?: boolean;
 }
 
-const DEFAULT_STARTER_FILES: EditorFile[] = [
-  {
-    id: "file-main-js",
-    name: "index.js",
-    path: "src/index.js",
-    folder: "src",
-    language: "javascript",
-    version: 1,
-    content: `// VS Code Workspace - Main Application Entry (JavaScript / Node.js)
-// Tip: Click in the left gutter next to any line number to toggle a red Breakpoint,
-// then click "Debug (F5)" or "Run (Cmd+R)" in the top toolbar!
-
-function calculateSprintVelocity(completedPoints, sprintDays) {
-  const dailyRate = Number((completedPoints / sprintDays).toFixed(2));
-  const projectedMonthly = Number((dailyRate * 22).toFixed(1));
-  return {
-    completedPoints,
-    sprintDays,
-    dailyRate,
-    projectedMonthly,
-    status: dailyRate >= 5 ? "ON_TRACK" : "NEEDS_ATTENTION",
-  };
-}
-
-function analyzeTasks(tasks) {
-  let totalPoints = 0;
-  const completed = [];
-  const pending = [];
-
-  for (let i = 0; i < tasks.length; i++) {
-    const task = tasks[i];
-    if (task.done) {
-      totalPoints += task.points;
-      completed.push(task.title);
-    } else {
-      pending.push(task.title);
-    }
-  }
-
-  return { totalPoints, completedCount: completed.length, pendingCount: pending.length, completed };
-}
-
-const sprintTasks = [
-  { id: 1, title: "Setup authentication & RBAC", points: 8, done: true },
-  { id: 2, title: "Real-time Socket.IO sync", points: 13, done: true },
-  { id: 3, title: "VS Code debugger integration", points: 10, done: true },
-  { id: 4, title: "Production deployment pipeline", points: 5, done: false },
-];
-
-console.log("🚀 Starting LetsCollab Sprint Analytics Engine...");
-const summary = analyzeTasks(sprintTasks);
-console.log("📊 Task Summary:", JSON.stringify(summary, null, 2));
-
-const metrics = calculateSprintVelocity(summary.totalPoints, 5);
-console.log("⚡ Velocity Metrics:", JSON.stringify(metrics, null, 2));
-`,
-  },
-  {
-    id: "file-algo-ts",
-    name: "scheduler.ts",
-    path: "src/scheduler.ts",
-    folder: "src",
-    language: "typescript",
-    version: 1,
-    content: `// TypeScript Task Priority Scheduler
-interface WorkItem {
+export interface IdeExtension {
   id: string;
-  title: string;
-  priority: number;
-  estimateHours: number;
+  name: string;
+  publisher: string;
+  version: string;
+  rating: number;
+  downloads: string;
+  category: "AI" | "Language" | "Linter" | "Tools" | "Themes";
+  desc: string;
+  enabled: boolean;
+  installed: boolean;
 }
 
-function scheduleWorkItems(items: WorkItem[], maxCapacityHours: number) {
-  const sorted = [...items].sort((a, b) => b.priority - a.priority);
-  const scheduled: string[] = [];
-  let usedHours = 0;
-
-  for (const item of sorted) {
-    if (usedHours + item.estimateHours <= maxCapacityHours) {
-      scheduled.push(item.title);
-      usedHours += item.estimateHours;
-    }
-  }
-
-  const utilization = Math.round((usedHours / maxCapacityHours) * 100);
-  return { scheduled, usedHours, maxCapacityHours, utilizationPercent: utilization };
-}
-
-const backlog: WorkItem[] = [
-  { id: "T-101", title: "Database connection pooling", priority: 90, estimateHours: 6 },
-  { id: "T-102", title: "Zero-latency cursor broadcast", priority: 95, estimateHours: 8 },
-  { id: "T-103", title: "Export audit log CSV", priority: 60, estimateHours: 4 },
-  { id: "T-104", title: "Custom webhook retries", priority: 75, estimateHours: 5 },
-];
-
-const plan = scheduleWorkItems(backlog, 18);
-console.log("📅 Scheduled Sprint Plan:", JSON.stringify(plan, null, 2));
-`,
+export const ESSENTIAL_EXTENSIONS: IdeExtension[] = [
+  {
+    id: "ext-copilot",
+    name: "GitHub Copilot & Chat",
+    publisher: "GitHub",
+    version: "1.150.0",
+    rating: 4.8,
+    downloads: "22M",
+    category: "AI",
+    desc: "AI pair programmer providing autocompletions, unit test synthesis, inline code explanations, and terminal error fixing.",
+    enabled: true,
+    installed: true,
   },
   {
-    id: "file-python-py",
-    name: "analytics.py",
-    path: "scripts/analytics.py",
-    folder: "scripts",
-    language: "python",
-    version: 1,
-    content: `# Python Real-Time Telemetry & Statistical Analyzer
-# Supports full live execution AND step-by-step debugging with Breakpoints!
-
-def compute_latency_stats(samples_ms):
-    count = len(samples_ms)
-    total = sum(samples_ms)
-    mean_val = round(total / count, 2)
-    sorted_samples = sorted(samples_ms)
-    median_val = sorted_samples[count // 2]
-    p95_index = min(count - 1, int(count * 0.95))
-    p95_val = sorted_samples[p95_index]
-    return {
-        "count": count,
-        "mean_ms": mean_val,
-        "median_ms": median_val,
-        "p95_ms": p95_val,
-        "min_ms": sorted_samples[0],
-        "max_ms": sorted_samples[-1]
-    }
-
-latencies = [12, 8, 15, 9, 11, 42, 7, 10, 14, 13]
-print("🐍 Running Python Telemetry Analyzer...")
-report = compute_latency_stats(latencies)
-
-for key, val in report.items():
-    print(f"  • {key}: {val}")
-
-print("✅ Analysis completed successfully.")
-`,
+    id: "ext-python",
+    name: "Python (Pylance & Debugger)",
+    publisher: "Microsoft",
+    version: "2026.4.0",
+    rating: 4.7,
+    downloads: "125M",
+    category: "Language",
+    desc: "Rich Python 3 language support, type checking, sys.settrace step-by-step debugging, and virtual environment resolution.",
+    enabled: true,
+    installed: true,
   },
   {
-    id: "file-web-html",
-    name: "preview.html",
-    path: "web/preview.html",
-    folder: "web",
-    language: "html",
-    version: 1,
-    content: `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #0f172a;
-      color: #f8fafc;
-      margin: 0;
-      padding: 24px;
-    }
-    .card {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 12px;
-      padding: 20px;
-      max-width: 480px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-    }
-    .badge {
-      display: inline-block;
-      background: #e65f42;
-      color: white;
-      font-size: 11px;
-      font-weight: 700;
-      padding: 4px 10px;
-      border-radius: 999px;
-      margin-bottom: 12px;
-    }
-    button {
-      background: #3b82f6;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      margin-top: 12px;
-    }
-    button:hover { background: #2563eb; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <span class="badge">LIVE HTML PREVIEW</span>
-    <h2 style="margin: 0 0 8px 0;">Interactive Component Sandbox</h2>
-    <p style="color: #94a3b8; font-size: 14px; line-height: 1.5;">
-      Edit this HTML/CSS/JS file in the VS Code editor to see instant live updates!
-    </p>
-    <div id="counter" style="font-size: 20px; font-weight: bold; color: #38bdf8; margin-top: 12px;">
-      Clicks: 0
-    </div>
-    <button onclick="increment()">Trigger Event</button>
-  </div>
-  <script>
-    let count = 0;
-    function increment() {
-      count++;
-      document.getElementById('counter').innerText = 'Clicks: ' + count;
-    }
-  </script>
-</body>
-</html>
-`,
+    id: "ext-ts-lsp",
+    name: "TypeScript & JavaScript Language Server",
+    publisher: "Microsoft",
+    version: "5.6.0",
+    rating: 4.9,
+    downloads: "95M",
+    category: "Language",
+    desc: "IntelliSense, symbol definitions, type checking, AST navigation, and refactoring tools.",
+    enabled: true,
+    installed: true,
+  },
+  {
+    id: "ext-node-debug",
+    name: "Node.js & V8 Step Debugger",
+    publisher: "ms-vscode",
+    version: "1.92.0",
+    rating: 4.8,
+    downloads: "80M",
+    category: "Tools",
+    desc: "Step-by-step V8 & TypeScript runtime inspection, breakpoints, call stacks, and variable watch.",
+    enabled: true,
+    installed: true,
+  },
+  {
+    id: "ext-eslint",
+    name: "ESLint & Diagnostics",
+    publisher: "Dirk Baeumer",
+    version: "3.0.10",
+    rating: 4.6,
+    downloads: "36M",
+    category: "Linter",
+    desc: "Integrates JavaScript and TypeScript linter diagnostics directly into Monaco gutter and Problems panel.",
+    enabled: true,
+    installed: true,
+  },
+  {
+    id: "ext-prettier",
+    name: "Prettier - Code Formatter",
+    publisher: "Prettier",
+    version: "11.0.0",
+    rating: 4.7,
+    downloads: "44M",
+    category: "Linter",
+    desc: "Opinionated code formatter supporting JavaScript, TypeScript, CSS, HTML, JSON, Markdown, and YAML.",
+    enabled: true,
+    installed: true,
+  },
+  {
+    id: "ext-gitlens",
+    name: "GitLens — Git supercharged",
+    publisher: "GitKraken",
+    version: "16.2.0",
+    rating: 4.8,
+    downloads: "34M",
+    category: "Tools",
+    desc: "Supercharge Git within VS Code: line heatmaps, blame annotations, commit history, and branch visualizers.",
+    enabled: true,
+    installed: true,
+  },
+  {
+    id: "ext-tailwind",
+    name: "Tailwind CSS IntelliSense",
+    publisher: "Tailwind Labs",
+    version: "0.12.0",
+    rating: 4.9,
+    downloads: "19M",
+    category: "Tools",
+    desc: "Intelligent autocomplete, syntax highlighting, hover documentation, and linting for Tailwind utility classes.",
+    enabled: true,
+    installed: true,
+  },
+  {
+    id: "ext-docker",
+    name: "Docker",
+    publisher: "Microsoft",
+    version: "1.29.0",
+    rating: 4.6,
+    downloads: "29M",
+    category: "Tools",
+    desc: "Makes it easy to build, manage, and deploy containerized applications and docker-compose stacks directly from the IDE.",
+    enabled: true,
+    installed: true,
+  },
+  {
+    id: "ext-liveserver",
+    name: "Live Server & HTML Preview",
+    publisher: "Ritwick Dey",
+    version: "5.7.9",
+    rating: 4.5,
+    downloads: "46M",
+    category: "Tools",
+    desc: "Instant live browser reload preview for static and dynamic web pages directly beside your code editor.",
+    enabled: true,
+    installed: true,
+  },
+  {
+    id: "ext-thunder",
+    name: "Thunder Client",
+    publisher: "Thunder Client",
+    version: "2.24.0",
+    rating: 4.9,
+    downloads: "5M",
+    category: "Tools",
+    desc: "Lightweight, GUI-based REST API client for testing endpoints, headers, cookies, and environment variables.",
+    enabled: true,
+    installed: true,
+  },
+  {
+    id: "ext-prisma",
+    name: "Prisma",
+    publisher: "Prisma",
+    version: "5.18.0",
+    rating: 4.8,
+    downloads: "6M",
+    category: "Language",
+    desc: "Prisma schema syntax highlighting, auto-formatting, model relation autocompletion, and lint diagnostics.",
+    enabled: true,
+    installed: true,
+  },
+  {
+    id: "ext-errorlens",
+    name: "Error Lens",
+    publisher: "Alexander",
+    version: "3.20.0",
+    rating: 4.9,
+    downloads: "4.5M",
+    category: "Linter",
+    desc: "Visualizes language diagnostic markers and runtime exceptions directly inline on the active code line.",
+    enabled: true,
+    installed: true,
+  },
+  {
+    id: "ext-path-intel",
+    name: "Path Intellisense",
+    publisher: "Christian Kohler",
+    version: "2.9.0",
+    rating: 4.7,
+    downloads: "13M",
+    category: "Tools",
+    desc: "Visual Studio Code plugin that autocompletes filenames and directory paths in imports and require statements.",
+    enabled: true,
+    installed: true,
+  },
+  {
+    id: "ext-auto-rename",
+    name: "Auto Rename Tag",
+    publisher: "Jun Han",
+    version: "0.1.10",
+    rating: 4.4,
+    downloads: "17M",
+    category: "Tools",
+    desc: "Automatically renames paired HTML/XML/JSX tags simultaneously as you edit either tag.",
+    enabled: true,
+    installed: true,
+  },
+  {
+    id: "ext-material-icons",
+    name: "Material Icon Theme",
+    publisher: "Philipp Kief",
+    version: "5.8.0",
+    rating: 4.9,
+    downloads: "25M",
+    category: "Themes",
+    desc: "Rich Material Design file and folder icons for 500+ programming languages and popular frameworks.",
+    enabled: true,
+    installed: true,
+  },
+  {
+    id: "ext-bracket-color",
+    name: "Bracket Pair Color DLW",
+    publisher: "CoenraadS",
+    version: "0.2.4",
+    rating: 4.8,
+    downloads: "15M",
+    category: "Themes",
+    desc: "Colorizes matching brackets with contrasting vibrant colors for immediate visual scope identification.",
+    enabled: true,
+    installed: true,
   },
 ];
 
@@ -371,30 +381,18 @@ const getFileBadgeColor = (filename: string): string => {
 
 export function CollaborativeEditor({
   projectId = "demo-workspace",
-  initialActiveFile = "file-main-js",
+  initialActiveFile = "",
 }: CollaborativeEditorProps) {
   const { user } = useAuth();
   const { socket, isConnected } = useSocket();
 
-  // Workspace Files State
-  const [files, setFiles] = useState<EditorFile[]>(DEFAULT_STARTER_FILES);
+  // Workspace Files State - Clean initial state, only collaborator-created files persist
+  const [files, setFiles] = useState<EditorFile[]>([]);
   const [activeFileId, setActiveFileId] = useState<string>(initialActiveFile);
-  const [openTabIds, setOpenTabIds] = useState<string[]>([
-    "file-main-js",
-    "file-algo-ts",
-    "file-python-py",
-    "file-web-html",
-  ]);
+  const [openTabIds, setOpenTabIds] = useState<string[]>([]);
   const [commits, setCommits] = useState<
     Array<{ id: string; message: string; authorName: string; timestamp: string }>
-  >([
-    {
-      id: "init001",
-      message: "Initialize VS Code collaborative project workspace",
-      authorName: user?.name || "Project Owner",
-      timestamp: new Date().toISOString(),
-    },
-  ]);
+  >([]);
 
   // Real-Time Collaborators State (NO fake hardcoded users)
   const [peers, setPeers] = useState<CollaboratorPeer[]>([]);
@@ -420,15 +418,12 @@ export function CollaborativeEditor({
   // Explorer File & Folder Creation / Rename Modals
   const [isCreatingFile, setIsCreatingFile] = useState(false);
   const [newFileNameInput, setNewFileNameInput] = useState("");
-  const [newFileFolderInput, setNewFileFolderInput] = useState("src");
+  const [newFileFolderInput, setNewFileFolderInput] = useState("");
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderNameInput, setNewFolderNameInput] = useState("");
   const [renamingFileId, setRenamingFileId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [treeExpanded, setTreeExpanded] = useState<Record<string, boolean>>({
-    src: true,
-    scripts: true,
-    web: true,
     root: true,
   });
 
@@ -503,10 +498,7 @@ export function CollaborativeEditor({
   const [appliedNotice, setAppliedNotice] = useState<string | null>(null);
 
   // Step-by-Step Debugger State
-  const [breakpointsByFile, setBreakpointsByFile] = useState<Record<string, number[]>>({
-    "file-main-js": [10, 25],
-    "file-python-py": [8, 22],
-  });
+  const [breakpointsByFile, setBreakpointsByFile] = useState<Record<string, number[]>>({});
   const [isDebugging, setIsDebugging] = useState(false);
   const [isStartingDebug, setIsStartingDebug] = useState(false);
   const [debugSteps, setDebugSteps] = useState<DebugStep[]>([]);
@@ -521,14 +513,10 @@ export function CollaborativeEditor({
   ]);
   const [debugEvalInput, setDebugEvalInput] = useState("");
 
-  // Extensions State
-  const [extensions, setExtensions] = useState([
-    { id: "ext-node-debug", name: "Node.js & TypeScript Debugger", publisher: "ms-vscode", version: "1.92.0", enabled: true, desc: "Step-by-step V8 & TypeScript runtime inspection, breakpoints, and variable watch." },
-    { id: "ext-python", name: "Python & sys.settrace Debugger", publisher: "ms-python", version: "2026.4.0", enabled: true, desc: "Rich Python support with live execution, sys.settrace line stepping, and local variable inspector." },
-    { id: "ext-eslint", name: "ESLint & Diagnostics", publisher: "dbaeumer", version: "3.0.10", enabled: true, desc: "Integrates syntax and runtime diagnostics directly into Monaco Editor and Problems tab." },
-    { id: "ext-prettier", name: "Prettier - Code Formatter", publisher: "esbenp", version: "11.0.0", enabled: true, desc: "Automatic code formatting for JS, TS, JSON, HTML, and CSS." },
-    { id: "ext-liveserver", name: "Live HTML/CSS Preview", publisher: "ritwickdey", version: "5.7.9", enabled: true, desc: "Instant split-screen live browser rendering for HTML/CSS/JS files." },
-  ]);
+  // Extensions State - 16 Essential IDE Extensions
+  const [extensions, setExtensions] = useState<IdeExtension[]>(ESSENTIAL_EXTENSIONS);
+  const [extensionSearch, setExtensionSearch] = useState("");
+  const [extensionCategory, setExtensionCategory] = useState<string>("All");
 
   // Refs
   const editorRef = useRef<any>(null);
@@ -549,7 +537,7 @@ export function CollaborativeEditor({
   }, [breakpointsByFile]);
 
   const activeFile = useMemo(
-    () => files.find((f) => f.id === activeFileId) || files[0] || DEFAULT_STARTER_FILES[0],
+    () => files.find((f) => f.id === activeFileId) || files[0] || null,
     [files, activeFileId]
   );
 
@@ -560,17 +548,33 @@ export function CollaborativeEditor({
 
   // Load Persistent Project Files from Backend
   useEffect(() => {
-    if (!projectId || projectId === "demo-workspace") return;
-    api.editor.getFiles(projectId).then((res) => {
-      if (res.data?.files && res.data.files.length > 0) {
-        setFiles(res.data.files);
-        setOpenTabIds(res.data.files.slice(0, 4).map((f: EditorFile) => f.id));
-        setActiveFileId(res.data.files[0].id);
-        if (res.data.commits) {
+    if (!projectId || projectId === "demo-workspace") {
+      setFiles([]);
+      setOpenTabIds([]);
+      setActiveFileId("");
+      return;
+    }
+    api.editor
+      .getFiles(projectId)
+      .then((res) => {
+        const loaded = res.data?.files || [];
+        setFiles(loaded);
+        if (loaded.length > 0) {
+          setOpenTabIds(loaded.slice(0, 4).map((f: EditorFile) => f.id));
+          setActiveFileId(loaded[0].id);
+        } else {
+          setOpenTabIds([]);
+          setActiveFileId("");
+        }
+        if (res.data?.commits) {
           setCommits(res.data.commits);
         }
-      }
-    });
+      })
+      .catch(() => {
+        setFiles([]);
+        setOpenTabIds([]);
+        setActiveFileId("");
+      });
   }, [projectId]);
 
   // Auto-open Live Preview when switching to an HTML file
@@ -663,11 +667,38 @@ export function CollaborativeEditor({
         if (prev.some((f) => f.id === data.file.id)) return prev;
         return [...prev, data.file];
       });
+      // If no file is currently active, open and activate the newly created file
+      setActiveFileId((curr) => curr || data.file.id);
+      setOpenTabIds((tabs) => (tabs.length === 0 ? [data.file.id] : tabs));
+    };
+
+    const handleFileUpdated = (data: any) => {
+      if (!data?.file) return;
+      setFiles((prev) =>
+        prev.map((f) => (f.id === data.file.id ? { ...f, ...data.file } : f))
+      );
+      if (data.file.id === activeFileIdRef.current && editorRef.current) {
+        const currentVal = editorRef.current.getValue();
+        if (data.file.content !== undefined && currentVal !== data.file.content) {
+          const pos = editorRef.current.getPosition();
+          editorRef.current.setValue(data.file.content);
+          if (pos) editorRef.current.setPosition(pos);
+        }
+      }
     };
 
     const handleFileDeleted = (data: any) => {
       if (!data?.fileId) return;
-      setFiles((prev) => prev.filter((f) => f.id !== data.fileId));
+      setFiles((prev) => {
+        const remaining = prev.filter((f) => f.id !== data.fileId);
+        setActiveFileId((curr) => {
+          if (curr === data.fileId) {
+            return remaining[0]?.id || "";
+          }
+          return curr;
+        });
+        return remaining;
+      });
       setOpenTabIds((prev) => prev.filter((id) => id !== data.fileId));
     };
 
@@ -676,6 +707,7 @@ export function CollaborativeEditor({
     socket.on("editor:cursor-moved", handleCursorMoved);
     socket.on("editor:code-updated", handleCodeUpdated);
     socket.on("editor:file-created", handleFileCreated);
+    socket.on("editor:file-updated", handleFileUpdated);
     socket.on("editor:file-deleted", handleFileDeleted);
 
     return () => {
@@ -685,6 +717,7 @@ export function CollaborativeEditor({
       socket.off("editor:cursor-moved", handleCursorMoved);
       socket.off("editor:code-updated", handleCodeUpdated);
       socket.off("editor:file-created", handleFileCreated);
+      socket.off("editor:file-updated", handleFileUpdated);
       socket.off("editor:file-deleted", handleFileDeleted);
     };
   }, [socket, projectId, user]);
@@ -797,7 +830,7 @@ export function CollaborativeEditor({
     if (!editorRef.current || !monacoRef.current) return;
     const monaco = monacoRef.current;
     const model = editorRef.current.getModel();
-    if (!model) return;
+    if (!model || !activeFile) return;
 
     const fileProblems = problems.filter(
       (p) => p.file === activeFile.name || p.file === activeFile.path
@@ -916,7 +949,7 @@ export function CollaborativeEditor({
         projectId,
         fileId: activeFileId,
         content: newVal,
-        version: activeFile.version + 1,
+        version: (activeFile?.version || 1) + 1,
         user: { id: user?.id, name: user?.name },
       });
     }
@@ -1323,7 +1356,6 @@ export function CollaborativeEditor({
 
   const handleDeleteFile = async (fileId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (files.length <= 1) return;
 
     if (projectId && projectId !== "demo-workspace") {
       await api.editor.deleteFile(projectId, fileId);
@@ -1332,9 +1364,9 @@ export function CollaborativeEditor({
     const remaining = files.filter((f) => f.id !== fileId);
     setFiles(remaining);
     const nextTabs = openTabIds.filter((id) => id !== fileId);
-    setOpenTabIds(nextTabs.length > 0 ? nextTabs : [remaining[0].id]);
+    setOpenTabIds(nextTabs);
     if (activeFileId === fileId) {
-      setActiveFileId(nextTabs[nextTabs.length - 1] || remaining[0].id);
+      setActiveFileId(nextTabs.length > 0 ? nextTabs[nextTabs.length - 1] : remaining[0]?.id || "");
     }
   };
 
@@ -1754,13 +1786,21 @@ export function CollaborativeEditor({
 
   // Group files by folder for Explorer tree
   const groupedFolders = useMemo(() => {
-    const groups: Record<string, EditorFile[]> = { src: [], scripts: [], web: [], root: [] };
+    const groups: Record<string, EditorFile[]> = {};
     for (const f of files) {
       const folderKey = f.folder || (f.path.includes("/") ? f.path.split("/")[0] : "root");
       if (!groups[folderKey]) groups[folderKey] = [];
       groups[folderKey].push(f);
     }
     return groups;
+  }, [files]);
+
+  const availableFolders = useMemo(() => {
+    const folders = new Set<string>();
+    for (const f of files) {
+      if (f.folder) folders.add(f.folder);
+    }
+    return Array.from(folders);
   }, [files]);
 
   const activeTerminalSession = useMemo(() => {
@@ -1806,7 +1846,7 @@ export function CollaborativeEditor({
   }, [handleSave, handleRunCode, handleStartDebugging]);
 
   const modifiedFiles = useMemo(() => files.filter((f) => f.isModified), [files]);
-  const linesCount = activeFile.content.split("\n").length;
+  const linesCount = activeFile ? activeFile.content.split("\n").length : 0;
 
   return (
     <div
@@ -1860,7 +1900,7 @@ export function CollaborativeEditor({
                 items: [
                   { name: "Format Document", shortcut: "⇧⌥F", action: handleFormat },
                   { name: "Find & Replace in Files", shortcut: "⌘⇧F", action: () => { setIsSidebarOpen(true); setActiveSidebarTab("search"); } },
-                  { name: "Copy File Content", shortcut: "⌘C", action: () => { navigator.clipboard.writeText(activeFile.content); setIsCopied(true); setTimeout(() => setIsCopied(false), 1200); } },
+                  { name: "Copy File Content", shortcut: "⌘C", action: () => { if (activeFile) { navigator.clipboard.writeText(activeFile.content); setIsCopied(true); setTimeout(() => setIsCopied(false), 1200); } } },
                 ],
               },
               {
@@ -1990,7 +2030,9 @@ export function CollaborativeEditor({
               className="hidden lg:flex items-center justify-center gap-2 w-72 py-1 px-3 rounded-md bg-[#252526] hover:bg-[#2d2d2e] border border-[#454545] text-[#9d9d9d] hover:text-white text-[11px] font-mono transition"
             >
               <Search className="w-3 h-3" />
-              <span className="truncate">{activeFile.path || activeFile.name} — ⌘K Commands</span>
+              <span className="truncate">
+                {activeFile ? (activeFile.path || activeFile.name) : "LetsCollab Workspace"} — ⌘K Commands
+              </span>
             </button>
           )}
         </div>
@@ -2274,10 +2316,12 @@ export function CollaborativeEditor({
                         onChange={(e) => setNewFileFolderInput(e.target.value)}
                         className="bg-[#252526] border border-[#454545] rounded px-1.5 py-1 text-[11px] text-white font-mono outline-none"
                       >
-                        <option value="src">src/</option>
-                        <option value="scripts">scripts/</option>
-                        <option value="web">web/</option>
                         <option value="">root</option>
+                        {availableFolders.map((fld) => (
+                          <option key={fld} value={fld}>
+                            {fld}/
+                          </option>
+                        ))}
                       </select>
                       <input
                         type="text"
@@ -2437,15 +2481,13 @@ export function CollaborativeEditor({
                                         >
                                           <Edit3 className="w-3 h-3" />
                                         </button>
-                                        {files.length > 1 && (
-                                          <button
-                                            onClick={(e) => handleDeleteFile(file.id, e)}
-                                            className="p-0.5 hover:text-[#f48771] text-[#858585]"
-                                            title="Delete File"
-                                          >
-                                            <Trash2 className="w-3 h-3" />
-                                          </button>
-                                        )}
+                                        <button
+                                          onClick={(e) => handleDeleteFile(file.id, e)}
+                                          className="p-0.5 hover:text-[#f48771] text-[#858585]"
+                                          title="Delete File"
+                                        >
+                                          <Trash2 className="w-3 h-3" />
+                                        </button>
                                       </div>
                                     </>
                                   )}
@@ -2457,6 +2499,26 @@ export function CollaborativeEditor({
                       </div>
                     );
                   })}
+
+                  {files.length === 0 && (
+                    <div className="flex flex-col items-center justify-center p-6 text-center text-[#858585] space-y-2">
+                      <FileCode className="w-8 h-8 text-[#555555]" />
+                      <div className="text-xs font-semibold text-[#cccccc]">No files in workspace</div>
+                      <p className="text-[11px] text-[#777777] leading-relaxed">
+                        Workspace is clean. Create or upload files to start collaborating.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setIsCreatingFile(true);
+                          setIsCreatingFolder(false);
+                        }}
+                        className="px-3 py-1 bg-[#007acc] hover:bg-[#1f8ad2] text-white rounded text-[11px] font-medium flex items-center gap-1.5 transition shadow mt-1"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>New File</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -2627,7 +2689,7 @@ export function CollaborativeEditor({
                     </button>
                   </div>
                   <div className="text-[10px] text-[#858585] font-mono">
-                    Target: {activeFile.path || activeFile.name} ({getMonacoLanguage(activeFile.name)})
+                    Target: {activeFile ? `${activeFile.path || activeFile.name} (${getMonacoLanguage(activeFile.name)})` : "No file selected"}
                   </div>
                 </div>
 
@@ -2793,40 +2855,109 @@ export function CollaborativeEditor({
 
             {/* VIEW 5: EXTENSIONS MARKETPLACE */}
             {activeSidebarTab === "extensions" && (
-              <div className="flex flex-col h-full p-3 space-y-2.5 overflow-y-auto">
-                <div className="text-[11px] font-bold tracking-wider text-[#bbbbbb] uppercase">
-                  INSTALLED EXTENSIONS
-                </div>
-                {extensions.map((ext) => (
-                  <div
-                    key={ext.id}
-                    className="p-2.5 rounded bg-[#1e1e1e] border border-[#333333] space-y-1.5"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-white">{ext.name}</span>
-                      <span className="text-[10px] font-mono text-[#75beff]">v{ext.version}</span>
-                    </div>
-                    <p className="text-[11px] text-[#9d9d9d] leading-snug">{ext.desc}</p>
-                    <div className="flex items-center justify-between pt-1">
-                      <span className="text-[10px] font-mono text-[#858585]">{ext.publisher}</span>
+              <div className="flex flex-col h-full overflow-hidden">
+                <div className="p-3 border-b border-[#1e1e1e] space-y-2 shrink-0">
+                  <div className="flex items-center justify-between text-[11px] font-bold tracking-wider text-[#bbbbbb] uppercase">
+                    <span>EXTENSIONS MARKETPLACE</span>
+                    <span className="text-[10px] text-[#75beff] font-mono">
+                      {extensions.filter((e) => e.enabled).length}/{extensions.length} Active
+                    </span>
+                  </div>
+
+                  {/* Search input */}
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-[#858585] absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={extensionSearch}
+                      onChange={(e) => setExtensionSearch(e.target.value)}
+                      placeholder="Search Extensions in Marketplace..."
+                      className="w-full bg-[#1e1e1e] border border-[#3c3c3c] focus:border-[#007acc] rounded-md pl-8 pr-2.5 py-1.5 text-xs text-white placeholder-[#858585] outline-none font-sans"
+                    />
+                  </div>
+
+                  {/* Category Filter Pills */}
+                  <div className="flex items-center gap-1 overflow-x-auto pb-0.5 no-scrollbar text-[10px]">
+                    {["All", "AI", "Language", "Linter", "Tools", "Themes"].map((cat) => (
                       <button
-                        onClick={() =>
-                          setExtensions((prev) =>
-                            prev.map((e) => (e.id === ext.id ? { ...e, enabled: !e.enabled } : e))
-                          )
-                        }
+                        key={cat}
+                        onClick={() => setExtensionCategory(cat)}
                         className={cn(
-                          "px-2 py-0.5 rounded text-[10px] font-bold",
-                          ext.enabled
-                            ? "bg-[#2ea043]/20 text-[#3fb950] border border-[#2ea043]/40"
-                            : "bg-[#3c3c3c] text-[#858585]"
+                          "px-2 py-0.5 rounded font-mono transition shrink-0",
+                          extensionCategory === cat
+                            ? "bg-[#007acc] text-white font-bold"
+                            : "bg-[#1e1e1e] text-[#858585] hover:text-white hover:bg-[#2d2d2e]"
                         )}
                       >
-                        {ext.enabled ? "Enabled" : "Disabled"}
+                        {cat}
                       </button>
-                    </div>
+                    ))}
                   </div>
-                ))}
+                </div>
+
+                {/* Extensions List */}
+                <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                  {extensions
+                    .filter((ext) => {
+                      const matchesSearch =
+                        !extensionSearch.trim() ||
+                        ext.name.toLowerCase().includes(extensionSearch.toLowerCase()) ||
+                        ext.publisher.toLowerCase().includes(extensionSearch.toLowerCase()) ||
+                        ext.desc.toLowerCase().includes(extensionSearch.toLowerCase());
+                      const matchesCategory =
+                        extensionCategory === "All" || ext.category === extensionCategory;
+                      return matchesSearch && matchesCategory;
+                    })
+                    .map((ext) => (
+                      <div
+                        key={ext.id}
+                        className="p-2.5 rounded-lg bg-[#1e1e1e] border border-[#333333] hover:border-[#454545] transition space-y-1.5"
+                      >
+                        <div className="flex items-start justify-between gap-1.5">
+                          <div className="min-w-0">
+                            <div className="text-xs font-bold text-white truncate flex items-center gap-1.5">
+                              <span>{ext.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] text-[#858585] font-mono mt-0.5">
+                              <span>{ext.publisher}</span>
+                              <span>•</span>
+                              <span className="text-[#ffbd2e]">★ {ext.rating}</span>
+                              <span>•</span>
+                              <span>{ext.downloads}</span>
+                            </div>
+                          </div>
+                          <span className="px-1.5 py-0.5 rounded bg-[#252526] text-[#75beff] text-[9px] font-mono shrink-0">
+                            v{ext.version}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#9d9d9d] leading-snug line-clamp-2">
+                          {ext.desc}
+                        </p>
+                        <div className="flex items-center justify-between pt-1 border-t border-[#252526]">
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#2a2d2e] text-[#bbbbbb]">
+                            {ext.category}
+                          </span>
+                          <button
+                            onClick={() =>
+                              setExtensions((prev) =>
+                                prev.map((e) =>
+                                  e.id === ext.id ? { ...e, enabled: !e.enabled } : e
+                                )
+                              )
+                            }
+                            className={cn(
+                              "px-2.5 py-0.5 rounded text-[10px] font-bold transition",
+                              ext.enabled
+                                ? "bg-[#2ea043]/20 text-[#3fb950] border border-[#2ea043]/40 hover:bg-[#2ea043]/30"
+                                : "bg-[#3c3c3c] text-[#cccccc] hover:bg-[#454545]"
+                            )}
+                          >
+                            {ext.enabled ? "Enabled" : "Enable"}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
               </div>
             )}
           </div>
@@ -2858,130 +2989,276 @@ export function CollaborativeEditor({
                     {file.isModified && (
                       <span className="w-2 h-2 rounded-full bg-[#e2c08d]" title="Unsaved changes" />
                     )}
-                    {openTabIds.length > 1 && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const rem = openTabIds.filter((id) => id !== file.id);
-                          setOpenTabIds(rem);
-                          if (activeFileId === file.id && rem.length > 0) {
-                            setActiveFileId(rem[rem.length - 1]);
-                          }
-                        }}
-                        className="opacity-0 group-hover:opacity-100 hover:bg-[#3c3c3c] p-0.5 rounded"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const rem = openTabIds.filter((id) => id !== file.id);
+                        setOpenTabIds(rem);
+                        if (activeFileId === file.id) {
+                          setActiveFileId(rem.length > 0 ? rem[rem.length - 1] : "");
+                        }
+                      }}
+                      className="opacity-0 group-hover:opacity-100 hover:bg-[#3c3c3c] p-0.5 rounded text-[#858585] hover:text-white"
+                      title="Close Tab"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
                   </div>
                 );
               })}
+              {openTabIds.length === 0 && (
+                <div className="flex items-center px-3 py-2 text-[11px] text-[#858585] italic">
+                  No open tabs
+                </div>
+              )}
             </div>
           </div>
 
-          {/* VS Code Breadcrumbs Bar */}
-          <div className="flex items-center justify-between px-3 py-1 bg-[#1e1e1e] border-b border-[#2d2d2d] text-[11px] font-mono text-[#858585] shrink-0">
-            <div className="flex items-center gap-1">
-              <span>workspace</span>
-              <ChevronRight className="w-3 h-3" />
-              {activeFile.folder && (
-                <>
-                  <span>{activeFile.folder}</span>
+          {activeFile ? (
+            <>
+              {/* VS Code Breadcrumbs Bar */}
+              <div className="flex items-center justify-between px-3 py-1 bg-[#1e1e1e] border-b border-[#2d2d2d] text-[11px] font-mono text-[#858585] shrink-0">
+                <div className="flex items-center gap-1">
+                  <span>workspace</span>
                   <ChevronRight className="w-3 h-3" />
-                </>
-              )}
-              <span className="text-[#cccccc] font-semibold">{activeFile.name}</span>
-              {isDebugging && currentDebugStep && (
-                <>
-                  <ChevronRight className="w-3 h-3" />
-                  <span className="text-[#ffcc00] font-bold">
-                    {currentDebugStep.functionName} (Line {currentDebugStep.line})
+                  {activeFile.folder && (
+                    <>
+                      <span>{activeFile.folder}</span>
+                      <ChevronRight className="w-3 h-3" />
+                    </>
+                  )}
+                  <span className="text-[#cccccc] font-semibold">{activeFile.name}</span>
+                  {isDebugging && currentDebugStep && (
+                    <>
+                      <ChevronRight className="w-3 h-3" />
+                      <span className="text-[#ffcc00] font-bold">
+                        {currentDebugStep.functionName} (Line {currentDebugStep.line})
+                      </span>
+                    </>
+                  )}
+                </div>
+                <div className="flex items-center gap-3 text-[10px]">
+                  <span className="text-[#75beff]">
+                    Breakpoints: {(breakpointsByFile[activeFile.id] || []).length}
                   </span>
-                </>
-              )}
-            </div>
-            <div className="flex items-center gap-3 text-[10px]">
-              <span className="text-[#75beff]">
-                Breakpoints: {(breakpointsByFile[activeFile.id] || []).length}
-              </span>
-              <button
-                onClick={handleFormat}
-                className="hover:text-white transition"
-              >
-                {isFormatting ? "Formatting..." : "Format (⇧⌥F)"}
-              </button>
-            </div>
-          </div>
-
-          {/* Editor + Optional Split Live HTML Preview */}
-          <div className="flex-1 flex min-h-0 overflow-hidden">
-            <div className="flex-1 h-full min-w-0 relative">
-              <Editor
-                height="100%"
-                width="100%"
-                language={getMonacoLanguage(activeFile.name)}
-                theme={editorTheme}
-                value={activeFile.content}
-                beforeMount={handleEditorWillMount}
-                onMount={handleEditorDidMount}
-                onChange={handleCodeChange}
-                loading={
-                  <div className="flex items-center justify-center h-full text-xs text-[#858585] font-mono gap-2">
-                    <Sparkles className="w-4 h-4 text-[#007acc] animate-spin" />
-                    <span>Loading VS Code Monaco Engine...</span>
-                  </div>
-                }
-                options={{
-                  fontSize: 13,
-                  fontFamily: "'IBM Plex Mono', Menlo, Monaco, 'Courier New', monospace",
-                  tabSize: 2,
-                  glyphMargin: true,
-                  lineNumbersMinChars: 3,
-                  minimap: { enabled: true, maxColumn: 80, scale: 0.75 },
-                  wordWrap: "on",
-                  scrollBeyondLastLine: false,
-                  smoothScrolling: true,
-                  cursorBlinking: "smooth",
-                  cursorSmoothCaretAnimation: "on",
-                  bracketPairColorization: { enabled: true },
-                  renderLineHighlight: "all",
-                  padding: { top: 10, bottom: 10 },
-                  automaticLayout: true,
-                }}
-              />
-            </div>
-
-            {/* Split Live Web Preview Pane */}
-            {isSplitPreviewOpen && (
-              <div className="w-1/2 h-full border-l border-[#333333] bg-[#0f172a] flex flex-col">
-                <div className="flex items-center justify-between px-3 py-1.5 bg-[#252526] border-b border-[#333333] text-[11px] font-mono text-[#cccccc]">
-                  <div className="flex items-center gap-1.5">
-                    <Eye className="w-3.5 h-3.5 text-[#007acc]" />
-                    <span>Live Preview — {activeFile.name}</span>
-                  </div>
                   <button
-                    onClick={() => setIsSplitPreviewOpen(false)}
-                    className="text-[#858585] hover:text-white"
+                    onClick={handleFormat}
+                    className="hover:text-white transition"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    {isFormatting ? "Formatting..." : "Format (⇧⌥F)"}
                   </button>
                 </div>
-                <iframe
-                  title="VS Code Live Preview"
-                  className="flex-1 w-full h-full bg-white"
-                  sandbox="allow-scripts"
-                  srcDoc={
-                    activeFile.name.endsWith(".html")
-                      ? activeFile.content
-                      : `<pre style="font-family:monospace;padding:16px;background:#0f172a;color:#e2e8f0;margin:0;min-height:100vh;">${activeFile.content
-                          .replace(/&/g, "&amp;")
-                          .replace(/</g, "&lt;")
-                          .replace(/>/g, "&gt;")}</pre>`
-                  }
-                />
               </div>
-            )}
-          </div>
+
+              {/* Editor + Optional Split Live HTML Preview */}
+              <div className="flex-1 flex min-h-0 overflow-hidden">
+                <div className="flex-1 h-full min-w-0 relative">
+                  <Editor
+                    height="100%"
+                    width="100%"
+                    language={getMonacoLanguage(activeFile.name)}
+                    theme={editorTheme}
+                    value={activeFile.content}
+                    beforeMount={handleEditorWillMount}
+                    onMount={handleEditorDidMount}
+                    onChange={handleCodeChange}
+                    loading={
+                      <div className="flex items-center justify-center h-full text-xs text-[#858585] font-mono gap-2">
+                        <Sparkles className="w-4 h-4 text-[#007acc] animate-spin" />
+                        <span>Loading VS Code Monaco Engine...</span>
+                      </div>
+                    }
+                    options={{
+                      fontSize: 13,
+                      fontFamily: "'IBM Plex Mono', Menlo, Monaco, 'Courier New', monospace",
+                      tabSize: 2,
+                      glyphMargin: true,
+                      lineNumbersMinChars: 3,
+                      minimap: { enabled: true, maxColumn: 80, scale: 0.75 },
+                      wordWrap: "on",
+                      scrollBeyondLastLine: false,
+                      smoothScrolling: true,
+                      cursorBlinking: "smooth",
+                      cursorSmoothCaretAnimation: "on",
+                      bracketPairColorization: { enabled: true },
+                      renderLineHighlight: "all",
+                      padding: { top: 10, bottom: 10 },
+                      automaticLayout: true,
+                    }}
+                  />
+                </div>
+
+                {/* Split Live Web Preview Pane */}
+                {isSplitPreviewOpen && (
+                  <div className="w-1/2 h-full border-l border-[#333333] bg-[#0f172a] flex flex-col">
+                    <div className="flex items-center justify-between px-3 py-1.5 bg-[#252526] border-b border-[#333333] text-[11px] font-mono text-[#cccccc]">
+                      <div className="flex items-center gap-1.5">
+                        <Eye className="w-3.5 h-3.5 text-[#007acc]" />
+                        <span>Live Preview — {activeFile.name}</span>
+                      </div>
+                      <button
+                        onClick={() => setIsSplitPreviewOpen(false)}
+                        className="text-[#858585] hover:text-white"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <iframe
+                      title="VS Code Live Preview"
+                      className="flex-1 w-full h-full bg-white"
+                      sandbox="allow-scripts"
+                      srcDoc={
+                        activeFile.name.endsWith(".html")
+                          ? activeFile.content
+                          : `<pre style="font-family:monospace;padding:16px;background:#0f172a;color:#e2e8f0;margin:0;min-height:100vh;">${activeFile.content
+                              .replace(/&/g, "&amp;")
+                              .replace(/</g, "&lt;")
+                              .replace(/>/g, "&gt;")}</pre>`
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#1e1e1e] text-[#cccccc] overflow-y-auto select-none">
+              <div className="max-w-2xl w-full space-y-6 animate-in fade-in zoom-in-95 duration-200">
+                {/* Hero Header */}
+                <div className="space-y-2 border-b border-[#2d2d2d] pb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-[#007acc]/10 border border-[#007acc]/30 flex items-center justify-center text-[#007acc]">
+                      <Code2 className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h1 className="text-2xl font-bold text-white tracking-tight">Visual Studio Code</h1>
+                      <p className="text-xs text-[#858585] font-mono">
+                        LetsCollab Collaborative Studio • Clean Workspace
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-[#9d9d9d] leading-relaxed pt-2">
+                    No starter files pre-seeded. Only files and folders created or uploaded by project collaborators are saved and synced in real time across all team members.
+                  </p>
+                </div>
+
+                {/* Quick Start Actions Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-xl bg-[#252526] border border-[#333333] space-y-3">
+                    <div className="text-xs font-bold uppercase tracking-wider text-[#bbbbbb] flex items-center gap-2">
+                      <Plus className="w-4 h-4 text-[#007acc]" />
+                      <span>Start Development</span>
+                    </div>
+                    <div className="space-y-2 text-xs">
+                      <button
+                        onClick={() => {
+                          setIsSidebarOpen(true);
+                          setActiveSidebarTab("explorer");
+                          setIsCreatingFile(true);
+                          setIsCreatingFolder(false);
+                        }}
+                        className="w-full flex items-center justify-between p-2 rounded bg-[#1e1e1e] hover:bg-[#2d2d2e] border border-[#3c3c3c] hover:border-[#007acc] text-left text-white transition group"
+                      >
+                        <span className="flex items-center gap-2 font-medium">
+                          <FileCode className="w-4 h-4 text-[#75beff]" />
+                          New File...
+                        </span>
+                        <kbd className="px-1.5 py-0.5 rounded bg-[#333333] text-[10px] font-mono text-[#858585]">⌘N</kbd>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setIsSidebarOpen(true);
+                          setActiveSidebarTab("explorer");
+                          setIsCreatingFolder(true);
+                          setIsCreatingFile(false);
+                        }}
+                        className="w-full flex items-center justify-between p-2 rounded bg-[#1e1e1e] hover:bg-[#2d2d2e] border border-[#3c3c3c] hover:border-[#dcb67a] text-left text-white transition group"
+                      >
+                        <span className="flex items-center gap-2 font-medium">
+                          <FolderPlus className="w-4 h-4 text-[#dcb67a]" />
+                          New Directory / Folder...
+                        </span>
+                        <kbd className="px-1.5 py-0.5 rounded bg-[#333333] text-[10px] font-mono text-[#858585]">Folder</kbd>
+                      </button>
+
+                      <button
+                        onClick={() => fileUploadRef.current?.click()}
+                        className="w-full flex items-center justify-between p-2 rounded bg-[#1e1e1e] hover:bg-[#2d2d2e] border border-[#3c3c3c] hover:border-[#89d185] text-left text-white transition group"
+                      >
+                        <span className="flex items-center gap-2 font-medium">
+                          <Upload className="w-4 h-4 text-[#89d185]" />
+                          Upload File from Computer...
+                        </span>
+                        <kbd className="px-1.5 py-0.5 rounded bg-[#333333] text-[10px] font-mono text-[#858585]">⌘O</kbd>
+                      </button>
+
+                      <button
+                        onClick={() => setIsCopilotOpen(true)}
+                        className="w-full flex items-center justify-between p-2 rounded bg-[#1e1e1e] hover:bg-[#2d2d2e] border border-[#3c3c3c] hover:border-[#007acc] text-left text-white transition group"
+                      >
+                        <span className="flex items-center gap-2 font-medium">
+                          <Bot className="w-4 h-4 text-[#75beff]" />
+                          Ask GitHub Copilot AI...
+                        </span>
+                        <kbd className="px-1.5 py-0.5 rounded bg-[#333333] text-[10px] font-mono text-[#858585]">⌘I</kbd>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Shortcuts & Navigation */}
+                  <div className="p-4 rounded-xl bg-[#252526] border border-[#333333] space-y-3">
+                    <div className="text-xs font-bold uppercase tracking-wider text-[#bbbbbb] flex items-center gap-2">
+                      <TerminalIcon className="w-4 h-4 text-[#e2c08d]" />
+                      <span>Essential Shortcuts</span>
+                    </div>
+                    <div className="space-y-1.5 text-[11px] font-mono">
+                      <div className="flex items-center justify-between py-1 border-b border-[#2d2d2d]">
+                        <span className="text-[#9d9d9d]">Command Palette</span>
+                        <kbd className="px-1.5 py-0.5 rounded bg-[#1e1e1e] text-[#cccccc] border border-[#3c3c3c]">⌘K</kbd>
+                      </div>
+                      <div className="flex items-center justify-between py-1 border-b border-[#2d2d2d]">
+                        <span className="text-[#9d9d9d]">Search in Workspace</span>
+                        <kbd className="px-1.5 py-0.5 rounded bg-[#1e1e1e] text-[#cccccc] border border-[#3c3c3c]">⌘⇧F</kbd>
+                      </div>
+                      <div className="flex items-center justify-between py-1 border-b border-[#2d2d2d]">
+                        <span className="text-[#9d9d9d]">Run / Step Debug</span>
+                        <kbd className="px-1.5 py-0.5 rounded bg-[#1e1e1e] text-[#cccccc] border border-[#3c3c3c]">F5 / ⌘R</kbd>
+                      </div>
+                      <div className="flex items-center justify-between py-1 border-b border-[#2d2d2d]">
+                        <span className="text-[#9d9d9d]">Toggle Terminal Panel</span>
+                        <kbd className="px-1.5 py-0.5 rounded bg-[#1e1e1e] text-[#cccccc] border border-[#3c3c3c]">⌘J</kbd>
+                      </div>
+                      <div className="flex items-center justify-between py-1">
+                        <span className="text-[#9d9d9d]">Extensions (16 Installed)</span>
+                        <kbd className="px-1.5 py-0.5 rounded bg-[#1e1e1e] text-[#cccccc] border border-[#3c3c3c]">⌘⇧X</kbd>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Real-time Collaboration Banner */}
+                <div className="p-3.5 rounded-xl bg-[#094771]/20 border border-[#007acc]/40 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2.5">
+                    <Users className="w-4 h-4 text-[#75beff] shrink-0" />
+                    <span className="text-[#cccccc]">
+                      <strong className="text-white">Real-Time Team Sync:</strong> Any file created, modified, or deleted is instantly broadcast to all connected project collaborators via WebSockets.
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setIsSidebarOpen(true);
+                      setActiveSidebarTab("explorer");
+                      setIsCreatingFile(true);
+                      setIsCreatingFolder(false);
+                    }}
+                    className="px-3 py-1 bg-[#007acc] hover:bg-[#1f8ad2] text-white rounded text-xs font-semibold shrink-0 transition"
+                  >
+                    Create First File
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* =================================================================
               3. VS CODE MULTI-TAB BOTTOM PANEL (PROBLEMS / OUTPUT / DEBUG / TERMINAL)
@@ -3305,7 +3582,9 @@ export function CollaborativeEditor({
             <div className="px-3 py-1.5 bg-[#1f1f1f] border-b border-[#2d2d2d] flex items-center justify-between text-[10px] font-mono shrink-0">
               <div className="flex items-center gap-1 text-[#858585] truncate">
                 <FileCode className="w-3 h-3 text-[#007acc] shrink-0" />
-                <span className="truncate">{activeFile.path || activeFile.name}</span>
+                <span className="truncate">
+                  {activeFile ? (activeFile.path || activeFile.name) : "No File Selected"}
+                </span>
               </div>
               <select
                 value={copilotModel}
@@ -3553,7 +3832,7 @@ export function CollaborativeEditor({
           </button>
           {isDebugging && currentDebugStep && (
             <span className="font-bold">
-              ● Paused at {activeFile.name}:{currentDebugStep.line}
+              ● Paused at {activeFile ? activeFile.name : "file"}:{currentDebugStep.line}
             </span>
           )}
         </div>
@@ -3565,7 +3844,7 @@ export function CollaborativeEditor({
           <span className="hidden sm:inline">Spaces: 2</span>
           <span className="hidden sm:inline">UTF-8</span>
           <span className="uppercase font-semibold">
-            {getMonacoLanguage(activeFile.name)}
+            {activeFile ? getMonacoLanguage(activeFile.name) : "Plain Text"}
           </span>
           <span>
             {peers.length === 0 ? "1 Active User" : `${peers.length + 1} Collaborators`}

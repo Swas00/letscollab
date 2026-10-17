@@ -51,23 +51,49 @@ function ensureStoreFile(): void {
   }
 }
 
+let inMemoryWorkspaces: Record<string, ProjectWorkspaceData> = {};
+
 function readAllWorkspaces(): Record<string, ProjectWorkspaceData> {
+  if (Object.keys(inMemoryWorkspaces).length > 0) {
+    return inMemoryWorkspaces;
+  }
   ensureStoreFile();
   try {
     const raw = fs.readFileSync(WORKSPACE_STORE_FILE, "utf-8");
-    return JSON.parse(raw);
+    inMemoryWorkspaces = JSON.parse(raw);
+    return inMemoryWorkspaces;
   } catch {
     return {};
   }
 }
 
 function writeAllWorkspaces(data: Record<string, ProjectWorkspaceData>): void {
+  inMemoryWorkspaces = data;
   if (process.env.NODE_ENV === "test") return;
   ensureStoreFile();
   try {
     fs.writeFileSync(WORKSPACE_STORE_FILE, JSON.stringify(data, null, 2), "utf-8");
   } catch (err) {
     console.error("[EditorStore] Error writing workspace file:", err);
+  }
+}
+
+export function updateWorkspaceFileCode(
+  projectId: string,
+  fileId: string,
+  content: string,
+  version?: number
+): void {
+  const all = readAllWorkspaces();
+  const ws = all[projectId];
+  if (!ws) return;
+  const file = ws.files.find((f) => f.id === fileId);
+  if (file) {
+    file.content = content;
+    file.version = version !== undefined ? version : file.version + 1;
+    file.updatedAt = new Date().toISOString();
+    all[projectId] = ws;
+    writeAllWorkspaces(all);
   }
 }
 
@@ -92,258 +118,10 @@ export function detectLanguage(filename: string): string {
 }
 
 function createDefaultWorkspace(projectId: string): ProjectWorkspaceData {
-  const now = new Date().toISOString();
-  const files: ProjectEditorFile[] = [
-    {
-      id: "file-main-js",
-      name: "index.js",
-      path: "src/index.js",
-      folder: "src",
-      language: "javascript",
-      version: 1,
-      updatedAt: now,
-      content: `// VS Code Workspace - Main Application Entry (JavaScript / Node.js)
-// Tip: Click in the left gutter next to any line number to set a red Breakpoint,
-// then click "Debug (F5)" or "Run (Cmd+R)" in the top bar!
-
-function calculateSprintVelocity(completedPoints, sprintDays) {
-  const dailyRate = Number((completedPoints / sprintDays).toFixed(2));
-  const projectedMonthly = Number((dailyRate * 22).toFixed(1));
-  return {
-    completedPoints,
-    sprintDays,
-    dailyRate,
-    projectedMonthly,
-    status: dailyRate >= 5 ? "ON_TRACK" : "NEEDS_ATTENTION",
-  };
-}
-
-function analyzeTasks(tasks) {
-  let totalPoints = 0;
-  const completed = [];
-  const pending = [];
-
-  for (let i = 0; i < tasks.length; i++) {
-    const task = tasks[i];
-    if (task.done) {
-      totalPoints += task.points;
-      completed.push(task.title);
-    } else {
-      pending.push(task.title);
-    }
-  }
-
-  return { totalPoints, completedCount: completed.length, pendingCount: pending.length, completed };
-}
-
-const sprintTasks = [
-  { id: 1, title: "Setup authentication & RBAC", points: 8, done: true },
-  { id: 2, title: "Real-time Socket.IO sync", points: 13, done: true },
-  { id: 3, title: "VS Code debugger integration", points: 10, done: true },
-  { id: 4, title: "Production deployment pipeline", points: 5, done: false },
-];
-
-console.log("🚀 Starting LetsCollab Sprint Analytics Engine...");
-const summary = analyzeTasks(sprintTasks);
-console.log("📊 Task Summary:", JSON.stringify(summary, null, 2));
-
-const metrics = calculateSprintVelocity(summary.totalPoints, 5);
-console.log("⚡ Velocity Metrics:", JSON.stringify(metrics, null, 2));
-`,
-    },
-    {
-      id: "file-algo-ts",
-      name: "scheduler.ts",
-      path: "src/scheduler.ts",
-      folder: "src",
-      language: "typescript",
-      version: 1,
-      updatedAt: now,
-      content: `// TypeScript Task Priority Scheduler
-interface WorkItem {
-  id: string;
-  title: string;
-  priority: number;
-  estimateHours: number;
-}
-
-function scheduleWorkItems(items: WorkItem[], maxCapacityHours: number) {
-  const sorted = [...items].sort((a, b) => b.priority - a.priority);
-  const scheduled: string[] = [];
-  let usedHours = 0;
-
-  for (const item of sorted) {
-    if (usedHours + item.estimateHours <= maxCapacityHours) {
-      scheduled.push(item.title);
-      usedHours += item.estimateHours;
-    }
-  }
-
-  const utilization = Math.round((usedHours / maxCapacityHours) * 100);
-  return { scheduled, usedHours, maxCapacityHours, utilizationPercent: utilization };
-}
-
-const backlog: WorkItem[] = [
-  { id: "T-101", title: "Database connection pooling", priority: 90, estimateHours: 6 },
-  { id: "T-102", title: "Zero-latency cursor broadcast", priority: 95, estimateHours: 8 },
-  { id: "T-103", title: "Export audit log CSV", priority: 60, estimateHours: 4 },
-  { id: "T-104", title: "Custom webhook retries", priority: 75, estimateHours: 5 },
-];
-
-const plan = scheduleWorkItems(backlog, 18);
-console.log("📅 Scheduled Sprint Plan:", JSON.stringify(plan, null, 2));
-`,
-    },
-    {
-      id: "file-python-py",
-      name: "analytics.py",
-      path: "scripts/analytics.py",
-      folder: "scripts",
-      language: "python",
-      version: 1,
-      updatedAt: now,
-      content: `# Python Real-Time Telemetry & Statistical Analyzer
-# Supports full live execution AND step-by-step debugging with Breakpoints!
-
-def compute_latency_stats(samples_ms):
-    count = len(samples_ms)
-    total = sum(samples_ms)
-    mean_val = round(total / count, 2)
-    sorted_samples = sorted(samples_ms)
-    median_val = sorted_samples[count // 2]
-    p95_index = min(count - 1, int(count * 0.95))
-    p95_val = sorted_samples[p95_index]
-    return {
-        "count": count,
-        "mean_ms": mean_val,
-        "median_ms": median_val,
-        "p95_ms": p95_val,
-        "min_ms": sorted_samples[0],
-        "max_ms": sorted_samples[-1]
-    }
-
-latencies = [12, 8, 15, 9, 11, 42, 7, 10, 14, 13]
-print("🐍 Running Python Telemetry Analyzer...")
-report = compute_latency_stats(latencies)
-
-for key, val in report.items():
-    print(f"  • {key}: {val}")
-
-print("✅ Analysis completed successfully.")
-`,
-    },
-    {
-      id: "file-web-html",
-      name: "preview.html",
-      path: "web/preview.html",
-      folder: "web",
-      language: "html",
-      version: 1,
-      updatedAt: now,
-      content: `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #0f172a;
-      color: #f8fafc;
-      margin: 0;
-      padding: 24px;
-    }
-    .card {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 12px;
-      padding: 20px;
-      max-width: 480px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-    }
-    .badge {
-      display: inline-block;
-      background: #e65f42;
-      color: white;
-      font-size: 11px;
-      font-weight: 700;
-      padding: 4px 10px;
-      border-radius: 999px;
-      margin-bottom: 12px;
-    }
-    button {
-      background: #3b82f6;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-weight: 600;
-      cursor: pointer;
-      margin-top: 12px;
-    }
-    button:hover { background: #2563eb; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <span class="badge">LIVE HTML PREVIEW</span>
-    <h2 style="margin: 0 0 8px 0;">Interactive Component Sandbox</h2>
-    <p style="color: #94a3b8; font-size: 14px; line-height: 1.5;">
-      Edit this HTML/CSS/JS file in the VS Code editor to see instant live updates!
-    </p>
-    <div id="counter" style="font-size: 20px; font-weight: bold; color: #38bdf8; margin-top: 12px;">
-      Clicks: 0
-    </div>
-    <button onclick="increment()">Trigger Event</button>
-  </div>
-  <script>
-    let count = 0;
-    function increment() {
-      count++;
-      document.getElementById('counter').innerText = 'Clicks: ' + count;
-    }
-  </script>
-</body>
-</html>
-`,
-    },
-    {
-      id: "file-pkg-json",
-      name: "package.json",
-      path: "package.json",
-      folder: "",
-      language: "json",
-      version: 1,
-      updatedAt: now,
-      content: JSON.stringify(
-        {
-          name: `workspace-${projectId.slice(0, 8)}`,
-          version: "1.0.0",
-          private: true,
-          scripts: {
-            start: "node src/index.js",
-            build: "tsc",
-            analytics: "python3 scripts/analytics.py",
-          },
-        },
-        null,
-        2
-      ),
-    },
-  ];
-
   return {
     projectId,
-    files,
-    commits: [
-      {
-        id: `init-${Date.now()}`,
-        message: "Initial project workspace setup",
-        authorName: "System",
-        authorEmail: "workspace@letscollab.app",
-        timestamp: now,
-        filesCount: files.length,
-      },
-    ],
+    files: [],
+    commits: [],
   };
 }
 

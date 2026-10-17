@@ -988,7 +988,7 @@ describe("LetsCollab Collaborative Platform Core Test Suite", () => {
         .set("Authorization", `Bearer ${devToken}`);
       expect(getRes.status).toBe(200);
       expect(Array.isArray(getRes.body.files)).toBe(true);
-      expect(getRes.body.files.length).toBeGreaterThan(0);
+      expect(getRes.body.files.length).toBe(0);
 
       const createRes = await request(app)
         .post(`/api/editor/${testProjectId}/files`)
@@ -1000,6 +1000,12 @@ describe("LetsCollab Collaborative Platform Core Test Suite", () => {
         });
       expect(createRes.status).toBe(201);
       expect(createRes.body.file.path).toBe("src/helper.js");
+
+      const afterGetRes = await request(app)
+        .get(`/api/editor/${testProjectId}/files`)
+        .set("Authorization", `Bearer ${devToken}`);
+      expect(afterGetRes.body.files.length).toBe(1);
+      expect(afterGetRes.body.files[0].path).toBe("src/helper.js");
     });
 
     it("should execute JavaScript and Python code and return real stdout", async () => {

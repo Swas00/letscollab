@@ -75,6 +75,14 @@ export function initSocket(server: HttpServer): SocketIOServer {
 
     socket.on("editor:code-change", (data: { projectId: string; fileId: string; content: string; version: number; user: any }) => {
       if (!data.projectId) return;
+      try {
+        const { updateWorkspaceFileCode } = require("./routes/editor.routes");
+        if (typeof updateWorkspaceFileCode === "function") {
+          updateWorkspaceFileCode(data.projectId, data.fileId, data.content, data.version);
+        }
+      } catch (err) {
+        // non-fatal in-memory fallback
+      }
       socket.to(`editor:${data.projectId}`).emit("editor:code-updated", {
         ...data,
         socketId: socket.id,
@@ -107,6 +115,7 @@ export function getIO(): SocketIOServer {
 export function emitToProject(projectId: string, event: string, data: any) {
   if (io) {
     io.to(`project:${projectId}`).emit(event, data);
+    io.to(`editor:${projectId}`).emit(event, data);
     // Also emit broadcast so global feeds stay synchronized
     io.emit(event, data);
   }
