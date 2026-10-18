@@ -90,6 +90,17 @@ export function initSocket(server: HttpServer): SocketIOServer {
       });
     });
 
+    socket.on("editor:team-chat", (data: { projectId: string; user: any; message: string; timestamp?: string }) => {
+      if (!data?.projectId || !data?.message) return;
+      const payload = {
+        ...data,
+        id: `chat-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        timestamp: data.timestamp || new Date().toISOString(),
+      };
+      io?.to(`editor:${data.projectId}`).emit("editor:team-chat-message", payload);
+      io?.to(`project:${data.projectId}`).emit("editor:team-chat-message", payload);
+    });
+
     socket.on("disconnect", () => {
       const user = (socket as any).editorUser;
       if (user && user.projectId) {

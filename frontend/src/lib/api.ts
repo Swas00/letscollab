@@ -310,7 +310,7 @@ export const api = {
       apiFetch<{ success: boolean; fileId: string }>(`/editor/${projectId}/files/${fileId}`, {
         method: "DELETE",
       }),
-    commit: (projectId: string, data: { message: string; files?: any[] }) =>
+    commit: (projectId: string, data: { message: string; files?: any[]; taskId?: string }) =>
       apiFetch<{ commit: any; commits: any[] }>(`/editor/${projectId}/commit`, {
         method: "POST",
         body: JSON.stringify(data),
@@ -353,7 +353,7 @@ export const api = {
         method: "POST",
         body: JSON.stringify(data),
       }),
-    terminal: (data: { command: string; files?: any[] }) =>
+    terminal: (data: { command: string; files?: any[]; env?: Record<string, string> }) =>
       apiFetch<{ stdout: string; stderr: string; exitCode: number }>("/editor/terminal", {
         method: "POST",
         body: JSON.stringify(data),

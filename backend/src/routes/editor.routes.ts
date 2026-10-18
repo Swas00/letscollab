@@ -243,9 +243,9 @@ router.delete("/:projectId/files/:fileId", authenticate, (req: AuthRequest, res:
 });
 
 // 5. POST /api/editor/:projectId/commit - Commit workspace changes
-router.post("/:projectId/commit", authenticate, (req: AuthRequest, res: Response) => {
+router.post("/:projectId/commit", authenticate, async (req: AuthRequest, res: Response) => {
   const { projectId } = req.params;
-  const { message, files } = req.body;
+  const { message, files, taskId } = req.body;
 
   if (!message || !String(message).trim()) {
     return res.status(400).json({ error: "Commit message is required" });
@@ -273,6 +273,36 @@ router.post("/:projectId/commit", authenticate, (req: AuthRequest, res: Response
   ws.commits = [commit, ...(ws.commits || []).slice(0, 49)];
   all[projectId] = ws;
   writeAllWorkspaces(all);
+
+  // Auto-link commit to task if taskId or #<taskId> is referenced
+  const matchId = taskId || (typeof message === "string" && message.match(/#([a-zA-Z0-9_\-]+)/)?.[1]);
+  if (matchId) {
+    try {
+      const { prisma } = require("../lib/prisma");
+      const targetTask = await prisma.task.findFirst({
+        where: { OR: [{ id: matchId }, { title: { contains: matchId, mode: "insensitive" } }] },
+      });
+      if (targetTask) {
+        await prisma.comment.create({
+          data: {
+            taskId: targetTask.id,
+            userId: req.user?.id || targetTask.assigneeId || targetTask.creatorId,
+            content: `🔗 **Linked Git Commit** \`${commit.id}\` by **${commit.authorName}**:\n> "${commit.message}"\n*(Touched ${commit.filesCount} workspace files)*`,
+          },
+        });
+        emitToProject(projectId, "activity:new", {
+          id: `act-${Date.now()}`,
+          projectId,
+          userId: req.user?.id,
+          action: "COMMITTED_CODE",
+          details: `Committed ${commit.id}: "${commit.message}" (linked to task ${targetTask.title})`,
+          createdAt: new Date().toISOString(),
+        });
+      }
+    } catch {
+      // non-fatal
+    }
+  }
 
   return res.status(201).json({ commit, commits: ws.commits });
 });
@@ -872,7 +902,7 @@ __origLog(JSON.stringify({
 
 // 8. POST /api/editor/terminal - Interactive Workspace Terminal Execution
 router.post("/terminal", authenticate, async (req: AuthRequest, res: Response) => {
-  const { command, files = [] } = req.body;
+  const { command, files = [], env: clientEnv = {} } = req.body;
 
   if (!command || typeof command !== "string") {
     return res.status(400).json({ error: "Command is required" });
@@ -892,9 +922,10 @@ router.post("/terminal", authenticate, async (req: AuthRequest, res: Response) =
     }
 
     const output = await new Promise<{ stdout: string; stderr: string; exitCode: number }>((resolve) => {
+      const sanitizedEnv = typeof clientEnv === "object" && clientEnv !== null ? clientEnv : {};
       const child = spawn("bash", ["-c", trimmed], {
         cwd: tmpDir,
-        env: { ...process.env, NODE_NO_WARNINGS: "1" },
+        env: { ...process.env, NODE_NO_WARNINGS: "1", ...sanitizedEnv },
       });
 
       let stdout = "";

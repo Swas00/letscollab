@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import Editor, { OnMount, BeforeMount } from "@monaco-editor/react";
+import Editor, { DiffEditor, OnMount, BeforeMount } from "@monaco-editor/react";
+import JSZip from "jszip";
 import {
   FileCode,
   Folder,
@@ -47,6 +48,7 @@ import {
   Bot,
   Wand2,
   FolderPlus,
+  FilePlus,
   Key,
   Send,
   MessageSquare,
@@ -57,6 +59,16 @@ import {
   ShieldCheck,
   ExternalLink,
   Users,
+  CheckSquare,
+  ZoomIn,
+  ZoomOut,
+  WrapText,
+  Archive,
+  MessageCircle,
+  GitPullRequest,
+  Sliders,
+  ArrowRight,
+  ListTodo,
 } from "lucide-react";
 import { Tooltip } from "../ui/Tooltip";
 import { SyncStatusBadge, SyncState } from "../ui/SyncStatusBadge";
@@ -84,6 +96,12 @@ export interface CollaboratorPeer {
   email?: string;
   color: string;
   cursor?: { line: number; ch: number };
+  selection?: {
+    startLine: number;
+    startColumn: number;
+    endLine: number;
+    endColumn: number;
+  };
   activeFileId?: string;
 }
 
@@ -342,7 +360,264 @@ export const ESSENTIAL_EXTENSIONS: IdeExtension[] = [
 
 const COLLABORATOR_COLORS = ["#E65F42", "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6"];
 
-type ActivityTab = "explorer" | "search" | "git" | "debug" | "extensions";
+export const STARTER_TEMPLATES = [
+  {
+    id: "react-sandbox",
+    name: "React Component Sandbox",
+    icon: Code2,
+    badge: "React 18 + TS",
+    desc: "Interactive React component playground with stateful hooks, modular UI components, and instant HTML live preview.",
+    files: [
+      {
+        name: "App.tsx",
+        path: "src/App.tsx",
+        folder: "src",
+        language: "typescript",
+        content: `import React, { useState } from "react";
+
+export default function App() {
+  const [count, setCount] = useState(0);
+  const [text, setText] = useState("");
+
+  return (
+    <div className="p-8 max-w-lg mx-auto bg-slate-900 text-white rounded-2xl shadow-xl">
+      <h1 className="text-2xl font-bold text-sky-400">React Sandbox</h1>
+      <p className="text-slate-400 text-sm mt-1">Edit code in LetsCollab IDE and watch live updates.</p>
+      <div className="mt-6 flex items-center gap-3">
+        <button
+          onClick={() => setCount((c) => c + 1)}
+          className="px-4 py-2 bg-sky-500 hover:bg-sky-400 rounded-lg font-semibold text-white transition"
+        >
+          Clicked: {count}
+        </button>
+        <input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Type here..."
+          className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white outline-none"
+        />
+      </div>
+      {text && <p className="mt-3 text-xs text-emerald-400 font-mono">Live Input: {text}</p>}
+    </div>
+  );
+}
+`,
+      },
+      {
+        name: "Button.tsx",
+        path: "src/components/Button.tsx",
+        folder: "src/components",
+        language: "typescript",
+        content: `import React from "react";
+
+interface ButtonProps {
+  label: string;
+  onClick?: () => void;
+  variant?: "primary" | "secondary";
+}
+
+export const Button: React.FC<ButtonProps> = ({ label, onClick, variant = "primary" }) => {
+  const base = "px-4 py-2 rounded-lg font-medium transition text-sm";
+  const styles = variant === "primary" ? "bg-blue-600 hover:bg-blue-500 text-white" : "bg-gray-700 hover:bg-gray-600 text-gray-200";
+  return (
+    <button onClick={onClick} className={\`\${base} \${styles}\`}>
+      {label}
+    </button>
+  );
+};
+`,
+      },
+      {
+        name: "index.html",
+        path: "index.html",
+        folder: "",
+        language: "html",
+        content: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>React Sandbox Preview</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-white min-h-screen flex items-center justify-center p-6">
+  <div id="root">
+    <div class="text-center space-y-3">
+      <h2 class="text-2xl font-bold text-sky-400">React Sandbox Preview</h2>
+      <p class="text-slate-400 text-sm">Open split live preview with ⌘\\ to view interactive render.</p>
+    </div>
+  </div>
+</body>
+</html>
+`,
+      },
+      {
+        name: "package.json",
+        path: "package.json",
+        folder: "",
+        language: "json",
+        content: `{\n  "name": "react-sandbox",\n  "version": "1.0.0",\n  "dependencies": {\n    "react": "^18.3.1",\n    "react-dom": "^18.3.1"\n  }\n}\n`,
+      },
+    ],
+  },
+  {
+    id: "node-api",
+    name: "Node.js REST API",
+    icon: TerminalIcon,
+    badge: "Node.js + Express",
+    desc: "Lightweight backend microservice with JSON REST endpoints, health monitoring, and environment variable configuration.",
+    files: [
+      {
+        name: "server.js",
+        path: "src/server.js",
+        folder: "src",
+        language: "javascript",
+        content: `// Node.js REST API Server
+const http = require("http");
+
+const PORT = process.env.PORT || 4000;
+const server = http.createServer((req, res) => {
+  res.setHeader("Content-Type", "application/json");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+
+  if (req.url === "/health") {
+    res.writeHead(200);
+    return res.end(JSON.stringify({ status: "healthy", uptime: process.uptime(), timestamp: new Date().toISOString() }));
+  }
+
+  if (req.url === "/api/metrics") {
+    res.writeHead(200);
+    return res.end(JSON.stringify({ memory: process.memoryUsage(), cpu: process.cpuUsage(), pid: process.pid }));
+  }
+
+  res.writeHead(200);
+  res.end(JSON.stringify({ message: "Hello from LetsCollab Node API!", endpoints: ["/health", "/api/metrics"] }));
+});
+
+server.listen(PORT, () => {
+  console.log(\`[Node.js] Server listening at http://localhost:\${PORT}\`);
+});
+`,
+      },
+      {
+        name: ".env.example",
+        path: ".env.example",
+        folder: "",
+        language: "shell",
+        content: `PORT=4000\nNODE_ENV=development\nAPI_SECRET=letscollab_dev_secret_key\n`,
+      },
+      {
+        name: "package.json",
+        path: "package.json",
+        folder: "",
+        language: "json",
+        content: `{\n  "name": "node-rest-api",\n  "version": "1.0.0",\n  "main": "src/server.js",\n  "scripts": {\n    "start": "node src/server.js"\n  }\n}\n`,
+      },
+    ],
+  },
+  {
+    id: "python-analytics",
+    name: "Python Analytics & Telemetry",
+    icon: Sparkles,
+    badge: "Python 3.11",
+    desc: "Data processing, math analytics, and telemetry simulation engine with step debugging and variable inspection support.",
+    files: [
+      {
+        name: "main.py",
+        path: "main.py",
+        folder: "",
+        language: "python",
+        content: `"""
+Python Analytics & Telemetry Engine
+LetsCollab Collaborative IDE v2.4
+"""
+import math
+import time
+
+def generate_telemetry_batch(count=5):
+    print(f"Collecting {count} telemetry data points...")
+    readings = []
+    for i in range(1, count + 1):
+        score = round(math.sin(i * 0.75) * 50 + 50, 2)
+        readings.append({"id": i, "score": score, "timestamp": time.time()})
+        print(f"  Point {i}: Score = {score}")
+    return readings
+
+def calculate_summary(readings):
+    if not readings:
+        return {"avg": 0, "max": 0, "min": 0}
+    scores = [r["score"] for r in readings]
+    return {
+        "avg": round(sum(scores) / len(scores), 2),
+        "max": max(scores),
+        "min": min(scores),
+        "count": len(scores),
+    }
+
+def main():
+    batch = generate_telemetry_batch(5)
+    summary = calculate_summary(batch)
+    print("✔ Telemetry Summary:", summary)
+
+if __name__ == "__main__":
+    main()
+`,
+      },
+      {
+        name: "requirements.txt",
+        path: "requirements.txt",
+        folder: "",
+        language: "plaintext",
+        content: `requests>=2.31.0\nnumpy>=1.26.0\n`,
+      },
+    ],
+  },
+  {
+    id: "tailwind-html",
+    name: "Modern Tailwind & HTML5",
+    icon: Eye,
+    badge: "HTML5 + Tailwind",
+    desc: "Fast static web application with Tailwind CSS CDN, modern typography, responsive cards, and live iframe preview.",
+    files: [
+      {
+        name: "index.html",
+        path: "index.html",
+        folder: "",
+        language: "html",
+        content: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LetsCollab Modern Preview</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white min-h-screen flex items-center justify-center p-6">
+  <div class="max-w-md w-full bg-slate-800/80 backdrop-blur-md rounded-2xl p-8 border border-slate-700 shadow-2xl text-center space-y-4">
+    <div class="w-12 h-12 rounded-xl bg-sky-500/20 text-sky-400 mx-auto flex items-center justify-center font-bold text-xl">
+      🚀
+    </div>
+    <h1 class="text-2xl font-bold text-white tracking-tight">Interactive Preview</h1>
+    <p class="text-slate-300 text-sm">Edit code in the left pane and see live changes instantly here!</p>
+    <button onclick="alert('Hello from interactive live preview!')" class="w-full py-3 rounded-xl bg-sky-500 hover:bg-sky-400 font-bold text-white shadow-lg transition active:scale-95">
+      Trigger Interactive Alert
+    </button>
+  </div>
+</body>
+</html>
+`,
+      },
+      {
+        name: "app.js",
+        path: "app.js",
+        folder: "",
+        language: "javascript",
+        content: `console.log("LetsCollab Live Preview App Initialized.");\n`,
+      },
+    ],
+  },
+];
+
+type ActivityTab = "explorer" | "search" | "git" | "debug" | "extensions" | "tasks";
 type BottomTab = "terminal" | "output" | "debug-console" | "problems" | "preview";
 
 interface CollaborativeEditorProps {
@@ -518,6 +793,59 @@ export function CollaborativeEditor({
   const [extensionSearch, setExtensionSearch] = useState("");
   const [extensionCategory, setExtensionCategory] = useState<string>("All");
 
+  // Advanced Features State:
+  // 1. Quick Open File (⌘P / Ctrl+P)
+  const [isQuickOpenVisible, setIsQuickOpenVisible] = useState(false);
+  const [quickOpenQuery, setQuickOpenQuery] = useState("");
+  const [quickOpenIndex, setQuickOpenIndex] = useState(0);
+
+  // 2. Right-Click Explorer Context Menu
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    file: EditorFile | null;
+    folder?: string;
+  } | null>(null);
+
+  // 3. Side-by-Side Monaco Diff Viewer
+  const [diffModal, setDiffModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    original: string;
+    modified: string;
+    language: string;
+    onApply?: () => void;
+  } | null>(null);
+  const committedFilesRef = useRef<Record<string, string>>({});
+
+  // 4. Editor Ergonomics & View Toggles
+  const [wordWrap, setWordWrap] = useState<"on" | "off">("on");
+  const [minimapEnabled, setMinimapEnabled] = useState<boolean>(true);
+  const [editorFontSize, setEditorFontSize] = useState<number>(13);
+
+  // 5. Project Starter Templates Scaffolding
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
+
+  // 6. In-Editor Tasks & Auto-linking
+  const [projectTasks, setProjectTasks] = useState<any[]>([]);
+  const [selectedCommitTaskId, setSelectedCommitTaskId] = useState<string>("");
+  const [taskFilterQuery, setTaskFilterQuery] = useState<string>("");
+
+  // 7. Real-Time Collaboration 2.0 (Team Chat Dock)
+  const [activeRightTab, setActiveRightTab] = useState<"copilot" | "chat">("copilot");
+  const [teamChatMessages, setTeamChatMessages] = useState<
+    Array<{ id: string; user: any; message: string; timestamp: string }>
+  >([]);
+  const [teamChatInput, setTeamChatInput] = useState<string>("");
+
+  // 8. Environment Variables (.env) & Terminal Export
+  const [isEnvModalOpen, setIsEnvModalOpen] = useState<boolean>(false);
+  const [envVars, setEnvVars] = useState<Array<{ key: string; value: string }>>([
+    { key: "NODE_ENV", value: "development" },
+    { key: "PORT", value: "4000" },
+  ]);
+  const [isCopiedTerminalLogs, setIsCopiedTerminalLogs] = useState<boolean>(false);
+
   // Refs
   const editorRef = useRef<any>(null);
   const monacoRef = useRef<any>(null);
@@ -546,7 +874,7 @@ export function CollaborativeEditor({
     return debugSteps[Math.min(currentDebugStepIdx, debugSteps.length - 1)] || null;
   }, [isDebugging, debugSteps, currentDebugStepIdx]);
 
-  // Load Persistent Project Files from Backend
+  // Load Persistent Project Files & Workspace Data from Backend
   useEffect(() => {
     if (!projectId || projectId === "demo-workspace") {
       setFiles([]);
@@ -554,11 +882,16 @@ export function CollaborativeEditor({
       setActiveFileId("");
       return;
     }
+
+    // Load workspace files & commits
     api.editor
       .getFiles(projectId)
       .then((res) => {
         const loaded = res.data?.files || [];
         setFiles(loaded);
+        loaded.forEach((f: EditorFile) => {
+          committedFilesRef.current[f.id] = f.content;
+        });
         if (loaded.length > 0) {
           setOpenTabIds(loaded.slice(0, 4).map((f: EditorFile) => f.id));
           setActiveFileId(loaded[0].id);
@@ -575,6 +908,26 @@ export function CollaborativeEditor({
         setOpenTabIds([]);
         setActiveFileId("");
       });
+
+    // Load project tasks for in-editor drawer & commit linking
+    api.tasks
+      .listByProject(projectId)
+      .then((res) => {
+        if (res.data?.tasks) {
+          setProjectTasks(res.data.tasks);
+        }
+      })
+      .catch(() => {});
+
+    // Restore saved environment variables
+    if (typeof window !== "undefined") {
+      try {
+        const savedEnv = localStorage.getItem(`letscollab_env_${projectId}`);
+        if (savedEnv) {
+          setEnvVars(JSON.parse(savedEnv));
+        }
+      } catch {}
+    }
   }, [projectId]);
 
   // Auto-open Live Preview when switching to an HTML file
@@ -629,15 +982,29 @@ export function CollaborativeEditor({
               name: data.user.name || "Collaborator",
               color: "#3b82f6",
               cursor: { line: data.line, ch: data.ch },
+              selection: data.selection,
               activeFileId: data.fileId,
             },
           ];
         }
         return prev.map((p) =>
           p.id === data.user.id
-            ? { ...p, cursor: { line: data.line, ch: data.ch }, activeFileId: data.fileId }
+            ? {
+                ...p,
+                cursor: { line: data.line, ch: data.ch },
+                selection: data.selection,
+                activeFileId: data.fileId,
+              }
             : p
         );
+      });
+    };
+
+    const handleTeamChatMessage = (data: any) => {
+      if (!data?.message) return;
+      setTeamChatMessages((prev) => {
+        if (prev.some((m) => m.id === data.id)) return prev;
+        return [...prev, data];
       });
     };
 
@@ -709,6 +1076,7 @@ export function CollaborativeEditor({
     socket.on("editor:file-created", handleFileCreated);
     socket.on("editor:file-updated", handleFileUpdated);
     socket.on("editor:file-deleted", handleFileDeleted);
+    socket.on("editor:team-chat-message", handleTeamChatMessage);
 
     return () => {
       socket.emit("editor:leave", { projectId });
@@ -719,6 +1087,7 @@ export function CollaborativeEditor({
       socket.off("editor:file-created", handleFileCreated);
       socket.off("editor:file-updated", handleFileUpdated);
       socket.off("editor:file-deleted", handleFileDeleted);
+      socket.off("editor:team-chat-message", handleTeamChatMessage);
     };
   }, [socket, projectId, user]);
 
@@ -817,6 +1186,25 @@ export function CollaborativeEditor({
           },
         },
       });
+
+      if (
+        peer.selection &&
+        (peer.selection.startLine !== peer.selection.endLine ||
+          peer.selection.startColumn !== peer.selection.endColumn)
+      ) {
+        newPeerDecorations.push({
+          range: new monaco.Range(
+            peer.selection.startLine,
+            peer.selection.startColumn,
+            peer.selection.endLine,
+            peer.selection.endColumn
+          ),
+          options: {
+            className: "monaco-remote-selection",
+            hoverMessage: { value: `Selection by **${peer.name}**` },
+          },
+        });
+      }
     });
 
     remoteDecorationsRef.current = editor.deltaDecorations(
@@ -918,6 +1306,26 @@ export function CollaborativeEditor({
       }
     });
 
+    // Cursor selection listener for collaborative range selection
+    editor.onDidChangeCursorSelection((e) => {
+      const sel = e.selection;
+      if (socket && projectId) {
+        socket.emit("editor:cursor", {
+          projectId,
+          fileId: activeFileIdRef.current,
+          line: sel.positionLineNumber,
+          ch: sel.positionColumn,
+          selection: {
+            startLine: sel.startLineNumber,
+            startColumn: sel.startColumn,
+            endLine: sel.endLineNumber,
+            endColumn: sel.endColumn,
+          },
+          user: { id: user?.id, name: user?.name },
+        });
+      }
+    });
+
     // Keybindings: Cmd+S (Save), Cmd+R (Run), F5 (Debug)
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       handleSave();
@@ -932,8 +1340,72 @@ export function CollaborativeEditor({
       handleDebugStepOver();
     });
 
+    // Ergonomic Shortcuts: Cmd+P (Quick Open), Alt+Z (Word Wrap), Zoom
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyP, () => {
+      setIsQuickOpenVisible(true);
+    });
+    editor.addCommand(monaco.KeyMod.Alt | monaco.KeyCode.KeyZ, () => {
+      setWordWrap((w) => (w === "on" ? "off" : "on"));
+    });
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Equal, () => {
+      setEditorFontSize((f) => Math.min(24, f + 1));
+    });
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Minus, () => {
+      setEditorFontSize((f) => Math.max(10, f - 1));
+    });
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Digit0, () => {
+      setEditorFontSize(13);
+    });
+
     updateEditorDecorations();
   };
+
+  // Global window shortcut listener
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Cmd+P or Ctrl+P -> Quick Open
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        setIsQuickOpenVisible((v) => !v);
+        return;
+      }
+      // Alt+Z / Option+Z -> Word Wrap
+      if (e.altKey && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        setWordWrap((w) => (w === "on" ? "off" : "on"));
+        return;
+      }
+      // Cmd+= or Ctrl+= -> Zoom In
+      if ((e.metaKey || e.ctrlKey) && (e.key === "=" || e.key === "+")) {
+        e.preventDefault();
+        setEditorFontSize((f) => Math.min(24, f + 1));
+        return;
+      }
+      // Cmd+- or Ctrl+- -> Zoom Out
+      if ((e.metaKey || e.ctrlKey) && e.key === "-") {
+        e.preventDefault();
+        setEditorFontSize((f) => Math.max(10, f - 1));
+        return;
+      }
+      // Cmd+0 or Ctrl+0 -> Reset Zoom
+      if ((e.metaKey || e.ctrlKey) && e.key === "0") {
+        e.preventDefault();
+        setEditorFontSize(13);
+        return;
+      }
+      // Escape -> close modals
+      if (e.key === "Escape") {
+        if (isQuickOpenVisible) setIsQuickOpenVisible(false);
+        if (contextMenu) setContextMenu(null);
+        if (diffModal) setDiffModal(null);
+        if (isEnvModalOpen) setIsEnvModalOpen(false);
+        if (isTemplateModalOpen) setIsTemplateModalOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, [isQuickOpenVisible, contextMenu, diffModal, isEnvModalOpen, isTemplateModalOpen]);
 
   // Code Change Handler
   const handleCodeChange = (newVal: string | undefined) => {
@@ -1354,8 +1826,8 @@ export function CollaborativeEditor({
     setNewFolderNameInput("");
   };
 
-  const handleDeleteFile = async (fileId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDeleteFile = async (fileId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
 
     if (projectId && projectId !== "demo-workspace") {
       await api.editor.deleteFile(projectId, fileId);
@@ -1510,10 +1982,16 @@ export function CollaborativeEditor({
       return;
     }
 
+    const clientEnvObj: Record<string, string> = {};
+    envVars.forEach((ev) => {
+      if (ev.key.trim()) clientEnvObj[ev.key.trim()] = ev.value;
+    });
+
     try {
       const res = await api.editor.terminal({
         command: cmd,
         files: files.map((f) => ({ path: f.path || f.name, content: f.content })),
+        env: clientEnvObj,
       });
 
       if (res.data) {
@@ -1541,6 +2019,28 @@ export function CollaborativeEditor({
         appendTerminalOutput(currentSessionId, [`Executed: ${cmd}`]);
       }
     }
+  };
+
+  const handleCopyTerminalLogs = () => {
+    const active = terminalSessions.find((s) => s.id === activeTerminalSessionId) || terminalSessions[0];
+    if (!active) return;
+    navigator.clipboard.writeText(active.history.join("\n"));
+    setIsCopiedTerminalLogs(true);
+    setTimeout(() => setIsCopiedTerminalLogs(false), 1500);
+  };
+
+  const handleDownloadTerminalLogs = () => {
+    const active = terminalSessions.find((s) => s.id === activeTerminalSessionId) || terminalSessions[0];
+    if (!active) return;
+    const blob = new Blob([active.history.join("\n")], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${active.name.replace(/[^a-zA-Z0-9_\-]/g, "_")}-${Date.now()}.log`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   // GitHub Copilot Handlers
@@ -1727,6 +2227,7 @@ export function CollaborativeEditor({
       const res = await api.editor.commit(projectId, {
         message: commitMessage.trim(),
         files,
+        taskId: selectedCommitTaskId || undefined,
       });
       if (res.data?.commits) {
         setCommits(res.data.commits);
@@ -1743,10 +2244,137 @@ export function CollaborativeEditor({
       ]);
     }
 
+    files.forEach((f) => {
+      committedFilesRef.current[f.id] = f.content;
+    });
+
     setFiles((prev) => prev.map((f) => ({ ...f, isModified: false })));
     setCommitMessage("");
+    setSelectedCommitTaskId("");
     setIsCommitting(false);
     setSyncState("Synced");
+  };
+
+  // Inspect Git Diff for a modified file
+  const handleOpenGitDiff = (file: EditorFile) => {
+    const originalContent = committedFilesRef.current[file.id] || "";
+    setDiffModal({
+      isOpen: true,
+      title: `Git Diff: ${file.path || file.name} (Working Tree vs. Last Commit)`,
+      original: originalContent,
+      modified: file.content,
+      language: getMonacoLanguage(file.name),
+    });
+  };
+
+  // Quick Open File Selection
+  const handleQuickOpenFile = (fileId: string) => {
+    if (!openTabIds.includes(fileId)) {
+      setOpenTabIds((p) => [...p, fileId]);
+    }
+    setActiveFileId(fileId);
+    setIsQuickOpenVisible(false);
+    setQuickOpenQuery("");
+  };
+
+  // Export Entire Workspace Directory as a ZIP Archive
+  const handleExportZip = async () => {
+    if (files.length === 0) return;
+    try {
+      const zip = new JSZip();
+      files.forEach((f) => {
+        zip.file(f.path || f.name, f.content);
+      });
+      const blob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${projectId || "workspace"}-files.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error("ZIP export failed:", err);
+    }
+  };
+
+  // Apply Scaffolding Starter Template
+  const handleApplyTemplate = async (templateId: string) => {
+    const tpl = STARTER_TEMPLATES.find((t) => t.id === templateId);
+    if (!tpl) return;
+    setIsTemplateModalOpen(false);
+    setSyncState("Saving");
+
+    const createdFiles: EditorFile[] = [];
+    for (const tFile of tpl.files) {
+      if (projectId && projectId !== "demo-workspace") {
+        try {
+          const res = await api.editor.createFile(projectId, {
+            name: tFile.name,
+            folder: tFile.folder,
+            content: tFile.content,
+          });
+          if (res.data?.file) {
+            createdFiles.push(res.data.file);
+            committedFilesRef.current[res.data.file.id] = res.data.file.content;
+          }
+        } catch {
+          // ignore
+        }
+      } else {
+        const localFile: EditorFile = {
+          id: `file-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          name: tFile.name,
+          path: tFile.path,
+          folder: tFile.folder,
+          language: tFile.language,
+          content: tFile.content,
+          version: 1,
+          isModified: false,
+        };
+        createdFiles.push(localFile);
+        committedFilesRef.current[localFile.id] = localFile.content;
+      }
+    }
+
+    if (createdFiles.length > 0) {
+      setFiles((prev) => [...prev, ...createdFiles]);
+      setOpenTabIds((prev) => [...prev, ...createdFiles.map((f) => f.id)]);
+      setActiveFileId(createdFiles[0].id);
+    }
+    setSyncState("Synced");
+    setLastSynced(new Date());
+  };
+
+  // Update Task Status in mini-kanban
+  const handleUpdateTaskStatus = async (taskId: string, newStatus: string) => {
+    try {
+      await api.tasks.update(taskId, { status: newStatus });
+      api.tasks
+        .listByProject(projectId)
+        .then((res) => {
+          if (res.data?.tasks) setProjectTasks(res.data.tasks);
+        })
+        .catch(() => {});
+    } catch {}
+  };
+
+  // Send real-time in-IDE team discussion message
+  const handleSendTeamChat = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!teamChatInput.trim() || !socket || !projectId) return;
+    const msgText = teamChatInput.trim();
+    socket.emit("editor:team-chat", {
+      projectId,
+      user: {
+        id: user?.id || `user-${Date.now()}`,
+        name: user?.name || "Developer",
+        email: user?.email,
+      },
+      message: msgText,
+    });
+    setTeamChatInput("");
   };
 
   // Search across all files in workspace
@@ -1848,6 +2476,16 @@ export function CollaborativeEditor({
   const modifiedFiles = useMemo(() => files.filter((f) => f.isModified), [files]);
   const linesCount = activeFile ? activeFile.content.split("\n").length : 0;
 
+  const quickOpenFilteredFiles = useMemo(() => {
+    if (!quickOpenQuery.trim()) return files;
+    const q = quickOpenQuery.toLowerCase();
+    return files.filter(
+      (f) =>
+        f.name.toLowerCase().includes(q) ||
+        (f.path && f.path.toLowerCase().includes(q))
+    );
+  }, [files, quickOpenQuery]);
+
   return (
     <div
       className={cn(
@@ -1890,9 +2528,11 @@ export function CollaborativeEditor({
                 label: "File",
                 items: [
                   { name: "New File", shortcut: "⌘N", action: () => { setIsSidebarOpen(true); setActiveSidebarTab("explorer"); setIsCreatingFile(true); } },
+                  { name: "Starter Project Templates...", shortcut: "", action: () => setIsTemplateModalOpen(true) },
                   { name: "Upload File from Disk...", shortcut: "⌘O", action: () => fileUploadRef.current?.click() },
                   { name: "Save", shortcut: "⌘S", action: handleSave },
                   { name: "Download Active File", shortcut: "⌘D", action: handleDownloadActiveFile },
+                  { name: "Export Workspace ZIP", shortcut: "", action: handleExportZip },
                 ],
               },
               {
@@ -1906,8 +2546,16 @@ export function CollaborativeEditor({
               {
                 label: "View",
                 items: [
+                  { name: "Quick Open File...", shortcut: "⌘P", action: () => setIsQuickOpenVisible(true) },
                   { name: "Command Palette...", shortcut: "⌘K", action: () => setIsCommandPaletteOpen(true) },
+                  { name: "Toggle Word Wrap", shortcut: "⌥Z", action: () => setWordWrap((w) => w === "on" ? "off" : "on") },
+                  { name: "Toggle Minimap", shortcut: "", action: () => setMinimapEnabled((m) => !m) },
+                  { name: "Zoom In (Font Size)", shortcut: "⌘+", action: () => setEditorFontSize((f) => Math.min(24, f + 1)) },
+                  { name: "Zoom Out (Font Size)", shortcut: "⌘-", action: () => setEditorFontSize((f) => Math.max(10, f - 1)) },
+                  { name: "Reset Zoom (13px)", shortcut: "⌘0", action: () => setEditorFontSize(13) },
                   { name: "Toggle Primary Sidebar", shortcut: "⌘B", action: () => setIsSidebarOpen((v) => !v) },
+                  { name: "Project Tasks (Mini-Kanban)", shortcut: "", action: () => { setIsSidebarOpen(true); setActiveSidebarTab("tasks"); } },
+                  { name: "Toggle GitHub Copilot", shortcut: "⌘I", action: () => setIsCopilotOpen((v) => !v) },
                   { name: "Toggle Bottom Panel", shortcut: "⌘J", action: () => setIsBottomPanelOpen((v) => !v) },
                   { name: "Toggle Live Split Preview", shortcut: "⌘\\", action: () => setIsSplitPreviewOpen((v) => !v) },
                   { name: "Toggle Fullscreen IDE", shortcut: "F11", action: () => setIsFullscreen((v) => !v) },
@@ -1927,6 +2575,9 @@ export function CollaborativeEditor({
                 items: [
                   { name: "New Terminal Output", shortcut: "⌃`", action: () => { setIsBottomPanelOpen(true); setActiveBottomTab("terminal"); } },
                   { name: "Open Debug Console", shortcut: "⌘⇧Y", action: () => { setIsBottomPanelOpen(true); setActiveBottomTab("debug-console"); } },
+                  { name: "Manage .env Variables...", shortcut: "", action: () => setIsEnvModalOpen(true) },
+                  { name: "Copy Terminal Logs", shortcut: "", action: handleCopyTerminalLogs },
+                  { name: "Export Terminal Logs (.log)", shortcut: "", action: handleDownloadTerminalLogs },
                   { name: "Clear Terminal", shortcut: "", action: () => setTerminalSessions((prev) => prev.map((s) => s.id === activeTerminalSessionId ? { ...s, history: [] } : s)) },
                 ],
               },
@@ -2198,6 +2849,15 @@ export function CollaborativeEditor({
                 badge: modifiedFiles.length > 0 ? modifiedFiles.length : undefined,
               },
               {
+                id: "tasks" as ActivityTab,
+                icon: CheckSquare,
+                label: "Project Tasks (Mini-Kanban)",
+                badge:
+                  projectTasks.filter((t) => t.status !== "DONE").length > 0
+                    ? projectTasks.filter((t) => t.status !== "DONE").length
+                    : undefined,
+              },
+              {
                 id: "debug" as ActivityTab,
                 icon: Bug,
                 label: "Run and Debug (⌘⇧D)",
@@ -2298,6 +2958,20 @@ export function CollaborativeEditor({
                     >
                       <Download className="w-3.5 h-3.5" />
                     </button>
+                    <button
+                      onClick={() => setIsTemplateModalOpen(true)}
+                      className="p-1 rounded hover:bg-[#3c3c3c] text-[#cccccc]"
+                      title="Scaffold Starter Template (React, Node, Python, HTML)..."
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-[#e2c08d]" />
+                    </button>
+                    <button
+                      onClick={handleExportZip}
+                      className="p-1 rounded hover:bg-[#3c3c3c] text-[#cccccc]"
+                      title="Export Entire Workspace as ZIP"
+                    >
+                      <Archive className="w-3.5 h-3.5 text-[#75beff]" />
+                    </button>
                   </div>
                 </div>
 
@@ -2387,7 +3061,13 @@ export function CollaborativeEditor({
                 )}
 
                 {/* Folder & File Tree */}
-                <div className="flex-1 overflow-y-auto py-1.5 space-y-1">
+                <div
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setContextMenu({ x: e.clientX, y: e.clientY, file: null, folder: "" });
+                  }}
+                  className="flex-1 overflow-y-auto py-1.5 space-y-1"
+                >
                   {Object.entries(groupedFolders).map(([folderName, folderFiles]) => {
                     if (folderFiles.length === 0) return null;
                     const isExp = treeExpanded[folderName] ?? true;
@@ -2399,6 +3079,11 @@ export function CollaborativeEditor({
                             onClick={() =>
                               setTreeExpanded((p) => ({ ...p, [folderName]: !isExp }))
                             }
+                            onContextMenu={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setContextMenu({ x: e.clientX, y: e.clientY, file: null, folder: folderName });
+                            }}
                             className="flex items-center gap-1.5 px-2 py-1 text-xs text-[#cccccc] hover:bg-[#2a2d2e] cursor-pointer font-medium"
                           >
                             {isExp ? (
@@ -2429,6 +3114,11 @@ export function CollaborativeEditor({
                                       setOpenTabIds((p) => [...p, file.id]);
                                     }
                                     setActiveFileId(file.id);
+                                  }}
+                                  onContextMenu={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setContextMenu({ x: e.clientX, y: e.clientY, file, folder: file.folder });
                                   }}
                                   className={cn(
                                     "group flex items-center justify-between px-2.5 py-1 text-xs font-mono cursor-pointer transition-colors",
@@ -2505,18 +3195,27 @@ export function CollaborativeEditor({
                       <FileCode className="w-8 h-8 text-[#555555]" />
                       <div className="text-xs font-semibold text-[#cccccc]">No files in workspace</div>
                       <p className="text-[11px] text-[#777777] leading-relaxed">
-                        Workspace is clean. Create or upload files to start collaborating.
+                        Workspace is clean. Create files or scaffold a starter template.
                       </p>
-                      <button
-                        onClick={() => {
-                          setIsCreatingFile(true);
-                          setIsCreatingFolder(false);
-                        }}
-                        className="px-3 py-1 bg-[#007acc] hover:bg-[#1f8ad2] text-white rounded text-[11px] font-medium flex items-center gap-1.5 transition shadow mt-1"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>New File</span>
-                      </button>
+                      <div className="flex items-center gap-2 mt-2">
+                        <button
+                          onClick={() => {
+                            setIsCreatingFile(true);
+                            setIsCreatingFolder(false);
+                          }}
+                          className="px-2.5 py-1 bg-[#007acc] hover:bg-[#1f8ad2] text-white rounded text-[11px] font-medium flex items-center gap-1.5 transition shadow"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>New File</span>
+                        </button>
+                        <button
+                          onClick={() => setIsTemplateModalOpen(true)}
+                          className="px-2.5 py-1 bg-[#252526] hover:bg-[#333333] border border-[#454545] text-white rounded text-[11px] font-medium flex items-center gap-1.5 transition"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-[#e2c08d]" />
+                          <span>Templates</span>
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -2606,11 +3305,48 @@ export function CollaborativeEditor({
                 </div>
 
                 <form onSubmit={handleCommitChanges} className="space-y-2">
+                  {projectTasks.length > 0 && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-[#858585] font-mono flex items-center justify-between">
+                        <span>LINK TASK</span>
+                        {selectedCommitTaskId && (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedCommitTaskId("")}
+                            className="text-[#75beff] hover:underline text-[9px]"
+                          >
+                            clear
+                          </button>
+                        )}
+                      </label>
+                      <select
+                        value={selectedCommitTaskId}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setSelectedCommitTaskId(val);
+                          if (val) {
+                            const t = projectTasks.find((task) => task.id === val);
+                            if (t && (!commitMessage || commitMessage.startsWith("#"))) {
+                              setCommitMessage(`#${t.id.slice(0, 8)}: ${t.title}`);
+                            }
+                          }
+                        }}
+                        className="w-full bg-[#3c3c3c] border border-[#454545] rounded p-1.5 text-[11px] text-white outline-none font-mono"
+                      >
+                        <option value="">No task linked</option>
+                        {projectTasks.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            [{t.status}] #{t.id.slice(0, 8)} {t.title.slice(0, 22)}...
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <textarea
                     rows={2}
                     value={commitMessage}
                     onChange={(e) => setCommitMessage(e.target.value)}
-                    placeholder="Message (⌘Enter to commit on 'main')"
+                    placeholder="Message (⌘Enter to commit or #TASK-ID)"
                     className="w-full bg-[#3c3c3c] border border-[#454545] focus:border-[#007acc] rounded p-2 text-xs text-white placeholder-[#858585] outline-none font-mono resize-none"
                   />
                   <button
@@ -2637,10 +3373,23 @@ export function CollaborativeEditor({
                       <div
                         key={f.id}
                         onClick={() => setActiveFileId(f.id)}
-                        className="flex items-center justify-between px-2 py-1 rounded hover:bg-[#2a2d2e] cursor-pointer text-xs font-mono"
+                        className="group flex items-center justify-between px-2 py-1 rounded hover:bg-[#2a2d2e] cursor-pointer text-xs font-mono"
                       >
-                        <span className="truncate text-[#e2c08d]">{f.path || f.name}</span>
-                        <span className="text-[10px] font-bold text-[#e2c08d]">M</span>
+                        <span className="truncate text-[#e2c08d] flex-1">{f.path || f.name}</span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenGitDiff(f);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 hover:text-white text-[#75beff] p-0.5"
+                            title="Inspect Git Diff (Working Tree vs. Last Commit)"
+                          >
+                            <GitPullRequest className="w-3 h-3" />
+                          </button>
+                          <span className="text-[10px] font-bold text-[#e2c08d]">M</span>
+                        </div>
                       </div>
                     ))
                   )}
@@ -2960,6 +3709,153 @@ export function CollaborativeEditor({
                 </div>
               </div>
             )}
+
+            {/* VIEW 6: PROJECT TASKS (MINI-KANBAN) */}
+            {activeSidebarTab === "tasks" && (
+              <div className="flex flex-col h-full p-3 space-y-3 overflow-y-auto">
+                <div className="text-[11px] font-bold tracking-wider text-[#bbbbbb] uppercase flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <CheckSquare className="w-3.5 h-3.5 text-[#007acc]" />
+                    <span>PROJECT TASKS</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-[#858585]">
+                    {projectTasks.length} tasks
+                  </span>
+                </div>
+
+                {/* Filter Input */}
+                <input
+                  type="text"
+                  value={taskFilterQuery}
+                  onChange={(e) => setTaskFilterQuery(e.target.value)}
+                  placeholder="Filter tasks by name or ID..."
+                  className="w-full bg-[#3c3c3c] border border-[#454545] rounded px-2 py-1 text-xs text-white placeholder-[#858585] outline-none font-mono"
+                />
+
+                {/* Tasks List grouped by Status */}
+                <div className="space-y-3 flex-1 overflow-y-auto pr-0.5">
+                  {(["TODO", "IN_PROGRESS", "DONE"] as const).map((colStatus) => {
+                    const colTasks = projectTasks
+                      .filter((t) => t.status === colStatus)
+                      .filter((t) =>
+                        taskFilterQuery.trim()
+                          ? t.title.toLowerCase().includes(taskFilterQuery.toLowerCase()) ||
+                            t.id.toLowerCase().includes(taskFilterQuery.toLowerCase())
+                          : true
+                      );
+
+                    const statusConfig: Record<string, { label: string; color: string }> = {
+                      TODO: { label: "TO DO", color: "text-[#858585]" },
+                      IN_PROGRESS: { label: "IN PROGRESS", color: "text-[#75beff]" },
+                      DONE: { label: "COMPLETED", color: "text-[#3fb950]" },
+                    };
+
+                    return (
+                      <div key={colStatus} className="space-y-1.5">
+                        <div className="flex items-center justify-between text-[10px] font-bold tracking-wide uppercase">
+                          <span className={statusConfig[colStatus].color}>
+                            {statusConfig[colStatus].label}
+                          </span>
+                          <span className="px-1.5 py-0.2 rounded-full bg-[#2a2d2e] text-[#858585]">
+                            {colTasks.length}
+                          </span>
+                        </div>
+
+                        {colTasks.length === 0 ? (
+                          <div className="p-2 rounded bg-[#1e1e1e]/60 border border-[#2d2d2d] text-[10px] text-[#656565] italic">
+                            No tasks
+                          </div>
+                        ) : (
+                          colTasks.map((task) => (
+                            <div
+                              key={task.id}
+                              className="p-2.5 rounded bg-[#1e1e1e] border border-[#333333] hover:border-[#007acc] text-xs font-mono space-y-2 transition group"
+                            >
+                              <div className="flex items-start justify-between gap-1.5">
+                                <span className="font-semibold text-white text-[11px] leading-snug">
+                                  {task.title}
+                                </span>
+                                <span
+                                  className={cn(
+                                    "px-1.5 py-0.5 rounded text-[9px] font-bold uppercase shrink-0",
+                                    task.priority === "HIGH"
+                                      ? "bg-[#da3633]/20 text-[#f85149]"
+                                      : task.priority === "MEDIUM"
+                                      ? "bg-[#d29922]/20 text-[#e3b341]"
+                                      : "bg-[#2a2d2e] text-[#858585]"
+                                  )}
+                                >
+                                  {task.priority || "NORMAL"}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center justify-between text-[10px] text-[#858585]">
+                                <span>#{task.id.slice(0, 8)}</span>
+                                {task.assignee?.name && (
+                                  <span className="text-[#cccccc] truncate max-w-[90px]">
+                                    @{task.assignee.name.split(" ")[0]}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Task Action Buttons */}
+                              <div className="flex items-center justify-between pt-1 border-t border-[#2d2d2d] text-[10px]">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveSidebarTab("git");
+                                    setSelectedCommitTaskId(task.id);
+                                    setCommitMessage(`#${task.id.slice(0, 8)}: ${task.title}`);
+                                  }}
+                                  className="text-[#75beff] hover:underline flex items-center gap-1"
+                                  title="Pre-fill commit message to link this task"
+                                >
+                                  <GitCommit className="w-2.5 h-2.5" />
+                                  <span>Commit Link</span>
+                                </button>
+
+                                <div className="flex items-center gap-1">
+                                  {colStatus !== "TODO" && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUpdateTaskStatus(task.id, "TODO")}
+                                      className="px-1.5 py-0.5 rounded bg-[#2a2d2e] hover:bg-[#333333] text-[#cccccc] text-[9px]"
+                                      title="Move to To Do"
+                                    >
+                                      ← Todo
+                                    </button>
+                                  )}
+                                  {colStatus !== "IN_PROGRESS" && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUpdateTaskStatus(task.id, "IN_PROGRESS")}
+                                      className="px-1.5 py-0.5 rounded bg-[#094771] hover:bg-[#007acc] text-white text-[9px]"
+                                      title="Move to In Progress"
+                                    >
+                                      → Progress
+                                    </button>
+                                  )}
+                                  {colStatus !== "DONE" && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleUpdateTaskStatus(task.id, "DONE")}
+                                      className="px-1.5 py-0.5 rounded bg-[#238636] hover:bg-[#2ea043] text-white text-[9px]"
+                                      title="Move to Completed"
+                                    >
+                                      ✔ Done
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -3069,13 +3965,13 @@ export function CollaborativeEditor({
                       </div>
                     }
                     options={{
-                      fontSize: 13,
+                      fontSize: editorFontSize,
                       fontFamily: "'IBM Plex Mono', Menlo, Monaco, 'Courier New', monospace",
                       tabSize: 2,
                       glyphMargin: true,
                       lineNumbersMinChars: 3,
-                      minimap: { enabled: true, maxColumn: 80, scale: 0.75 },
-                      wordWrap: "on",
+                      minimap: { enabled: minimapEnabled, maxColumn: 80, scale: 0.75 },
+                      wordWrap: wordWrap,
                       scrollBeyondLastLine: false,
                       smoothScrolling: true,
                       cursorBlinking: "smooth",
@@ -3202,6 +4098,17 @@ export function CollaborativeEditor({
                         </span>
                         <kbd className="px-1.5 py-0.5 rounded bg-[#333333] text-[10px] font-mono text-[#858585]">⌘I</kbd>
                       </button>
+
+                      <button
+                        onClick={() => setIsTemplateModalOpen(true)}
+                        className="w-full flex items-center justify-between p-2 rounded bg-[#1e1e1e] hover:bg-[#2d2d2e] border border-[#3c3c3c] hover:border-[#e2c08d] text-left text-white transition group"
+                      >
+                        <span className="flex items-center gap-2 font-medium">
+                          <Sparkles className="w-4 h-4 text-[#e2c08d]" />
+                          Scaffold Starter Template...
+                        </span>
+                        <span className="text-[10px] text-[#e2c08d] font-mono">React/Node/Python</span>
+                      </button>
                     </div>
                   </div>
 
@@ -3213,8 +4120,16 @@ export function CollaborativeEditor({
                     </div>
                     <div className="space-y-1.5 text-[11px] font-mono">
                       <div className="flex items-center justify-between py-1 border-b border-[#2d2d2d]">
+                        <span className="text-[#9d9d9d]">Quick Open File</span>
+                        <kbd className="px-1.5 py-0.5 rounded bg-[#1e1e1e] text-[#cccccc] border border-[#3c3c3c]">⌘P</kbd>
+                      </div>
+                      <div className="flex items-center justify-between py-1 border-b border-[#2d2d2d]">
                         <span className="text-[#9d9d9d]">Command Palette</span>
                         <kbd className="px-1.5 py-0.5 rounded bg-[#1e1e1e] text-[#cccccc] border border-[#3c3c3c]">⌘K</kbd>
+                      </div>
+                      <div className="flex items-center justify-between py-1 border-b border-[#2d2d2d]">
+                        <span className="text-[#9d9d9d]">Toggle Word Wrap</span>
+                        <kbd className="px-1.5 py-0.5 rounded bg-[#1e1e1e] text-[#cccccc] border border-[#3c3c3c]">⌥Z</kbd>
                       </div>
                       <div className="flex items-center justify-between py-1 border-b border-[#2d2d2d]">
                         <span className="text-[#9d9d9d]">Search in Workspace</span>
@@ -3224,13 +4139,9 @@ export function CollaborativeEditor({
                         <span className="text-[#9d9d9d]">Run / Step Debug</span>
                         <kbd className="px-1.5 py-0.5 rounded bg-[#1e1e1e] text-[#cccccc] border border-[#3c3c3c]">F5 / ⌘R</kbd>
                       </div>
-                      <div className="flex items-center justify-between py-1 border-b border-[#2d2d2d]">
-                        <span className="text-[#9d9d9d]">Toggle Terminal Panel</span>
-                        <kbd className="px-1.5 py-0.5 rounded bg-[#1e1e1e] text-[#cccccc] border border-[#3c3c3c]">⌘J</kbd>
-                      </div>
                       <div className="flex items-center justify-between py-1">
-                        <span className="text-[#9d9d9d]">Extensions (16 Installed)</span>
-                        <kbd className="px-1.5 py-0.5 rounded bg-[#1e1e1e] text-[#cccccc] border border-[#3c3c3c]">⌘⇧X</kbd>
+                        <span className="text-[#9d9d9d]">Zoom In / Out</span>
+                        <kbd className="px-1.5 py-0.5 rounded bg-[#1e1e1e] text-[#cccccc] border border-[#3c3c3c]">⌘+ / ⌘-</kbd>
                       </div>
                     </div>
                   </div>
@@ -3464,9 +4375,45 @@ export function CollaborativeEditor({
                         </button>
                       </Tooltip>
                     </div>
-                    <div className="text-[#858585] text-[10px]">
-                      Session {terminalSessions.findIndex((s) => s.id === activeTerminalSessionId) + 1} of{" "}
-                      {terminalSessions.length}
+                    <div className="flex items-center gap-2 text-[#858585] text-[10px]">
+                      <button
+                        type="button"
+                        onClick={() => setIsEnvModalOpen(true)}
+                        className="flex items-center gap-1 hover:text-[#75beff] px-1.5 py-0.5 rounded hover:bg-[#252526] transition font-mono"
+                        title="Manage Workspace Environment Variables"
+                      >
+                        <SlidersHorizontal className="w-3 h-3 text-[#dcb67a]" />
+                        <span>.env ({envVars.length})</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleCopyTerminalLogs}
+                        className="flex items-center gap-1 hover:text-white px-1.5 py-0.5 rounded hover:bg-[#252526] transition font-mono"
+                        title="Copy All Terminal Output"
+                      >
+                        {isCopiedTerminalLogs ? (
+                          <Check className="w-3 h-3 text-[#3fb950]" />
+                        ) : (
+                          <Copy className="w-3 h-3" />
+                        )}
+                        <span>{isCopiedTerminalLogs ? "Copied" : "Copy"}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleDownloadTerminalLogs}
+                        className="flex items-center gap-1 hover:text-white px-1.5 py-0.5 rounded hover:bg-[#252526] transition font-mono"
+                        title="Export Terminal Log File"
+                      >
+                        <Download className="w-3 h-3 text-[#75beff]" />
+                        <span>Export</span>
+                      </button>
+
+                      <span className="hidden sm:inline">
+                        Session {terminalSessions.findIndex((s) => s.id === activeTerminalSessionId) + 1} of{" "}
+                        {terminalSessions.length}
+                      </span>
                     </div>
                   </div>
 
@@ -3524,281 +4471,406 @@ export function CollaborativeEditor({
         </div>
 
         {/* =====================================================================
-            2D. VS CODE SECONDARY SIDEBAR: GITHUB COPILOT AI ASSISTANT
+            2D. VS CODE SECONDARY SIDEBAR: GITHUB COPILOT AI & TEAM CHAT
            ===================================================================== */}
         {isCopilotOpen && (
           <div className="w-80 lg:w-96 bg-[#252526] border-l border-[#333333] flex flex-col shrink-0 select-text overflow-hidden z-10">
-            {/* Copilot Header */}
+            {/* Secondary Sidebar Header with Tab Switcher */}
             <div className="flex items-center justify-between px-3 py-2 border-b border-[#333333] bg-[#2d2d2d] shrink-0">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-md bg-gradient-to-br from-[#094771] to-[#007acc] flex items-center justify-center shadow">
-                  <Bot className="w-3.5 h-3.5 text-white" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-white leading-none">
-                    <span>GitHub Copilot</span>
-                    <span
-                      className={cn(
-                        "w-2 h-2 rounded-full",
-                        githubUser ? "bg-[#238636]" : "bg-[#007acc] animate-pulse"
-                      )}
-                      title={githubUser ? `Linked as @${githubUser.login}` : "Built-in Copilot Engine Active"}
-                    />
-                  </div>
-                  <span className="text-[10px] text-[#858585] font-mono leading-none">
-                    {githubUser ? `@${githubUser.login} (${githubUser.plan || "Pro"})` : "AI Pair Programmer"}
-                  </span>
-                </div>
+              <div className="flex items-center gap-1 bg-[#1e1e1e] p-0.5 rounded-lg border border-[#3c3c3c]">
+                <button
+                  type="button"
+                  onClick={() => setActiveRightTab("copilot")}
+                  className={cn(
+                    "flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-bold transition",
+                    activeRightTab === "copilot"
+                      ? "bg-[#094771] text-white shadow-sm"
+                      : "text-[#858585] hover:text-white"
+                  )}
+                >
+                  <Bot className="w-3.5 h-3.5 text-[#75beff]" />
+                  <span>Copilot AI</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveRightTab("chat")}
+                  className={cn(
+                    "flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-bold transition",
+                    activeRightTab === "chat"
+                      ? "bg-[#094771] text-white shadow-sm"
+                      : "text-[#858585] hover:text-white"
+                  )}
+                >
+                  <MessageCircle className="w-3.5 h-3.5 text-[#75beff]" />
+                  <span>Team Chat</span>
+                  {teamChatMessages.length > 0 && (
+                    <span className="px-1.5 py-0.2 rounded-full bg-[#007acc] text-[9px] text-white font-mono">
+                      {teamChatMessages.length}
+                    </span>
+                  )}
+                </button>
               </div>
 
               <div className="flex items-center gap-1">
-                {/* Account / Settings button */}
-                <Tooltip content={githubUser ? "Configure GitHub Account" : "Link GitHub Copilot Account"} side="bottom">
-                  <button
-                    onClick={() => setIsAuthModalOpen(true)}
-                    className={cn(
-                      "p-1.5 rounded transition",
-                      githubUser
-                        ? "text-[#3fb950] hover:bg-[#3c3c3c]"
-                        : "text-[#858585] hover:text-white hover:bg-[#3c3c3c]"
-                    )}
-                  >
-                    <Key className="w-3.5 h-3.5" />
-                  </button>
-                </Tooltip>
+                {activeRightTab === "copilot" && (
+                  <Tooltip content={githubUser ? "Configure GitHub Account" : "Link GitHub Copilot Account"} side="bottom">
+                    <button
+                      onClick={() => setIsAuthModalOpen(true)}
+                      className={cn(
+                        "p-1.5 rounded transition",
+                        githubUser
+                          ? "text-[#3fb950] hover:bg-[#3c3c3c]"
+                          : "text-[#858585] hover:text-white hover:bg-[#3c3c3c]"
+                      )}
+                    >
+                      <Key className="w-3.5 h-3.5" />
+                    </button>
+                  </Tooltip>
+                )}
 
                 {/* Close Button */}
                 <button
                   onClick={() => setIsCopilotOpen(false)}
                   className="p-1 rounded text-[#858585] hover:text-white hover:bg-[#3c3c3c]"
-                  title="Close Copilot Panel (⌘I)"
+                  title="Close Secondary Sidebar (⌘I)"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
 
-            {/* Model & Target Subheader */}
-            <div className="px-3 py-1.5 bg-[#1f1f1f] border-b border-[#2d2d2d] flex items-center justify-between text-[10px] font-mono shrink-0">
-              <div className="flex items-center gap-1 text-[#858585] truncate">
-                <FileCode className="w-3 h-3 text-[#007acc] shrink-0" />
-                <span className="truncate">
-                  {activeFile ? (activeFile.path || activeFile.name) : "No File Selected"}
-                </span>
-              </div>
-              <select
-                value={copilotModel}
-                onChange={(e) => setCopilotModel(e.target.value as any)}
-                className="bg-[#252526] text-[#cccccc] border border-[#454545] rounded px-1.5 py-0.5 text-[10px] outline-none"
-              >
-                <option value="copilot-gpt-4o">Copilot GPT-4o</option>
-                <option value="copilot-claude-3.5-sonnet">Claude 3.5 Sonnet</option>
-                <option value="builtin-ai">Built-in AI</option>
-              </select>
-            </div>
-
-            {/* Quick Slash Commands Chips */}
-            <div className="px-2.5 py-1.5 bg-[#252526] border-b border-[#333333] flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0">
-              {[
-                { cmd: "/explain", label: "Explain", icon: HelpCircle },
-                { cmd: "/refactor", label: "Refactor", icon: Wand2 },
-                { cmd: "/tests", label: "Tests", icon: CheckCircle2 },
-                { cmd: "/fix", label: "Fix", icon: Bug },
-                { cmd: "/doc", label: "Doc", icon: FileText },
-              ].map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.cmd}
-                    onClick={() => handleCopilotSend(item.cmd, item.cmd.replace("/", ""))}
-                    disabled={isCopilotGenerating}
-                    className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#1e1e1e] hover:bg-[#333333] border border-[#454545] text-[#cccccc] hover:text-white text-[10px] font-mono shrink-0 transition disabled:opacity-50"
-                  >
-                    <Icon className="w-2.5 h-2.5 text-[#75beff]" />
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Notification Banner (When code is applied) */}
-            {appliedNotice && (
-              <div className="px-3 py-1 bg-[#2ea043]/20 border-b border-[#2ea043]/40 text-[#3fb950] text-[10px] font-mono flex items-center gap-1.5 animate-fadeIn shrink-0">
-                <Check className="w-3 h-3" />
-                <span>{appliedNotice}</span>
-              </div>
-            )}
-
-            {/* Chat Stream Area */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-3 font-mono text-xs">
-              {copilotMessages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={cn(
-                    "flex flex-col space-y-1.5 rounded-lg p-2.5 transition",
-                    msg.role === "user"
-                      ? "bg-[#094771]/30 border border-[#007acc]/40 ml-4 text-white"
-                      : "bg-[#1e1e1e] border border-[#333333] mr-2 text-[#cccccc]"
-                  )}
-                >
-                  <div className="flex items-center justify-between text-[10px] text-[#858585]">
-                    <span className="font-bold flex items-center gap-1">
-                      {msg.role === "user" ? (
-                        <>
-                          <span className="text-[#75beff]">You</span>
-                        </>
-                      ) : (
-                        <>
-                          <Bot className="w-3 h-3 text-[#75beff]" />
-                          <span className="text-white">GitHub Copilot</span>
-                        </>
-                      )}
+            {/* TAB 1: GITHUB COPILOT AI ASSISTANT */}
+            {activeRightTab === "copilot" && (
+              <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                {/* Model & Target Subheader */}
+                <div className="px-3 py-1.5 bg-[#1f1f1f] border-b border-[#2d2d2d] flex items-center justify-between text-[10px] font-mono shrink-0">
+                  <div className="flex items-center gap-1 text-[#858585] truncate">
+                    <FileCode className="w-3 h-3 text-[#007acc] shrink-0" />
+                    <span className="truncate">
+                      {activeFile ? (activeFile.path || activeFile.name) : "No File Selected"}
                     </span>
-                    <span>{msg.timestamp}</span>
                   </div>
+                  <select
+                    value={copilotModel}
+                    onChange={(e) => setCopilotModel(e.target.value as any)}
+                    className="bg-[#252526] text-[#cccccc] border border-[#454545] rounded px-1.5 py-0.5 text-[10px] outline-none"
+                  >
+                    <option value="copilot-gpt-4o">Copilot GPT-4o</option>
+                    <option value="copilot-claude-3.5-sonnet">Claude 3.5 Sonnet</option>
+                    <option value="builtin-ai">Built-in AI</option>
+                  </select>
+                </div>
 
-                  {/* Render Message Text with formatted Markdown paragraphs */}
-                  <div className="space-y-1.5 text-[11px] leading-relaxed text-[#d4d4d4] select-text">
-                    {msg.content.split("\n\n").map((para, pIdx) => {
-                      if (para.startsWith("```")) return null;
-                      if (para.startsWith("### ")) {
-                        return (
-                          <div key={pIdx} className="font-bold text-white text-xs pt-1">
-                            {para.replace("### ", "")}
-                          </div>
-                        );
-                      }
-                      if (para.startsWith("#### ")) {
-                        return (
-                          <div key={pIdx} className="font-semibold text-[#75beff] text-[11px] pt-1">
-                            {para.replace("#### ", "")}
-                          </div>
-                        );
-                      }
-                      return (
-                        <p key={pIdx} className="whitespace-pre-wrap">
-                          {para}
-                        </p>
-                      );
-                    })}
+                {/* Quick Slash Commands Chips */}
+                <div className="px-2.5 py-1.5 bg-[#252526] border-b border-[#333333] flex items-center gap-1.5 overflow-x-auto scrollbar-none shrink-0">
+                  {[
+                    { cmd: "/explain", label: "Explain", icon: HelpCircle },
+                    { cmd: "/refactor", label: "Refactor", icon: Wand2 },
+                    { cmd: "/tests", label: "Tests", icon: CheckCircle2 },
+                    { cmd: "/fix", label: "Fix", icon: Bug },
+                    { cmd: "/doc", label: "Doc", icon: FileText },
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <button
+                        key={item.cmd}
+                        onClick={() => handleCopilotSend(item.cmd, item.cmd.replace("/", ""))}
+                        disabled={isCopilotGenerating}
+                        className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#1e1e1e] hover:bg-[#333333] border border-[#454545] text-[#cccccc] hover:text-white text-[10px] font-mono shrink-0 transition disabled:opacity-50"
+                      >
+                        <Icon className="w-2.5 h-2.5 text-[#75beff]" />
+                        <span>{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Notification Banner (When code is applied) */}
+                {appliedNotice && (
+                  <div className="px-3 py-1 bg-[#2ea043]/20 border-b border-[#2ea043]/40 text-[#3fb950] text-[10px] font-mono flex items-center gap-1.5 animate-fadeIn shrink-0">
+                    <Check className="w-3 h-3" />
+                    <span>{appliedNotice}</span>
                   </div>
+                )}
 
-                  {/* Render Code Blocks with "Apply to Editor" and "Insert at Cursor" */}
-                  {msg.codeBlocks && msg.codeBlocks.length > 0 && (
-                    <div className="space-y-2 pt-1">
-                      {msg.codeBlocks.map((block, bIdx) => (
-                        <div
-                          key={bIdx}
-                          className="rounded-md overflow-hidden border border-[#454545] bg-[#141414]"
-                        >
-                          {/* Code Block Toolbar */}
-                          <div className="flex items-center justify-between px-2.5 py-1 bg-[#1e1e1e] border-b border-[#333333] text-[10px] font-mono">
-                            <span className="text-[#75beff] font-bold uppercase">{block.language}</span>
-                            <div className="flex items-center gap-1.5">
-                              {/* Apply to Editor Button */}
-                              <button
-                                onClick={() => handleApplyCodeBlock(block.code, msg.id)}
-                                className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#094771] hover:bg-[#007acc] text-white text-[10px] font-bold transition"
-                                title="Replace current file or selection with this code"
-                              >
-                                <Wand2 className="w-2.5 h-2.5" />
-                                <span>Apply to Editor</span>
-                              </button>
+                {/* Chat Stream Area */}
+                <div className="flex-1 overflow-y-auto p-3 space-y-3 font-mono text-xs">
+                  {copilotMessages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={cn(
+                        "flex flex-col space-y-1.5 rounded-lg p-2.5 transition",
+                        msg.role === "user"
+                          ? "bg-[#094771]/30 border border-[#007acc]/40 ml-4 text-white"
+                          : "bg-[#1e1e1e] border border-[#333333] mr-2 text-[#cccccc]"
+                      )}
+                    >
+                      <div className="flex items-center justify-between text-[10px] text-[#858585]">
+                        <span className="font-bold flex items-center gap-1">
+                          {msg.role === "user" ? (
+                            <>
+                              <span className="text-[#75beff]">You</span>
+                            </>
+                          ) : (
+                            <>
+                              <Bot className="w-3 h-3 text-[#75beff]" />
+                              <span className="text-white">GitHub Copilot</span>
+                            </>
+                          )}
+                        </span>
+                        <span>{msg.timestamp}</span>
+                      </div>
 
-                              {/* Insert at Cursor Button */}
-                              <button
-                                onClick={() => handleInsertAtCursor(block.code)}
-                                className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#252526] hover:bg-[#3c3c3c] text-[#cccccc] hover:text-white text-[10px] transition"
-                                title="Insert at cursor position"
-                              >
-                                <CornerDownRight className="w-2.5 h-2.5" />
-                                <span>Insert</span>
-                              </button>
+                      {/* Render Message Text with formatted Markdown paragraphs */}
+                      <div className="space-y-1.5 text-[11px] leading-relaxed text-[#d4d4d4] select-text">
+                        {msg.content.split("\n\n").map((para, pIdx) => {
+                          if (para.startsWith("```")) return null;
+                          if (para.startsWith("### ")) {
+                            return (
+                              <div key={pIdx} className="font-bold text-white text-xs pt-1">
+                                {para.replace("### ", "")}
+                              </div>
+                            );
+                          }
+                          if (para.startsWith("#### ")) {
+                            return (
+                              <div key={pIdx} className="font-semibold text-[#75beff] text-[11px] pt-1">
+                                {para.replace("#### ", "")}
+                              </div>
+                            );
+                          }
+                          return (
+                            <p key={pIdx} className="whitespace-pre-wrap">
+                              {para}
+                            </p>
+                          );
+                        })}
+                      </div>
 
-                              {/* Copy Button */}
-                              <button
-                                onClick={() => {
-                                  navigator.clipboard.writeText(block.code);
-                                  setAppliedNotice("✓ Copied code to clipboard");
-                                  setTimeout(() => setAppliedNotice(null), 2000);
-                                }}
-                                className="p-1 rounded hover:bg-[#3c3c3c] text-[#858585] hover:text-white transition"
-                                title="Copy snippet"
-                              >
-                                <Copy className="w-2.5 h-2.5" />
-                              </button>
+                      {/* Render Code Blocks with "Diff", "Apply to Editor", and "Insert at Cursor" */}
+                      {msg.codeBlocks && msg.codeBlocks.length > 0 && (
+                        <div className="space-y-2 pt-1">
+                          {msg.codeBlocks.map((block, bIdx) => (
+                            <div
+                              key={bIdx}
+                              className="rounded-md overflow-hidden border border-[#454545] bg-[#141414]"
+                            >
+                              {/* Code Block Toolbar */}
+                              <div className="flex items-center justify-between px-2.5 py-1 bg-[#1e1e1e] border-b border-[#333333] text-[10px] font-mono">
+                                <span className="text-[#75beff] font-bold uppercase">{block.language}</span>
+                                <div className="flex items-center gap-1.5">
+                                  {/* Side-by-Side Diff Review Button */}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const currentContent = activeFile ? activeFile.content : "";
+                                      setDiffModal({
+                                        isOpen: true,
+                                        title: `Diff Review: Copilot Suggestion vs ${activeFile ? (activeFile.path || activeFile.name) : "Current File"}`,
+                                        original: currentContent,
+                                        modified: block.code,
+                                        language: block.language || (activeFile ? getMonacoLanguage(activeFile.name) : "typescript"),
+                                        onApply: () => handleApplyCodeBlock(block.code, msg.id),
+                                      });
+                                    }}
+                                    className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#252526] hover:bg-[#3c3c3c] text-[#75beff] hover:text-white text-[10px] font-bold transition border border-[#454545]"
+                                    title="Review Side-by-Side Diff with current file before applying"
+                                  >
+                                    <GitPullRequest className="w-2.5 h-2.5" />
+                                    <span>Diff</span>
+                                  </button>
+
+                                  {/* Apply to Editor Button */}
+                                  <button
+                                    onClick={() => handleApplyCodeBlock(block.code, msg.id)}
+                                    className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#094771] hover:bg-[#007acc] text-white text-[10px] font-bold transition"
+                                    title="Replace current file or selection with this code"
+                                  >
+                                    <Wand2 className="w-2.5 h-2.5" />
+                                    <span>Apply</span>
+                                  </button>
+
+                                  {/* Insert at Cursor Button */}
+                                  <button
+                                    onClick={() => handleInsertAtCursor(block.code)}
+                                    className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#252526] hover:bg-[#3c3c3c] text-[#cccccc] hover:text-white text-[10px] transition"
+                                    title="Insert at cursor position"
+                                  >
+                                    <CornerDownRight className="w-2.5 h-2.5" />
+                                    <span>Insert</span>
+                                  </button>
+
+                                  {/* Copy Button */}
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(block.code);
+                                      setAppliedNotice("✓ Copied code to clipboard");
+                                      setTimeout(() => setAppliedNotice(null), 2000);
+                                    }}
+                                    className="p-1 rounded hover:bg-[#3c3c3c] text-[#858585] hover:text-white transition"
+                                    title="Copy snippet"
+                                  >
+                                    <Copy className="w-2.5 h-2.5" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Code Body */}
+                              <pre className="p-2.5 text-[11px] font-mono text-[#dcdcaa] overflow-x-auto whitespace-pre leading-relaxed select-text">
+                                {block.code}
+                              </pre>
                             </div>
-                          </div>
-
-                          {/* Code Body */}
-                          <pre className="p-2.5 text-[11px] font-mono text-[#dcdcaa] overflow-x-auto whitespace-pre leading-relaxed select-text">
-                            {block.code}
-                          </pre>
+                          ))}
                         </div>
-                      ))}
+                      )}
+                    </div>
+                  ))}
+
+                  {isCopilotGenerating && (
+                    <div className="flex items-center gap-2 p-2.5 rounded bg-[#1e1e1e] border border-[#333333] text-[#75beff] text-xs">
+                      <Sparkles className="w-3.5 h-3.5 animate-spin" />
+                      <span>GitHub Copilot is thinking...</span>
                     </div>
                   )}
                 </div>
-              ))}
 
-              {isCopilotGenerating && (
-                <div className="flex items-center gap-2 p-2.5 rounded bg-[#1e1e1e] border border-[#333333] text-[#75beff] text-xs">
-                  <Sparkles className="w-3.5 h-3.5 animate-spin" />
-                  <span>GitHub Copilot is thinking...</span>
-                </div>
-              )}
-            </div>
-
-            {/* Input Box Footer */}
-            <div className="p-2.5 border-t border-[#333333] bg-[#1e1e1e] space-y-2 shrink-0">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleCopilotSend();
-                }}
-                className="relative"
-              >
-                <textarea
-                  value={copilotInput}
-                  onChange={(e) => setCopilotInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
+                {/* Input Box Footer */}
+                <div className="p-2.5 border-t border-[#333333] bg-[#1e1e1e] space-y-2 shrink-0">
+                  <form
+                    onSubmit={(e) => {
                       e.preventDefault();
                       handleCopilotSend();
-                    }
-                  }}
-                  rows={2}
-                  placeholder="Ask Copilot or type /explain, /refactor..."
-                  className="w-full bg-[#252526] border border-[#454545] focus:border-[#007acc] rounded-md px-2.5 py-1.5 text-xs text-white placeholder-[#858585] outline-none font-mono resize-none"
-                />
-                <button
-                  type="submit"
-                  disabled={!copilotInput.trim() || isCopilotGenerating}
-                  className="absolute right-2 bottom-2.5 p-1 rounded bg-[#007acc] hover:bg-[#1f8ad2] disabled:opacity-40 text-white transition"
-                  title="Send message (Enter)"
-                >
-                  <Send className="w-3 h-3" />
-                </button>
-              </form>
-              <div className="flex items-center justify-between text-[10px] text-[#858585] font-mono">
-                <span>Enter ↵ to send • Shift+Enter for new line</span>
-                <button
-                  onClick={() =>
-                    setCopilotMessages([
-                      {
-                        id: "welcome",
-                        role: "assistant",
-                        content: "👋 Chat cleared. Ready for your next coding task!",
-                        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-                      },
-                    ])
-                  }
-                  className="hover:text-white transition"
-                >
-                  Clear
-                </button>
+                    }}
+                    className="relative"
+                  >
+                    <textarea
+                      value={copilotInput}
+                      onChange={(e) => setCopilotInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleCopilotSend();
+                        }
+                      }}
+                      rows={2}
+                      placeholder="Ask Copilot or type /explain, /refactor..."
+                      className="w-full bg-[#252526] border border-[#454545] focus:border-[#007acc] rounded-md px-2.5 py-1.5 text-xs text-white placeholder-[#858585] outline-none font-mono resize-none"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!copilotInput.trim() || isCopilotGenerating}
+                      className="absolute right-2 bottom-2.5 p-1 rounded bg-[#007acc] hover:bg-[#1f8ad2] disabled:opacity-40 text-white transition"
+                      title="Send message (Enter)"
+                    >
+                      <Send className="w-3 h-3" />
+                    </button>
+                  </form>
+                  <div className="flex items-center justify-between text-[10px] text-[#858585] font-mono">
+                    <span>Enter ↵ to send • Shift+Enter for new line</span>
+                    <button
+                      onClick={() =>
+                        setCopilotMessages([
+                          {
+                            id: "welcome",
+                            role: "assistant",
+                            content: "👋 Chat cleared. Ready for your next coding task!",
+                            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                          },
+                        ])
+                      }
+                      className="hover:text-white transition"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* TAB 2: REAL-TIME IN-IDE TEAM DISCUSSION DOCK */}
+            {activeRightTab === "chat" && (
+              <div className="flex-1 flex flex-col min-h-0 bg-[#1e1e1e]">
+                {/* Team Chat Subheader */}
+                <div className="px-3 py-2 bg-[#252526] border-b border-[#333333] flex items-center justify-between text-xs font-mono shrink-0">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#3fb950] animate-pulse" />
+                    <span className="font-bold text-white">Team Workspace Chat</span>
+                  </div>
+                  <span className="text-[10px] text-[#858585]">
+                    {peers.length + 1} online
+                  </span>
+                </div>
+
+                {/* Chat message stream */}
+                <div className="flex-1 overflow-y-auto p-3 space-y-3 font-mono text-xs select-text">
+                  {teamChatMessages.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-4 text-[#858585] space-y-2">
+                      <MessageCircle className="w-8 h-8 text-[#555555]" />
+                      <p className="text-xs text-[#cccccc] font-semibold">No team messages yet</p>
+                      <p className="text-[11px] text-[#858585] leading-relaxed">
+                        Start discussing code changes, task reviews, or architecture decisions with your team in real time.
+                      </p>
+                    </div>
+                  ) : (
+                    teamChatMessages.map((msg) => {
+                      const isMe = msg.user?.id === user?.id || msg.user?.email === user?.email;
+                      return (
+                        <div
+                          key={msg.id}
+                          className={cn(
+                            "flex flex-col space-y-1 rounded-lg p-2.5 transition",
+                            isMe
+                              ? "bg-[#094771]/30 border border-[#007acc]/40 ml-4 text-white"
+                              : "bg-[#252526] border border-[#333333] mr-4 text-[#cccccc]"
+                          )}
+                        >
+                          <div className="flex items-center justify-between text-[10px] text-[#858585]">
+                            <span className="font-bold text-[#75beff]">
+                              {isMe ? "You" : (msg.user?.name || "Collaborator")}
+                            </span>
+                            <span>{msg.timestamp}</span>
+                          </div>
+                          <p className="text-[11px] leading-relaxed whitespace-pre-wrap break-words text-[#e0e0e0]">
+                            {msg.message}
+                          </p>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Team chat input footer */}
+                <div className="p-2.5 border-t border-[#333333] bg-[#252526] shrink-0">
+                  <form onSubmit={handleSendTeamChat} className="relative">
+                    <input
+                      type="text"
+                      value={teamChatInput}
+                      onChange={(e) => setTeamChatInput(e.target.value)}
+                      placeholder="Message collaborators in this workspace..."
+                      className="w-full bg-[#1e1e1e] border border-[#454545] focus:border-[#007acc] rounded-md pl-3 pr-9 py-2 text-xs text-white placeholder-[#858585] outline-none font-mono"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!teamChatInput.trim()}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded bg-[#007acc] hover:bg-[#1f8ad2] disabled:opacity-40 text-white transition"
+                      title="Send message (Enter)"
+                    >
+                      <Send className="w-3 h-3" />
+                    </button>
+                  </form>
+                  <div className="flex items-center justify-between text-[10px] text-[#858585] font-mono mt-1 px-1">
+                    <span>Press Enter ↵ to broadcast</span>
+                    <button
+                      type="button"
+                      onClick={() => setTeamChatMessages([])}
+                      className="hover:text-white transition"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -3838,6 +4910,48 @@ export function CollaborativeEditor({
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Word Wrap Toggle */}
+          <button
+            type="button"
+            onClick={() => setWordWrap((prev) => (prev === "on" ? "off" : "on"))}
+            className="hover:bg-white/10 px-1.5 py-0.5 rounded flex items-center gap-1 transition"
+            title="Toggle Word Wrap (⌥Z)"
+          >
+            <WrapText className="w-3 h-3" />
+            <span>Wrap: {wordWrap.toUpperCase()}</span>
+          </button>
+
+          {/* Minimap Toggle */}
+          <button
+            type="button"
+            onClick={() => setMinimapEnabled((prev) => !prev)}
+            className="hover:bg-white/10 px-1.5 py-0.5 rounded flex items-center gap-1 transition"
+            title="Toggle Monaco Minimap"
+          >
+            <span>Map: {minimapEnabled ? "ON" : "OFF"}</span>
+          </button>
+
+          {/* Font Zoom Controls */}
+          <div className="hidden sm:flex items-center gap-1 bg-black/20 px-1.5 py-0.5 rounded">
+            <button
+              type="button"
+              onClick={() => setEditorFontSize((prev) => Math.max(10, prev - 1))}
+              className="hover:bg-white/20 p-0.5 rounded"
+              title="Zoom Out (⌘-)"
+            >
+              <ZoomOut className="w-3 h-3" />
+            </button>
+            <span className="font-mono text-[10px] px-0.5">{editorFontSize}px</span>
+            <button
+              type="button"
+              onClick={() => setEditorFontSize((prev) => Math.min(26, prev + 1))}
+              className="hover:bg-white/20 p-0.5 rounded"
+              title="Zoom In (⌘+)"
+            >
+              <ZoomIn className="w-3 h-3" />
+            </button>
+          </div>
+
           <span>
             Ln {cursorPos.line}, Col {cursorPos.col}
           </span>
@@ -4018,6 +5132,479 @@ export function CollaborativeEditor({
           </div>
         </div>
       )}
+
+      {/* 7. Quick Open File Modal (⌘P / Ctrl+P) */}
+      {isQuickOpenVisible && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black/60 backdrop-blur-xs"
+          onClick={() => setIsQuickOpenVisible(false)}
+        >
+          <div
+            className="w-full max-w-xl bg-[#252526] border border-[#454545] rounded-xl shadow-2xl overflow-hidden font-mono text-xs animate-in fade-in zoom-in-95"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 px-3.5 py-2.5 bg-[#1e1e1e] border-b border-[#333333]">
+              <Search className="w-4 h-4 text-[#75beff] shrink-0" />
+              <input
+                type="text"
+                autoFocus
+                value={quickOpenQuery}
+                onChange={(e) => {
+                  setQuickOpenQuery(e.target.value);
+                  setQuickOpenIndex(0);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setQuickOpenIndex((i) => Math.min(i + 1, Math.max(0, quickOpenFilteredFiles.length - 1)));
+                  } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setQuickOpenIndex((i) => Math.max(0, i - 1));
+                  } else if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (quickOpenFilteredFiles[quickOpenIndex]) {
+                      handleQuickOpenFile(quickOpenFilteredFiles[quickOpenIndex].id);
+                    }
+                  } else if (e.key === "Escape") {
+                    e.preventDefault();
+                    setIsQuickOpenVisible(false);
+                  }
+                }}
+                placeholder="Type the name of a file to open (e.g. index.ts, main.py)..."
+                className="w-full bg-transparent text-white outline-none placeholder:text-[#656565] text-xs"
+              />
+              <span className="text-[10px] text-[#858585] shrink-0">esc to close</span>
+            </div>
+
+            <div className="max-h-80 overflow-y-auto divide-y divide-[#2d2d2d]">
+              {quickOpenFilteredFiles.length === 0 ? (
+                <div className="p-4 text-center text-[#858585] text-xs">
+                  No matching files found in this workspace.
+                </div>
+              ) : (
+                quickOpenFilteredFiles.map((file, idx) => (
+                  <div
+                    key={file.id}
+                    onClick={() => handleQuickOpenFile(file.id)}
+                    className={cn(
+                      "flex items-center justify-between px-3.5 py-2 cursor-pointer transition select-none",
+                      idx === quickOpenIndex
+                        ? "bg-[#094771] text-white"
+                        : "text-[#cccccc] hover:bg-[#2a2d2e]"
+                    )}
+                  >
+                    <div className="flex items-center gap-2.5 truncate">
+                      <FileCode className={cn("w-3.5 h-3.5 shrink-0", getFileBadgeColor(file.name))} />
+                      <span className="font-bold truncate">{file.name}</span>
+                      <span className="text-[10px] text-[#858585] truncate">
+                        {file.folder || "/"}
+                      </span>
+                    </div>
+                    {file.isModified && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#dcb67a] shrink-0" />
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 8. Right-Click Explorer Context Menu */}
+      {contextMenu && (
+        <div
+          className="fixed inset-0 z-50 bg-transparent"
+          onClick={() => setContextMenu(null)}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            setContextMenu(null);
+          }}
+        >
+          <div
+            style={{
+              top: Math.min(contextMenu.y, typeof window !== "undefined" ? window.innerHeight - 260 : contextMenu.y),
+              left: Math.min(contextMenu.x, typeof window !== "undefined" ? window.innerWidth - 220 : contextMenu.x),
+            }}
+            className="fixed w-52 bg-[#252526] border border-[#454545] rounded-lg shadow-2xl py-1 text-xs font-mono text-[#cccccc] z-50 divide-y divide-[#333333] animate-in fade-in zoom-in-95"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {contextMenu.file ? (
+              <>
+                <div className="py-0.5">
+                  <button
+                    onClick={() => {
+                      if (!openTabIds.includes(contextMenu.file!.id)) {
+                        setOpenTabIds((p) => [...p, contextMenu.file!.id]);
+                      }
+                      setActiveFileId(contextMenu.file!.id);
+                      setContextMenu(null);
+                    }}
+                    className="w-full text-left px-3 py-1.5 hover:bg-[#094771] hover:text-white flex items-center gap-2 transition"
+                  >
+                    <FileCode className="w-3.5 h-3.5 text-[#75beff]" />
+                    <span>Open in Editor</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      handleOpenGitDiff(contextMenu.file!);
+                      setContextMenu(null);
+                    }}
+                    className="w-full text-left px-3 py-1.5 hover:bg-[#094771] hover:text-white flex items-center gap-2 transition"
+                  >
+                    <GitPullRequest className="w-3.5 h-3.5 text-[#75beff]" />
+                    <span>Review Diff</span>
+                  </button>
+                </div>
+
+                <div className="py-0.5">
+                  <button
+                    onClick={() => {
+                      setRenamingFileId(contextMenu.file!.id);
+                      setRenameValue(contextMenu.file!.name);
+                      setContextMenu(null);
+                    }}
+                    className="w-full text-left px-3 py-1.5 hover:bg-[#094771] hover:text-white flex items-center gap-2 transition"
+                  >
+                    <Edit3 className="w-3.5 h-3.5 text-[#dcb67a]" />
+                    <span>Rename File</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(contextMenu.file!.path || contextMenu.file!.name);
+                      setContextMenu(null);
+                    }}
+                    className="w-full text-left px-3 py-1.5 hover:bg-[#094771] hover:text-white flex items-center gap-2 transition"
+                  >
+                    <Copy className="w-3.5 h-3.5 text-[#858585]" />
+                    <span>Copy Path</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      const blob = new Blob([contextMenu.file!.content], { type: "text/plain" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = contextMenu.file!.name;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                      setContextMenu(null);
+                    }}
+                    className="w-full text-left px-3 py-1.5 hover:bg-[#094771] hover:text-white flex items-center gap-2 transition"
+                  >
+                    <Download className="w-3.5 h-3.5 text-[#75beff]" />
+                    <span>Download File</span>
+                  </button>
+                </div>
+
+                <div className="py-0.5">
+                  <button
+                    onClick={() => {
+                      handleDeleteFile(contextMenu.file!.id);
+                      setContextMenu(null);
+                    }}
+                    className="w-full text-left px-3 py-1.5 hover:bg-[#da3633] hover:text-white text-[#f48771] flex items-center gap-2 transition"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete File</span>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="py-0.5">
+                  <button
+                    onClick={() => {
+                      setNewFileFolderInput(contextMenu.folder || "");
+                      setIsCreatingFile(true);
+                      setContextMenu(null);
+                    }}
+                    className="w-full text-left px-3 py-1.5 hover:bg-[#094771] hover:text-white flex items-center gap-2 transition"
+                  >
+                    <FilePlus className="w-3.5 h-3.5 text-[#75beff]" />
+                    <span>New File Here</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsCreatingFolder(true);
+                      setContextMenu(null);
+                    }}
+                    className="w-full text-left px-3 py-1.5 hover:bg-[#094771] hover:text-white flex items-center gap-2 transition"
+                  >
+                    <FolderPlus className="w-3.5 h-3.5 text-[#dcb67a]" />
+                    <span>New Subfolder</span>
+                  </button>
+                </div>
+
+                <div className="py-0.5">
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(contextMenu.folder || "");
+                      setContextMenu(null);
+                    }}
+                    className="w-full text-left px-3 py-1.5 hover:bg-[#094771] hover:text-white flex items-center gap-2 transition"
+                  >
+                    <Copy className="w-3.5 h-3.5 text-[#858585]" />
+                    <span>Copy Folder Path</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 9. Side-by-Side Monaco Diff Modal */}
+      {diffModal && diffModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-5xl h-[85vh] bg-[#1e1e1e] border border-[#454545] rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-4 py-2.5 bg-[#2d2d2d] border-b border-[#333333] shrink-0 font-mono text-xs">
+              <div className="flex items-center gap-2 truncate">
+                <GitPullRequest className="w-4 h-4 text-[#75beff] shrink-0" />
+                <span className="font-bold text-white truncate">{diffModal.title}</span>
+                <span className="px-2 py-0.5 rounded bg-[#1e1e1e] text-[10px] text-[#858585] uppercase border border-[#333333]">
+                  {diffModal.language}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {diffModal.onApply && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      diffModal.onApply?.();
+                      setDiffModal(null);
+                    }}
+                    className="px-3 py-1 rounded bg-[#238636] hover:bg-[#2ea043] text-white font-bold text-xs flex items-center gap-1.5 transition"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Accept & Apply Changes</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setDiffModal(null)}
+                  className="p-1 rounded text-[#858585] hover:text-white hover:bg-[#3c3c3c] transition"
+                  title="Close Diff Modal (Esc)"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Monaco Diff Editor Body */}
+            <div className="flex-1 min-h-0 relative">
+              <DiffEditor
+                original={diffModal.original}
+                modified={diffModal.modified}
+                language={diffModal.language}
+                theme={editorTheme}
+                options={{
+                  renderSideBySide: true,
+                  readOnly: true,
+                  minimap: { enabled: false },
+                  fontSize: editorFontSize,
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 10. Project Starter Templates Modal */}
+      {isTemplateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-3xl bg-[#252526] border border-[#454545] rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 font-mono">
+            <div className="flex items-center justify-between px-5 py-3.5 bg-[#2d2d2d] border-b border-[#333333]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#094771] to-[#007acc] flex items-center justify-center shadow">
+                  <Sparkles className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white leading-none">Project Starter Templates</h3>
+                  <span className="text-[11px] text-[#858585]">Scaffold a complete multi-file project with one click</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsTemplateModalOpen(false)}
+                className="text-[#858585] hover:text-white p-1 rounded hover:bg-[#3c3c3c]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[70vh] overflow-y-auto">
+              {STARTER_TEMPLATES.map((tpl) => {
+                const Icon = tpl.icon;
+                return (
+                  <div
+                    key={tpl.id}
+                    className="p-4 rounded-xl bg-[#1e1e1e] border border-[#3c3c3c] hover:border-[#007acc] flex flex-col justify-between space-y-3 transition group"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-md bg-[#252526] flex items-center justify-center border border-[#333333]">
+                            <Icon className="w-4 h-4 text-[#75beff]" />
+                          </div>
+                          <span className="font-bold text-white text-xs">{tpl.name}</span>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-full bg-[#094771]/50 text-[#75beff] text-[10px] font-bold border border-[#007acc]/40">
+                          {tpl.badge}
+                        </span>
+                      </div>
+
+                      <p className="text-[11px] text-[#9d9d9d] leading-relaxed">
+                        {tpl.desc}
+                      </p>
+
+                      <div className="pt-2 border-t border-[#2d2d2d] flex items-center gap-1.5 flex-wrap text-[10px] text-[#858585]">
+                        <span className="font-semibold text-[#cccccc]">Files:</span>
+                        {tpl.files.map((f, i) => (
+                          <span key={i} className="px-1.5 py-0.5 rounded bg-[#252526] text-[#75beff] border border-[#333333]">
+                            {f.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleApplyTemplate(tpl.id)}
+                      className="w-full py-2 rounded-lg bg-[#094771] group-hover:bg-[#007acc] text-white font-bold text-xs transition flex items-center justify-center gap-1.5"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Scaffold into Workspace</span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="px-5 py-3 bg-[#1e1e1e] border-t border-[#333333] text-[10px] text-[#858585] flex items-center justify-between">
+              <span>💡 New templates are created cleanly in your project and synced to all collaborators.</span>
+              <button
+                type="button"
+                onClick={() => setIsTemplateModalOpen(false)}
+                className="text-[#9d9d9d] hover:text-white"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 11. Environment Variables (.env) Manager Modal */}
+      {isEnvModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg bg-[#252526] border border-[#454545] rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 font-mono text-xs">
+            <div className="flex items-center justify-between px-4 py-3 bg-[#2d2d2d] border-b border-[#333333]">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal className="w-4 h-4 text-[#dcb67a]" />
+                <h3 className="text-sm font-bold text-white">Workspace Environment Variables (.env)</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEnvModalOpen(false)}
+                className="text-[#858585] hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-3">
+              <p className="text-[11px] text-[#858585] leading-relaxed">
+                These key-value pairs are injected into your integrated terminal execution environment whenever you run scripts or shell commands.
+              </p>
+
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {envVars.map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={item.key}
+                      onChange={(e) => {
+                        const next = [...envVars];
+                        next[idx].key = e.target.value;
+                        setEnvVars(next);
+                      }}
+                      placeholder="KEY (e.g. PORT)"
+                      className="w-1/2 bg-[#1e1e1e] border border-[#454545] focus:border-[#007acc] rounded px-2.5 py-1.5 text-xs text-white placeholder-[#656565] outline-none"
+                    />
+                    <input
+                      type="text"
+                      value={item.value}
+                      onChange={(e) => {
+                        const next = [...envVars];
+                        next[idx].value = e.target.value;
+                        setEnvVars(next);
+                      }}
+                      placeholder="VALUE (e.g. 4000)"
+                      className="w-1/2 bg-[#1e1e1e] border border-[#454545] focus:border-[#007acc] rounded px-2.5 py-1.5 text-xs text-white placeholder-[#656565] outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setEnvVars((prev) => prev.filter((_, i) => i !== idx))}
+                      className="p-1 text-[#858585] hover:text-[#f48771] transition"
+                      title="Remove Variable"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setEnvVars((prev) => [...prev, { key: "", value: "" }])}
+                className="w-full py-1.5 rounded border border-dashed border-[#454545] hover:border-[#75beff] text-[#75beff] text-[11px] font-bold transition flex items-center justify-center gap-1.5"
+              >
+                <Plus className="w-3 h-3" />
+                <span>Add Environment Variable</span>
+              </button>
+
+              <div className="pt-3 border-t border-[#333333] flex items-center justify-between">
+                <span className="text-[10px] text-[#656565]">Saved to workspace session</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      localStorage.setItem(`letscollab_env_${projectId}`, JSON.stringify(envVars));
+                    } catch {}
+                    setIsEnvModalOpen(false);
+                  }}
+                  className="px-4 py-1.5 rounded bg-[#007acc] hover:bg-[#1f8ad2] text-white font-bold text-xs transition flex items-center gap-1"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Save & Apply</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Global CSS for Monaco Remote Selection & Cursor */}
+      <style jsx global>{`
+        .monaco-remote-selection {
+          background-color: rgba(117, 190, 255, 0.25) !important;
+          border-radius: 2px;
+        }
+        .monaco-remote-cursor-line {
+          border-left: 2px solid #75beff !important;
+        }
+      `}</style>
     </div>
   );
 }
