@@ -22,6 +22,7 @@ import {
   AlertCircle,
   UserPlus,
   Briefcase,
+  Code2,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useSocket } from "../../context/SocketContext";
@@ -117,6 +118,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { label: "Projects", href: "/projects", icon: FolderKanban },
+    { label: "Code Editor", href: "/editor", icon: Code2, badge: "IDE" },
     ...(user?.role === "ADMIN"
       ? [{ label: "Users & Team", href: "/users", icon: Users, badge: "Admin" }]
       : []),

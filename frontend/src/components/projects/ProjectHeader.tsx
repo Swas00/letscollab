@@ -134,6 +134,7 @@ export function ProjectHeader({ project, userAccess }: ProjectHeaderProps) {
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = tab.exact ? pathname === tab.href : pathname.startsWith(tab.href);
+          const isEditorTab = tab.label === "Code Editor";
 
           return (
             <Link
@@ -143,11 +144,27 @@ export function ProjectHeader({ project, userAccess }: ProjectHeaderProps) {
                 "group relative flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all duration-160 ease-out shrink-0 select-none hover:-translate-y-0.5 active:scale-[0.98] active:translate-y-0",
                 isActive
                   ? "bg-carbon text-paper shadow-sm"
+                  : isEditorTab
+                  ? "bg-[#1e1e1e] text-white hover:bg-[#007acc] border border-[#333333] shadow-xs"
                   : "text-muted hover:text-carbon hover:bg-paper border border-transparent hover:border-divider"
               )}
             >
-              <Icon className={cn("w-3.5 h-3.5 transition-transform duration-160", isActive ? "text-coral" : "text-muted group-hover:scale-105")} />
+              <Icon
+                className={cn(
+                  "w-3.5 h-3.5 transition-transform duration-160",
+                  isActive
+                    ? "text-coral"
+                    : isEditorTab
+                    ? "text-[#38bdf8] group-hover:text-white"
+                    : "text-muted group-hover:scale-105"
+                )}
+              />
               <span>{tab.label}</span>
+              {isEditorTab && (
+                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-white/10 text-[#9cdcfe] group-hover:bg-white/20 group-hover:text-white">
+                  IDE ↗
+                </span>
+              )}
               {isActive && (
                 <span className="absolute bottom-0 left-3 right-3 h-[2px] bg-coral rounded-full" />
               )}

@@ -1,23 +1,26 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
-import { AppLayout } from "../../../../components/layout/AppLayout";
-import { ProjectHeader } from "../../../../components/projects/ProjectHeader";
+import { useParams, useRouter } from "next/navigation";
 import { CollaborativeEditor } from "../../../../components/editor/CollaborativeEditor";
 import { useSocket } from "../../../../context/SocketContext";
+import { useAuth } from "../../../../context/AuthContext";
 import { api } from "../../../../lib/api";
-import { AlertCircle, Loader2 } from "lucide-react";
 
 export default function ProjectEditorPage() {
   const params = useParams();
+  const router = useRouter();
   const projectId = params.id as string;
   const { joinProject, leaveProject } = useSocket();
+  const { user, isLoading: isAuthLoading } = useAuth();
 
   const [project, setProject] = useState<any>(null);
-  const [userAccess, setUserAccess] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isAuthLoading && !user) {
+      router.replace("/login");
+    }
+  }, [user, isAuthLoading, router]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -27,11 +30,7 @@ export default function ProjectEditorPage() {
     api.projects.get(projectId).then((res) => {
       if (res.data?.project) {
         setProject(res.data.project);
-        setUserAccess(res.data.userAccess);
-      } else {
-        setErrorMsg(res.error || "Project not found or unauthorized");
       }
-      setIsLoading(false);
     });
 
     return () => {
@@ -39,36 +38,16 @@ export default function ProjectEditorPage() {
     };
   }, [projectId]);
 
-  if (isLoading) {
-    return (
-      <AppLayout>
-        <div className="p-16 text-center text-xs font-mono text-muted flex items-center justify-center gap-2">
-          <Loader2 className="w-4 h-4 animate-spin text-coral" />
-          <span>Mounting Real-Time Code Workspace...</span>
-        </div>
-      </AppLayout>
-    );
-  }
-
-  if (errorMsg) {
-    return (
-      <AppLayout>
-        <div className="p-16 text-center text-sm text-coral space-y-3 font-mono">
-          <AlertCircle className="w-8 h-8 mx-auto" />
-          <p>{errorMsg}</p>
-        </div>
-      </AppLayout>
-    );
-  }
-
   return (
-    <AppLayout>
-      <div className="space-y-6 max-w-7xl mx-auto">
-        <ProjectHeader project={project} userAccess={userAccess} />
-
-        {/* Real-Time Collaborative Code Editor */}
-        <CollaborativeEditor projectId={projectId} />
-      </div>
-    </AppLayout>
+    <div className="h-screen w-screen overflow-hidden bg-[#1e1e1e]">
+      <CollaborativeEditor
+        projectId={projectId}
+        projectName={project?.name || "Project Workspace"}
+        projectKey={project?.key}
+        backHref={`/projects/${projectId}`}
+        backLabel={project?.name ? `Back to ${project.name}` : "Back to Project"}
+        fullPage={true}
+      />
+    </div>
   );
 }

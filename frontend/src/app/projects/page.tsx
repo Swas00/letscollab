@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AppLayout } from "../../components/layout/AppLayout";
 import { useAuth } from "../../context/AuthContext";
 import { useSocket } from "../../context/SocketContext";
@@ -18,6 +19,7 @@ import {
   Trash2,
   Building,
   Mail,
+  Code2,
 } from "lucide-react";
 import { PRIORITY_CONFIG, cn } from "../../lib/utils";
 import { Button } from "../../components/ui/Button";
@@ -25,6 +27,7 @@ import { Button } from "../../components/ui/Button";
 export default function ProjectsPage() {
   const { user } = useAuth();
   const { socket } = useSocket();
+  const router = useRouter();
 
   const [projects, setProjects] = useState<any[]>([]);
   const [search, setSearch] = useState("");
@@ -455,15 +458,31 @@ export default function ProjectsPage() {
                     </div>
                   </div>
 
-                  {/* Card Footer: Total Tasks & Open Link */}
+                  {/* Card Footer: Total Tasks, Open IDE, & Open Link */}
                   <div className="mt-6 pt-4 border-t border-divider flex items-center justify-between">
                     <span className="text-xs text-muted">
                       <strong className="text-carbon font-mono">{proj._count?.tasks || 0}</strong> tasks
                     </span>
 
-                    <span className="flex items-center gap-1 text-xs text-coral font-bold group-hover:translate-x-1 transition-transform">
-                      Open Board <ArrowRight className="w-3.5 h-3.5" />
-                    </span>
+                    <div className="flex items-center gap-2.5">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          router.push(`/projects/${proj.id}/editor`);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#1e1e1e] hover:bg-[#007acc] text-white text-[11px] font-mono font-semibold transition shadow-xs"
+                        title="Open Dedicated VS Code IDE"
+                      >
+                        <Code2 className="w-3.5 h-3.5 text-[#38bdf8]" />
+                        <span>Open IDE</span>
+                      </button>
+
+                      <span className="flex items-center gap-1 text-xs text-coral font-bold group-hover:translate-x-1 transition-transform">
+                        Open Board <ArrowRight className="w-3.5 h-3.5" />
+                      </span>
+                    </div>
                   </div>
                 </Link>
               );

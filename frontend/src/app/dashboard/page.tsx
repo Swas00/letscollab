@@ -14,6 +14,7 @@ import {
   Activity,
   ArrowUpRight,
   TrendingUp,
+  Code2,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -162,7 +163,14 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Link
+              href={projects[0]?.id ? `/projects/${projects[0].id}/editor` : "/editor"}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1e1e1e] hover:bg-[#007acc] text-white text-xs font-bold shadow-md transition"
+            >
+              <Code2 className="w-4 h-4 text-[#38bdf8]" />
+              <span>Code Editor IDE</span>
+            </Link>
             <Link
               href="/projects"
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-carbon hover:bg-[#353a34] text-paper text-xs font-bold shadow-md transition"

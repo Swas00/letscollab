@@ -14,6 +14,7 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
+  Code2,
 } from "lucide-react";
 import { STATUS_CONFIG, PRIORITY_CONFIG, cn } from "../../../lib/utils";
 
@@ -81,6 +82,34 @@ export default function ProjectOverviewPage() {
     <AppLayout>
       <div className="space-y-8 max-w-7xl mx-auto">
         <ProjectHeader project={project} userAccess={userAccess} />
+
+        {/* Dedicated Full-Page VS Code IDE Launch Banner */}
+        <div className="p-5 rounded-3xl bg-[#1e1e1e] text-white border border-[#333333] shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-[#007acc]/20 border border-[#007acc]/40 flex items-center justify-center text-[#38bdf8] shrink-0">
+              <Code2 className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-bold text-white">Visual Studio Code Collaborative IDE</h2>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#2ea043]/20 text-[#4ade80] border border-[#2ea043]/40">
+                  Full-Screen Workspace
+                </span>
+              </div>
+              <p className="text-xs text-[#9d9d9d] mt-0.5">
+                Open the dedicated full-page code editor with real-time team cursors, multi-language execution, step-by-step debugger, and GitHub Copilot AI.
+              </p>
+            </div>
+          </div>
+          <Link
+            href={`/projects/${project.id}/editor`}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#007acc] hover:bg-[#1f8ad2] text-white text-xs font-bold transition shadow-md shrink-0"
+          >
+            <Code2 className="w-4 h-4" />
+            <span>Open Code Editor</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
 
         {/* Project Metrics Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

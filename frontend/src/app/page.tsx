@@ -142,9 +142,18 @@ export default function HomePage() {
                 </span>
                 <span className="text-muted">• Try setting breakpoints, running code, or opening split preview</span>
               </div>
-              <span className="text-[11px] bg-paper px-2 py-0.5 rounded border border-divider font-semibold text-coral">
-                Press ⌘K for Command Palette
-              </span>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/editor"
+                  className="inline-flex items-center gap-1.5 text-[11px] bg-[#1e1e1e] hover:bg-[#007acc] text-white px-3 py-1 rounded-lg font-mono font-bold transition shadow-xs"
+                >
+                  <Code2 className="w-3.5 h-3.5 text-[#38bdf8]" />
+                  <span>Open Full-Page IDE ↗</span>
+                </Link>
+                <span className="text-[11px] bg-paper px-2 py-0.5 rounded border border-divider font-semibold text-coral hidden sm:inline">
+                  Press ⌘K for Command Palette
+                </span>
+              </div>
             </div>
 
             {/* Embedded VS Code Lookalike IDE */}

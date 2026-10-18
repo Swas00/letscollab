@@ -68,8 +68,12 @@ import {
   GitPullRequest,
   Sliders,
   ArrowRight,
+  ArrowLeft,
+  ChevronUp,
+  LayoutDashboard,
   ListTodo,
 } from "lucide-react";
+import Link from "next/link";
 import { Tooltip } from "../ui/Tooltip";
 import { SyncStatusBadge, SyncState } from "../ui/SyncStatusBadge";
 import { CommandPalette } from "../ui/CommandPalette";
@@ -623,6 +627,11 @@ type BottomTab = "terminal" | "output" | "debug-console" | "problems" | "preview
 interface CollaborativeEditorProps {
   projectId?: string;
   initialActiveFile?: string;
+  fullPage?: boolean;
+  projectName?: string;
+  projectKey?: string;
+  backHref?: string;
+  backLabel?: string;
 }
 
 const getMonacoLanguage = (filename: string): string => {
@@ -657,6 +666,11 @@ const getFileBadgeColor = (filename: string): string => {
 export function CollaborativeEditor({
   projectId = "demo-workspace",
   initialActiveFile = "",
+  fullPage = false,
+  projectName,
+  projectKey,
+  backHref,
+  backLabel,
 }: CollaborativeEditorProps) {
   const { user } = useAuth();
   const { socket, isConnected } = useSocket();
@@ -677,8 +691,10 @@ export function CollaborativeEditor({
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeBottomTab, setActiveBottomTab] = useState<BottomTab>("terminal");
   const [isBottomPanelOpen, setIsBottomPanelOpen] = useState(true);
+  const [isBottomPanelMaximized, setIsBottomPanelMaximized] = useState(false);
   const [isSplitPreviewOpen, setIsSplitPreviewOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isProjectNavOpen, setIsProjectNavOpen] = useState(false);
   const [editorTheme, setEditorTheme] = useState<"vs-dark" | "letscollab-paper">("vs-dark");
   const [activeMenuDropdown, setActiveMenuDropdown] = useState<string | null>(null);
 
@@ -874,27 +890,49 @@ export function CollaborativeEditor({
     return debugSteps[Math.min(currentDebugStepIdx, debugSteps.length - 1)] || null;
   }, [isDebugging, debugSteps, currentDebugStepIdx]);
 
-  // Load Persistent Project Files & Workspace Data from Backend
+  // Load Persistent Project Files & Workspace Data from Backend (with localStorage instant backup)
+  const hasHydratedWorkspaceRef = useRef<string>("");
   useEffect(() => {
-    if (!projectId || projectId === "demo-workspace") {
-      setFiles([]);
-      setOpenTabIds([]);
-      setActiveFileId("");
+    hasHydratedWorkspaceRef.current = "";
+    const restoreLocalBackup = () => {
+      if (typeof window === "undefined") return [];
+      try {
+        const cached = localStorage.getItem(`letscollab_ws_files_${projectId}`);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) return parsed as EditorFile[];
+        }
+      } catch {}
+      return [];
+    };
+
+    if (!projectId || projectId === "demo-workspace" || projectId === "landing-demo") {
+      const localFiles = restoreLocalBackup();
+      setFiles(localFiles);
+      if (localFiles.length > 0) {
+        setOpenTabIds(localFiles.slice(0, 4).map((f) => f.id));
+        setActiveFileId(localFiles[0].id);
+      } else {
+        setOpenTabIds([]);
+        setActiveFileId("");
+      }
+      hasHydratedWorkspaceRef.current = projectId || "demo-workspace";
       return;
     }
 
-    // Load workspace files & commits
+    // Load workspace files & commits from backend
     api.editor
       .getFiles(projectId)
       .then((res) => {
-        const loaded = res.data?.files || [];
-        setFiles(loaded);
-        loaded.forEach((f: EditorFile) => {
+        const loaded: EditorFile[] = res.data?.files || [];
+        const finalFiles = loaded.length > 0 ? loaded : restoreLocalBackup();
+        setFiles(finalFiles);
+        finalFiles.forEach((f: EditorFile) => {
           committedFilesRef.current[f.id] = f.content;
         });
-        if (loaded.length > 0) {
-          setOpenTabIds(loaded.slice(0, 4).map((f: EditorFile) => f.id));
-          setActiveFileId(loaded[0].id);
+        if (finalFiles.length > 0) {
+          setOpenTabIds(finalFiles.slice(0, 4).map((f: EditorFile) => f.id));
+          setActiveFileId(finalFiles[0].id);
         } else {
           setOpenTabIds([]);
           setActiveFileId("");
@@ -902,11 +940,19 @@ export function CollaborativeEditor({
         if (res.data?.commits) {
           setCommits(res.data.commits);
         }
+        hasHydratedWorkspaceRef.current = projectId;
       })
       .catch(() => {
-        setFiles([]);
-        setOpenTabIds([]);
-        setActiveFileId("");
+        const localFiles = restoreLocalBackup();
+        setFiles(localFiles);
+        if (localFiles.length > 0) {
+          setOpenTabIds(localFiles.slice(0, 4).map((f) => f.id));
+          setActiveFileId(localFiles[0].id);
+        } else {
+          setOpenTabIds([]);
+          setActiveFileId("");
+        }
+        hasHydratedWorkspaceRef.current = projectId;
       });
 
     // Load project tasks for in-editor drawer & commit linking
@@ -929,6 +975,15 @@ export function CollaborativeEditor({
       } catch {}
     }
   }, [projectId]);
+
+  // Mirror workspace files to localStorage so user never loses work across reloads
+  useEffect(() => {
+    if (typeof window === "undefined" || !projectId) return;
+    if (hasHydratedWorkspaceRef.current !== projectId) return;
+    try {
+      localStorage.setItem(`letscollab_ws_files_${projectId}`, JSON.stringify(files));
+    } catch {}
+  }, [files, projectId]);
 
   // Auto-open Live Preview when switching to an HTML file
   useEffect(() => {
@@ -1466,9 +1521,63 @@ export function CollaborativeEditor({
     }, 220);
   };
 
+  // Quick 1-click file creator from Welcome screen or Explorer
+  const handleQuickCreateFile = async (fileName: string, folderName: string = "") => {
+    const cleanName = fileName.trim();
+    const cleanFolder = folderName.trim().replace(/^\/+|\/+$/g, "");
+    const fullPath = cleanFolder ? `${cleanFolder}/${cleanName}` : cleanName;
+    const lang = getMonacoLanguage(cleanName);
+
+    setTreeExpanded((prev) => ({ ...prev, [cleanFolder || "root"]: true }));
+
+    const starterContent =
+      lang === "python"
+        ? `# ${cleanName} — Python 3 Module\nimport math\n\ndef calculate_metrics(values):\n    total = sum(values)\n    avg = round(total / len(values), 2)\n    return {"count": len(values), "sum": total, "avg": avg}\n\nscores = [88, 94, 79, 96, 91]\nreport = calculate_metrics(scores)\nprint(f"Analytics Report for ${cleanName}:", report)\n`
+        : lang === "typescript"
+        ? `// ${cleanName} — TypeScript Module\n\ninterface ServiceStatus {\n  service: string;\n  ready: boolean;\n  latencyMs: number;\n}\n\nexport function checkHealth(serviceName: string): ServiceStatus {\n  const status: ServiceStatus = {\n    service: serviceName,\n    ready: true,\n    latencyMs: 14,\n  };\n  console.log(\`[TS] \${status.service} ready (\${status.latencyMs}ms)\`, status);\n  return status;\n}\n\ncheckHealth("${cleanName}");\n`
+        : lang === "html"
+        ? `<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8" />\n  <title>${cleanName}</title>\n  <style>\n    body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; padding: 2.5rem; }\n    .card { max-width: 520px; background: #1e293b; border: 1px solid #334155; padding: 1.75rem; border-radius: 16px; }\n    h1 { margin-top: 0; color: #38bdf8; }\n    button { background: #0284c7; color: white; border: 0; padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-weight: 600; }\n  </style>\n</head>\n<body>\n  <div class="card">\n    <h1>Live HTML Preview</h1>\n    <p>Edit <code>${cleanName}</code> in VS Code to see instant live updates.</p>\n    <button onclick="document.getElementById('out').textContent = 'Clicked at ' + new Date().toLocaleTimeString()">Test Interaction</button>\n    <p id="out" style="color:#4ade80;font-family:monospace;margin-top:12px;"></p>\n  </div>\n</body>\n</html>\n`
+        : `// ${cleanName} — JavaScript Node Runtime\n\nfunction computeSprintVelocity(completedPoints, days) {\n  const dailyRate = Number((completedPoints / days).toFixed(2));\n  const projected = Math.round(dailyRate * 10);\n  return { completedPoints, days, dailyRate, projected };\n}\n\nconst result = computeSprintVelocity(42, 7);\nconsole.log("Sprint Velocity Report:", JSON.stringify(result));\n`;
+
+    if (projectId && projectId !== "demo-workspace" && projectId !== "landing-demo") {
+      try {
+        const res = await api.editor.createFile(projectId, {
+          name: cleanName,
+          folder: cleanFolder,
+          content: starterContent,
+        });
+        if (res.data?.file) {
+          const created = res.data.file;
+          setFiles((prev) => [...prev, created]);
+          setOpenTabIds((prev) => (prev.includes(created.id) ? prev : [...prev, created.id]));
+          setActiveFileId(created.id);
+          return;
+        }
+      } catch {}
+    }
+
+    const newFile: EditorFile = {
+      id: `file-${Date.now()}`,
+      name: cleanName,
+      path: fullPath,
+      folder: cleanFolder,
+      language: lang,
+      version: 1,
+      content: starterContent,
+      isModified: false,
+    };
+
+    setFiles((prev) => [...prev, newFile]);
+    setOpenTabIds((prev) => [...prev, newFile.id]);
+    setActiveFileId(newFile.id);
+  };
+
   // Execute Code (Run Without Debugging)
   const handleRunCode = async () => {
-    if (!activeFile) return;
+    if (!activeFile) {
+      setIsTemplateModalOpen(true);
+      return;
+    }
 
     // If HTML file, open Live Preview
     if (activeFile.name.endsWith(".html")) {
@@ -1552,7 +1661,10 @@ export function CollaborativeEditor({
 
   // Start Step-by-Step Debugger (F5)
   const handleStartDebugging = async () => {
-    if (!activeFile) return;
+    if (!activeFile) {
+      setIsTemplateModalOpen(true);
+      return;
+    }
 
     setIsStartingDebug(true);
     setActiveSidebarTab("debug");
@@ -1971,12 +2083,16 @@ export function CollaborativeEditor({
     if (cmd === "help") {
       appendTerminalOutput(currentSessionId, [
         "Available VS Code Integrated Terminal Commands:",
-        "  node <file>        Execute JavaScript file (e.g., node src/index.js)",
-        "  python3 <file>     Execute Python script (e.g., python3 scripts/analytics.py)",
-        "  ls                 List all files in project workspace",
+        "  node <file>        Execute JavaScript/TypeScript file (e.g., node src/index.js)",
+        "  python3 <file>     Execute Python script (e.g., python3 main.py)",
+        "  ls / dir           List all files in project workspace",
         "  cat <file>         Print file contents",
-        "  pwd                Print workspace path",
+        "  touch <file>       Create a new file in the workspace",
+        "  rm <file>          Remove a file from the workspace",
+        "  env                Print active .env variables",
         "  git status         Check modified files in workspace",
+        "  git log            Show recent workspace commits",
+        "  pwd / whoami       Print workspace path or active user",
         "  clear              Clear terminal output",
       ]);
       return;
@@ -1986,6 +2102,141 @@ export function CollaborativeEditor({
     envVars.forEach((ev) => {
       if (ev.key.trim()) clientEnvObj[ev.key.trim()] = ev.value;
     });
+
+    const executeLocalTerminalCommand = async (): Promise<boolean> => {
+      if (cmd === "ls" || cmd === "dir" || cmd === "ls -la" || cmd === "ls -l") {
+        appendTerminalOutput(
+          currentSessionId,
+          files.length > 0
+            ? files.map((f) => f.path || f.name)
+            : ["(empty workspace — run 'touch index.js' or click 'New File')"]
+        );
+        return true;
+      }
+      if (cmd === "pwd") {
+        appendTerminalOutput(currentSessionId, [`/workspace/${projectKey?.toLowerCase() || projectId}`]);
+        return true;
+      }
+      if (cmd === "whoami") {
+        appendTerminalOutput(currentSessionId, [user?.name || user?.email || "developer"]);
+        return true;
+      }
+      if (cmd === "date") {
+        appendTerminalOutput(currentSessionId, [new Date().toString()]);
+        return true;
+      }
+      if (cmd === "env" || cmd === "printenv") {
+        appendTerminalOutput(
+          currentSessionId,
+          envVars.map((ev) => `${ev.key}=${ev.value}`)
+        );
+        return true;
+      }
+      if (cmd.startsWith("echo ")) {
+        appendTerminalOutput(currentSessionId, [cmd.slice(5).replace(/^["']|["']$/g, "")]);
+        return true;
+      }
+      if (cmd === "git status") {
+        const mod = files.filter((f) => f.isModified);
+        appendTerminalOutput(
+          currentSessionId,
+          mod.length === 0
+            ? ["On branch main", "nothing to commit, working tree clean"]
+            : [
+                "On branch main",
+                "Changes not staged for commit:",
+                ...mod.map((f) => `  modified:   ${f.path || f.name}`),
+              ]
+        );
+        return true;
+      }
+      if (cmd === "git log" || cmd === "git log --oneline") {
+        appendTerminalOutput(
+          currentSessionId,
+          commits.length > 0
+            ? commits.map((c) => `${c.id.slice(0, 7)} (${c.authorName}) ${c.message}`)
+            : ["No commits yet on branch main."]
+        );
+        return true;
+      }
+      if (cmd.startsWith("cat ")) {
+        const target = cmd.slice(4).trim();
+        const f = files.find((file) => file.path === target || file.name === target);
+        appendTerminalOutput(
+          currentSessionId,
+          f ? f.content.split("\n") : [`cat: ${target}: No such file in workspace`]
+        );
+        return true;
+      }
+      if (cmd.startsWith("touch ")) {
+        const target = cmd.slice(6).trim();
+        if (target) {
+          await handleQuickCreateFile(target);
+          appendTerminalOutput(currentSessionId, [`Created file: ${target}`]);
+        }
+        return true;
+      }
+      if (cmd.startsWith("rm ")) {
+        const target = cmd.slice(3).trim();
+        const f = files.find((file) => file.path === target || file.name === target);
+        if (f) {
+          await handleDeleteFile(f.id);
+          appendTerminalOutput(currentSessionId, [`Removed ${target}`]);
+        } else {
+          appendTerminalOutput(currentSessionId, [`rm: ${target}: No such file`]);
+        }
+        return true;
+      }
+      if (cmd.startsWith("node ") || cmd.startsWith("python3 ") || cmd.startsWith("python ") || cmd.startsWith("ts-node ")) {
+        const parts = cmd.split(/\s+/);
+        const runner = parts[0];
+        const target = parts[1];
+        const targetFile =
+          files.find((f) => f.path === target || f.name === target) || activeFile;
+        if (!targetFile) {
+          appendTerminalOutput(currentSessionId, [`${runner}: can't open file '${target}': No such file`]);
+          return true;
+        }
+        const lang =
+          runner.startsWith("python") ? "python" : getMonacoLanguage(targetFile.name);
+        try {
+          const fallbackRes = await fetch("/api/editor/run", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              mode: "execute",
+              code: targetFile.content,
+              language: lang,
+              fileName: targetFile.name,
+            }),
+          });
+          const data = await fallbackRes.json();
+          const out: string[] = [];
+          if (data.stdout) out.push(...data.stdout.trimEnd().split("\n"));
+          if (data.stderr) out.push(...data.stderr.trimEnd().split("\n"));
+          appendTerminalOutput(currentSessionId, out.length > 0 ? out : ["(completed with exit code 0)"]);
+        } catch (err: any) {
+          appendTerminalOutput(currentSessionId, [`Error: ${err.message}`]);
+        }
+        return true;
+      }
+      return false;
+    };
+
+    // Handle workspace mutations & runner commands directly for zero-latency accuracy
+    if (
+      cmd.startsWith("touch ") ||
+      cmd.startsWith("rm ") ||
+      cmd.startsWith("node ") ||
+      cmd.startsWith("python3 ") ||
+      cmd.startsWith("python ") ||
+      cmd.startsWith("ts-node ") ||
+      cmd === "git log" ||
+      cmd === "git log --oneline"
+    ) {
+      await executeLocalTerminalCommand();
+      return;
+    }
 
     try {
       const res = await api.editor.terminal({
@@ -2000,22 +2251,14 @@ export function CollaborativeEditor({
         if (res.data.stderr) out.push(...res.data.stderr.trimEnd().split("\n"));
         appendTerminalOutput(currentSessionId, out.length > 0 ? out : ["(completed)"]);
       } else {
-        if (cmd === "ls" || cmd === "dir") {
-          appendTerminalOutput(currentSessionId, files.map((f) => f.path || f.name));
-        } else if (cmd === "pwd") {
-          appendTerminalOutput(currentSessionId, ["/workspace/project"]);
-        } else if (cmd.startsWith("cat ")) {
-          const target = cmd.slice(4).trim();
-          const f = files.find((file) => file.path === target || file.name === target);
-          appendTerminalOutput(currentSessionId, f ? f.content.split("\n") : [`cat: ${target}: No such file`]);
-        } else {
+        const handled = await executeLocalTerminalCommand();
+        if (!handled) {
           appendTerminalOutput(currentSessionId, [`[Terminal] Executed: ${cmd}`]);
         }
       }
     } catch {
-      if (cmd === "ls" || cmd === "dir") {
-        appendTerminalOutput(currentSessionId, files.map((f) => f.path || f.name));
-      } else {
+      const handled = await executeLocalTerminalCommand();
+      if (!handled) {
         appendTerminalOutput(currentSessionId, [`Executed: ${cmd}`]);
       }
     }
@@ -2486,12 +2729,26 @@ export function CollaborativeEditor({
     );
   }, [files, quickOpenQuery]);
 
+  const resolvedBackHref =
+    backHref ||
+    (projectId && projectId !== "demo-workspace" && projectId !== "landing-demo"
+      ? `/projects/${projectId}`
+      : "/dashboard");
+
+  const resolvedBackLabel =
+    backLabel ||
+    (projectName
+      ? `Back to ${projectName}`
+      : projectId && projectId !== "demo-workspace" && projectId !== "landing-demo"
+      ? "Back to Project"
+      : "Dashboard");
+
   return (
     <div
       className={cn(
         "flex flex-col bg-[#1e1e1e] text-[#cccccc] border border-[#333333] shadow-2xl overflow-hidden select-none transition-all",
-        isFullscreen
-          ? "fixed inset-0 z-50 h-screen w-screen rounded-none"
+        fullPage || isFullscreen
+          ? "fixed inset-0 z-50 h-screen w-screen rounded-none border-0"
           : "h-[800px] max-h-[86vh] w-full rounded-2xl"
       )}
     >
@@ -2508,18 +2765,105 @@ export function CollaborativeEditor({
           1. VS CODE TOP TITLE & MENU BAR
          ===================================================================== */}
       <div className="flex items-center justify-between px-3 h-10 bg-[#323233] border-b border-[#252526] text-xs shrink-0">
-        {/* Left: Window Controls + VS Code Menus */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-full bg-[#ff5f56]" />
-            <span className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
-            <span className="w-3 h-3 rounded-full bg-[#27c93f]" />
-          </div>
+        {/* Left: Back Navigation + Window Controls + VS Code Menus */}
+        <div className="flex items-center gap-2.5">
+          {fullPage ? (
+            <Link
+              href={resolvedBackHref}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#252526] hover:bg-[#007acc] border border-[#454545] hover:border-[#007acc] text-[#e1e1e1] hover:text-white text-[11px] font-medium transition shadow-sm"
+              title="Return to Project Workspace"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span className="max-w-[140px] truncate">{resolvedBackLabel}</span>
+            </Link>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-full bg-[#ff5f56]" />
+              <span className="w-3 h-3 rounded-full bg-[#ffbd2e]" />
+              <span className="w-3 h-3 rounded-full bg-[#27c93f]" />
+            </div>
+          )}
 
-          <div className="flex items-center gap-1.5 font-semibold text-[#e1e1e1] pl-1">
+          <div className="flex items-center gap-1.5 font-semibold text-[#e1e1e1] pl-0.5">
             <Code2 className="w-4 h-4 text-[#007acc]" />
             <span className="hidden sm:inline">Visual Studio Code</span>
           </div>
+
+          {/* Project Workspace Badge & Quick Navigation Switcher */}
+          {(fullPage || (projectId && projectId !== "demo-workspace" && projectId !== "landing-demo")) && (
+            <div className="relative">
+              <button
+                onClick={() => setIsProjectNavOpen((v) => !v)}
+                className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#094771]/50 hover:bg-[#094771] border border-[#007acc]/50 text-[#75beff] hover:text-white text-[11px] font-mono transition"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-[#3fb950]" />
+                <span className="max-w-[140px] truncate font-semibold">
+                  {projectKey ? `${projectKey} • ${projectName || "Project"}` : projectName || "Studio Workspace"}
+                </span>
+                <ChevronDown className="w-3 h-3 opacity-80" />
+              </button>
+              {isProjectNavOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsProjectNavOpen(false)}
+                  />
+                  <div className="absolute left-0 top-full mt-1 w-56 rounded-md bg-[#252526] border border-[#454545] shadow-2xl py-1.5 z-50 text-xs font-sans">
+                    <div className="px-3 py-1 text-[10px] font-mono uppercase tracking-wider text-[#858585] border-b border-[#333333] mb-1">
+                      Switch Project View
+                    </div>
+                    {projectId && projectId !== "demo-workspace" && projectId !== "landing-demo" && projectId !== "personal-studio" ? (
+                      <>
+                        <Link
+                          href={`/projects/${projectId}`}
+                          className="w-full px-3 py-1.5 flex items-center justify-between text-[#cccccc] hover:bg-[#094771] hover:text-white transition"
+                        >
+                          <span>Project Overview</span>
+                          <ExternalLink className="w-3 h-3 opacity-70" />
+                        </Link>
+                        <Link
+                          href={`/projects/${projectId}/tasks`}
+                          className="w-full px-3 py-1.5 flex items-center justify-between text-[#cccccc] hover:bg-[#094771] hover:text-white transition"
+                        >
+                          <span>Kanban Task Board</span>
+                          <ListTodo className="w-3 h-3 opacity-70" />
+                        </Link>
+                        <Link
+                          href={`/projects/${projectId}/team`}
+                          className="w-full px-3 py-1.5 flex items-center justify-between text-[#cccccc] hover:bg-[#094771] hover:text-white transition"
+                        >
+                          <span>Team & Collaborators</span>
+                          <Users className="w-3 h-3 opacity-70" />
+                        </Link>
+                        <Link
+                          href={`/projects/${projectId}/activity`}
+                          className="w-full px-3 py-1.5 flex items-center justify-between text-[#cccccc] hover:bg-[#094771] hover:text-white transition"
+                        >
+                          <span>Activity Stream</span>
+                          <GitCommit className="w-3 h-3 opacity-70" />
+                        </Link>
+                        <div className="my-1 border-t border-[#333333]" />
+                      </>
+                    ) : null}
+                    <Link
+                      href="/projects"
+                      className="w-full px-3 py-1.5 flex items-center justify-between text-[#cccccc] hover:bg-[#094771] hover:text-white transition"
+                    >
+                      <span>All Projects</span>
+                      <Folder className="w-3 h-3 opacity-70" />
+                    </Link>
+                    <Link
+                      href="/dashboard"
+                      className="w-full px-3 py-1.5 flex items-center justify-between text-[#cccccc] hover:bg-[#094771] hover:text-white transition"
+                    >
+                      <span>Main Dashboard</span>
+                      <LayoutDashboard className="w-3 h-3 opacity-70" />
+                    </Link>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Interactive Top Menu Bar */}
           <div className="hidden md:flex items-center gap-0.5 text-[11px] text-[#cccccc] relative">
@@ -2557,6 +2901,7 @@ export function CollaborativeEditor({
                   { name: "Project Tasks (Mini-Kanban)", shortcut: "", action: () => { setIsSidebarOpen(true); setActiveSidebarTab("tasks"); } },
                   { name: "Toggle GitHub Copilot", shortcut: "⌘I", action: () => setIsCopilotOpen((v) => !v) },
                   { name: "Toggle Bottom Panel", shortcut: "⌘J", action: () => setIsBottomPanelOpen((v) => !v) },
+                  { name: "Maximize / Restore Terminal", shortcut: "", action: () => { setIsBottomPanelOpen(true); setIsBottomPanelMaximized((v) => !v); } },
                   { name: "Toggle Live Split Preview", shortcut: "⌘\\", action: () => setIsSplitPreviewOpen((v) => !v) },
                   { name: "Toggle Fullscreen IDE", shortcut: "F11", action: () => setIsFullscreen((v) => !v) },
                 ],
@@ -2682,7 +3027,7 @@ export function CollaborativeEditor({
             >
               <Search className="w-3 h-3" />
               <span className="truncate">
-                {activeFile ? (activeFile.path || activeFile.name) : "LetsCollab Workspace"} — ⌘K Commands
+                {activeFile ? (activeFile.path || activeFile.name) : projectName || "LetsCollab Workspace"} — ⌘K Commands
               </span>
             </button>
           )}
@@ -2813,22 +3158,39 @@ export function CollaborativeEditor({
             </button>
           </Tooltip>
 
-          {/* Fullscreen Toggle */}
-          <Tooltip
-            content={isFullscreen ? "Exit Fullscreen IDE" : "Maximize Fullscreen VS Code"}
-            side="bottom"
-          >
-            <button
-              onClick={() => setIsFullscreen((v) => !v)}
-              className="p-1.5 rounded bg-[#252526] hover:bg-[#3c3c3c] border border-[#454545] text-[#cccccc] transition"
-            >
-              {isFullscreen ? (
-                <Minimize2 className="w-3.5 h-3.5" />
-              ) : (
-                <Maximize2 className="w-3.5 h-3.5" />
-              )}
-            </button>
-          </Tooltip>
+          {/* Open Standalone Page Link (when embedded) or Fullscreen Toggle */}
+          {!fullPage ? (
+            <>
+              <Tooltip content="Open Dedicated Full-Page IDE" side="bottom">
+                <Link
+                  href={
+                    projectId && projectId !== "demo-workspace" && projectId !== "landing-demo"
+                      ? `/projects/${projectId}/editor`
+                      : "/editor"
+                  }
+                  className="flex items-center gap-1 px-2 py-1 rounded bg-[#007acc] hover:bg-[#1f8ad2] text-white text-[11px] font-mono font-semibold transition"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  <span className="hidden xl:inline">Full Page</span>
+                </Link>
+              </Tooltip>
+              <Tooltip
+                content={isFullscreen ? "Exit Fullscreen IDE" : "Maximize Fullscreen VS Code"}
+                side="bottom"
+              >
+                <button
+                  onClick={() => setIsFullscreen((v) => !v)}
+                  className="p-1.5 rounded bg-[#252526] hover:bg-[#3c3c3c] border border-[#454545] text-[#cccccc] transition"
+                >
+                  {isFullscreen ? (
+                    <Minimize2 className="w-3.5 h-3.5" />
+                  ) : (
+                    <Maximize2 className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              </Tooltip>
+            </>
+          ) : null}
         </div>
       </div>
 
@@ -4147,6 +4509,31 @@ export function CollaborativeEditor({
                   </div>
                 </div>
 
+                {/* 1-Click Instant File Creators */}
+                <div className="p-3.5 rounded-xl bg-[#252526] border border-[#333333] flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2 text-[#bbbbbb] font-medium">
+                    <Sparkles className="w-3.5 h-3.5 text-[#007acc]" />
+                    <span>1-Click Create & Open:</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {[
+                      { name: "index.js", folder: "src", badge: "JS", color: "text-[#f7df1e]" },
+                      { name: "main.py", folder: "scripts", badge: "PY", color: "text-[#3776ab]" },
+                      { name: "app.ts", folder: "src", badge: "TS", color: "text-[#3178c6]" },
+                      { name: "index.html", folder: "public", badge: "HTML", color: "text-[#e34f26]" },
+                    ].map((qf) => (
+                      <button
+                        key={qf.name}
+                        onClick={() => handleQuickCreateFile(qf.name, qf.folder)}
+                        className="px-2.5 py-1 rounded bg-[#1e1e1e] hover:bg-[#094771] border border-[#3c3c3c] hover:border-[#007acc] text-[#e1e1e1] hover:text-white font-mono text-[11px] flex items-center gap-1.5 transition"
+                      >
+                        <span className={cn("font-bold text-[10px]", qf.color)}>{qf.badge}</span>
+                        <span>{qf.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Real-time Collaboration Banner */}
                 <div className="p-3.5 rounded-xl bg-[#094771]/20 border border-[#007acc]/40 flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2.5">
@@ -4175,7 +4562,12 @@ export function CollaborativeEditor({
               3. VS CODE MULTI-TAB BOTTOM PANEL (PROBLEMS / OUTPUT / DEBUG / TERMINAL)
              ================================================================= */}
           {isBottomPanelOpen && (
-            <div className="h-52 border-t border-[#333333] bg-[#181818] flex flex-col shrink-0">
+            <div
+              className={cn(
+                "border-t border-[#333333] bg-[#181818] flex flex-col shrink-0 transition-all duration-150",
+                isBottomPanelMaximized ? "h-[58vh]" : "h-56"
+              )}
+            >
               {/* Panel Tabs Header */}
               <div className="flex items-center justify-between px-3 border-b border-[#252526] bg-[#1f1f1f] text-[11px] font-mono">
                 <div className="flex items-center gap-4">
@@ -4232,8 +4624,20 @@ export function CollaborativeEditor({
                     Clear
                   </button>
                   <button
+                    onClick={() => setIsBottomPanelMaximized((v) => !v)}
+                    className="text-[#858585] hover:text-white p-0.5"
+                    title={isBottomPanelMaximized ? "Restore Panel Size" : "Maximize Panel Size"}
+                  >
+                    {isBottomPanelMaximized ? (
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                  <button
                     onClick={() => setIsBottomPanelOpen(false)}
-                    className="text-[#858585] hover:text-white"
+                    className="text-[#858585] hover:text-white p-0.5"
+                    title="Close Panel (⌘J)"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
