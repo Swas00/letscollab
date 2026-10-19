@@ -23,6 +23,9 @@ import {
   UserPlus,
   Briefcase,
   Code2,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Menu,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useSocket } from "../../context/SocketContext";
@@ -40,6 +43,54 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showCmd, setShowCmd] = useState(false);
+
+  // Sidebar open/close state (Desktop & Mobile)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Restore saved sidebar preference
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("letscollab_sidebar_open");
+        if (saved !== null) {
+          setIsSidebarOpen(saved === "true");
+        }
+      } catch {}
+    }
+  }, []);
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("letscollab_sidebar_open", String(next));
+        } catch {}
+      }
+      return next;
+    });
+  };
+
+  // Keyboard shortcut: Cmd+B / Ctrl+B to toggle sidebar, Escape to close mobile
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        toggleSidebar();
+      }
+      if (e.key === "Escape" && isMobileSidebarOpen) {
+        setIsMobileSidebarOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isMobileSidebarOpen]);
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setIsMobileSidebarOpen(false);
+  }, [pathname]);
 
   // Organization workspace state
   const [showOrgModal, setShowOrgModal] = useState(false);
@@ -176,12 +227,28 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         ))}
       </div>
 
-      {/* Sidebar Navigation Landmark */}
-      <aside aria-label="Sidebar Navigation" className="w-full md:w-64 border-b md:border-b-0 md:border-r border-divider bg-editor flex flex-col justify-between shrink-0 shadow-sm">
-        <div>
-          {/* Logo & App Title */}
+      {/* Desktop Sidebar Navigation Landmark */}
+      <aside
+        aria-label="Sidebar Navigation"
+        className={cn(
+          "hidden md:flex flex-col justify-between shrink-0 bg-editor border-r border-divider shadow-sm transition-all duration-300 ease-in-out z-30 select-none",
+          isSidebarOpen
+            ? "w-64 opacity-100"
+            : "w-0 -ml-64 opacity-0 border-r-0 pointer-events-none overflow-hidden"
+        )}
+      >
+        <div className="w-64 min-w-[16rem]">
+          {/* Logo & App Title + Close Sidebar Button */}
           <div className="p-5 border-b border-divider flex items-center justify-between">
             <Logo href="/dashboard" size="md" subtitle="Project Workspace" />
+            <button
+              onClick={toggleSidebar}
+              aria-label="Close sidebar (⌘B)"
+              title="Close sidebar (⌘B)"
+              className="p-1.5 rounded-xl text-muted hover:text-carbon hover:bg-paper border border-transparent hover:border-divider transition"
+            >
+              <PanelLeftClose className="w-4 h-4" />
+            </button>
           </div>
 
           {/* Organization Switcher / Workspace Badge */}
@@ -258,7 +325,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* User Card in Sidebar Footer */}
-        <div className="p-3 border-t border-divider bg-paper/60">
+        <div className="w-64 min-w-[16rem] p-3 border-t border-divider bg-paper/60">
           {user ? (
             <div className="p-2.5 rounded-xl bg-editor border border-divider flex items-center justify-between shadow-sm">
               <Link href="/profile" className="flex items-center gap-2.5 min-w-0 group">
@@ -301,17 +368,219 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
+      {/* Mobile Drawer Backdrop */}
+      {isMobileSidebarOpen && (
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label="Close navigation drawer"
+          className="fixed inset-0 z-40 bg-carbon/60 backdrop-blur-xs md:hidden animate-in fade-in duration-200"
+          onClick={() => setIsMobileSidebarOpen(false)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape" || e.key === "Enter" || e.key === " ") {
+              setIsMobileSidebarOpen(false);
+            }
+          }}
+        />
+      )}
+
+      {/* Mobile Sidebar Drawer */}
+      <aside
+        aria-label="Mobile Navigation"
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 w-72 bg-editor border-r border-divider flex flex-col justify-between shadow-2xl transition-transform duration-300 ease-in-out md:hidden select-none",
+          isMobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <div className="overflow-y-auto">
+          {/* Logo & Mobile Close Button */}
+          <div className="p-5 border-b border-divider flex items-center justify-between">
+            <Logo href="/dashboard" size="md" subtitle="Project Workspace" />
+            <button
+              onClick={() => setIsMobileSidebarOpen(false)}
+              aria-label="Close menu"
+              title="Close menu"
+              className="p-1.5 rounded-xl text-muted hover:text-carbon hover:bg-paper border border-divider transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Organization Switcher / Workspace Badge */}
+          <div className="p-3 border-b border-divider">
+            <button
+              onClick={() => {
+                setOrgTab(activeMembership ? "overview" : "create");
+                setShowOrgModal(true);
+                setIsMobileSidebarOpen(false);
+              }}
+              className="w-full p-2.5 rounded-xl bg-paper border border-divider hover:border-coral/50 flex items-center justify-between text-left transition-all duration-140 active:scale-[0.98] group"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-coral/10 border border-coral/20 flex items-center justify-center shrink-0 text-coral">
+                  {activeMembership ? (
+                    <Building className="w-3.5 h-3.5" />
+                  ) : (
+                    <Briefcase className="w-3.5 h-3.5 text-muted" />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] uppercase tracking-wider text-muted font-bold block truncate">
+                    {activeMembership ? "Organization" : "Workspace"}
+                  </span>
+                  <span className="text-xs font-bold text-carbon block truncate">
+                    {activeMembership ? activeMembership.organization.name : "Personal (No Org)"}
+                  </span>
+                </div>
+              </div>
+              <span className="text-[10px] font-mono font-medium text-coral group-hover:underline shrink-0">
+                {activeMembership ? "Manage" : "Opt-in"}
+              </span>
+            </button>
+          </div>
+
+          {/* Navigation Links */}
+          <nav aria-label="Mobile Application Navigation" className="p-3 space-y-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive =
+                item.href === "/dashboard"
+                  ? pathname === "/dashboard"
+                  : pathname.startsWith(item.href);
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setIsMobileSidebarOpen(false)}
+                  aria-current={isActive ? "page" : undefined}
+                  className={cn(
+                    "flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-160 ease-out select-none active:scale-[0.98]",
+                    isActive
+                      ? "bg-carbon text-paper font-semibold shadow-xs"
+                      : "text-muted hover:text-carbon hover:bg-paper border border-transparent hover:border-divider"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <Icon className={cn("w-4 h-4", isActive ? "text-paper" : "text-muted")} />
+                    <span>{item.label}</span>
+                  </div>
+                  {item.badge && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-paper border border-divider text-muted font-mono font-medium">
+                      {item.badge}
+                    </span>
+                  )}
+                  {item.count !== undefined && item.count > 0 && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-coral text-white font-bold">
+                      {item.count}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* User Card in Mobile Footer */}
+        <div className="p-3 border-t border-divider bg-paper/60">
+          {user ? (
+            <div className="p-2.5 rounded-xl bg-editor border border-divider flex items-center justify-between shadow-sm">
+              <Link
+                href="/profile"
+                onClick={() => setIsMobileSidebarOpen(false)}
+                className="flex items-center gap-2.5 min-w-0 group"
+              >
+                <img
+                  src={user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
+                  alt={user.name}
+                  className="w-8 h-8 rounded-full bg-paper object-cover border border-divider"
+                />
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-carbon group-hover:text-coral transition truncate">
+                    {user.name}
+                  </p>
+                  <span
+                    className={cn(
+                      "inline-block text-[10px] font-medium px-1.5 py-0.2 rounded border mt-0.5",
+                      ROLE_CONFIG[user.role]?.badge || "bg-paper text-muted border-divider"
+                    )}
+                  >
+                    {ROLE_CONFIG[user.role]?.label || user.role}
+                  </span>
+                </div>
+              </Link>
+
+              <button
+                onClick={() => {
+                  setIsMobileSidebarOpen(false);
+                  logout();
+                }}
+                title="Sign Out"
+                className="p-1.5 text-muted hover:text-coral rounded-lg hover:bg-paper transition"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              onClick={() => setIsMobileSidebarOpen(false)}
+              className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-coral hover:bg-[#d34628] text-white text-xs font-semibold rounded-xl transition shadow-md"
+            >
+              Sign In
+            </Link>
+          )}
+        </div>
+      </aside>
+
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Navbar */}
-        <header className="h-16 border-b border-divider bg-editor/90 backdrop-blur-md px-6 flex items-center justify-between shrink-0 shadow-sm">
-          {/* Real-time Status Badge & Breadcrumb */}
-          <div className="flex items-center gap-4">
+        <header className="h-16 border-b border-divider bg-editor/90 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between shrink-0 shadow-sm">
+          {/* Real-time Status Badge & Breadcrumb + Toggle Controls */}
+          <div className="flex items-center gap-2.5 sm:gap-3.5">
+            {/* Desktop Sidebar Toggle Button */}
+            <button
+              onClick={toggleSidebar}
+              aria-label={isSidebarOpen ? "Close sidebar (⌘B)" : "Open sidebar (⌘B)"}
+              title={isSidebarOpen ? "Close sidebar (⌘B)" : "Open sidebar (⌘B)"}
+              className={cn(
+                "hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border transition-all duration-150 active:scale-95 shadow-xs select-none",
+                isSidebarOpen
+                  ? "bg-paper hover:bg-editor border-divider text-muted hover:text-carbon"
+                  : "bg-coral text-white hover:bg-[#d34628] border-coral font-bold"
+              )}
+            >
+              {isSidebarOpen ? (
+                <PanelLeftClose className="w-4 h-4" />
+              ) : (
+                <>
+                  <PanelLeftOpen className="w-4 h-4" />
+                  <span className="text-xs font-bold font-mono">Sidebar</span>
+                </>
+              )}
+            </button>
+
+            {/* Mobile Menu Hamburger Button */}
+            <button
+              onClick={() => setIsMobileSidebarOpen(true)}
+              aria-label="Open navigation menu"
+              title="Open navigation menu"
+              className="inline-flex md:hidden p-2 rounded-xl bg-paper hover:bg-editor border border-divider text-muted hover:text-carbon transition-all duration-150 active:scale-95 shadow-xs"
+            >
+              <Menu className="w-4 h-4" />
+            </button>
+
+            {/* Mobile Compact Logo */}
+            <div className="inline-flex md:hidden items-center">
+              <Logo href="/dashboard" size="sm" withText={false} />
+            </div>
+
             <SyncStatusBadge state={isConnected ? "Synced" : "Offline"} />
 
             <button
               onClick={() => setShowCmd(true)}
-              className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-paper hover:bg-editor border border-divider text-muted hover:text-carbon text-xs font-mono transition-all duration-140 hover:-translate-y-0.5 active:scale-[0.98]"
+              className="hidden lg:inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-paper hover:bg-editor border border-divider text-muted hover:text-carbon text-xs font-mono transition-all duration-140 hover:-translate-y-0.5 active:scale-[0.98]"
             >
               <Search className="w-3.5 h-3.5 text-muted" />
               <span>Search commands & actions</span>

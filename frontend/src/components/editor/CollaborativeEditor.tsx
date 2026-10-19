@@ -689,6 +689,27 @@ export function CollaborativeEditor({
   // VS Code Workbench Layout State
   const [activeSidebarTab, setActiveSidebarTab] = useState<ActivityTab>("explorer");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  // Restore IDE sidebar state from localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("letscollab_ide_sidebar_open");
+        if (saved !== null) {
+          setIsSidebarOpen(saved === "true");
+        }
+      } catch {}
+    }
+  }, []);
+
+  // Save IDE sidebar state to localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("letscollab_ide_sidebar_open", String(isSidebarOpen));
+      } catch {}
+    }
+  }, [isSidebarOpen]);
   const [activeBottomTab, setActiveBottomTab] = useState<BottomTab>("terminal");
   const [isBottomPanelOpen, setIsBottomPanelOpen] = useState(true);
   const [isBottomPanelMaximized, setIsBottomPanelMaximized] = useState(false);
@@ -1446,6 +1467,12 @@ export function CollaborativeEditor({
       if ((e.metaKey || e.ctrlKey) && e.key === "0") {
         e.preventDefault();
         setEditorFontSize(13);
+        return;
+      }
+      // Cmd+B or Ctrl+B -> Toggle Primary Side Bar
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        setIsSidebarOpen((v) => !v);
         return;
       }
       // Escape -> close modals
@@ -3334,6 +3361,14 @@ export function CollaborativeEditor({
                     >
                       <Archive className="w-3.5 h-3.5 text-[#75beff]" />
                     </button>
+                    <button
+                      onClick={() => setIsSidebarOpen(false)}
+                      className="p-1 rounded hover:bg-[#3c3c3c] text-[#858585] hover:text-white transition ml-1 pl-1.5 border-l border-[#333333]"
+                      title="Close Side Bar (⌘B)"
+                      aria-label="Close Side Bar"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
 
@@ -3587,8 +3622,16 @@ export function CollaborativeEditor({
             {/* VIEW 2: SEARCH & REPLACE ACROSS FILES */}
             {activeSidebarTab === "search" && (
               <div className="flex flex-col h-full p-3 space-y-3">
-                <div className="text-[11px] font-bold tracking-wider text-[#bbbbbb] uppercase">
-                  SEARCH & REPLACE
+                <div className="flex items-center justify-between text-[11px] font-bold tracking-wider text-[#bbbbbb] uppercase">
+                  <span>SEARCH & REPLACE</span>
+                  <button
+                    onClick={() => setIsSidebarOpen(false)}
+                    className="p-1 rounded hover:bg-[#3c3c3c] text-[#858585] hover:text-white transition"
+                    title="Close Side Bar (⌘B)"
+                    aria-label="Close Side Bar"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
                 <div className="space-y-2">
                   <div className="relative">
@@ -3662,8 +3705,18 @@ export function CollaborativeEditor({
             {activeSidebarTab === "git" && (
               <div className="flex flex-col h-full p-3 space-y-3 overflow-y-auto">
                 <div className="text-[11px] font-bold tracking-wider text-[#bbbbbb] uppercase flex items-center justify-between">
-                  <span>SOURCE CONTROL</span>
-                  <span className="text-[10px] font-mono text-[#75beff]">main</span>
+                  <div className="flex items-center gap-2">
+                    <span>SOURCE CONTROL</span>
+                    <span className="text-[10px] font-mono text-[#75beff]">main</span>
+                  </div>
+                  <button
+                    onClick={() => setIsSidebarOpen(false)}
+                    className="p-1 rounded hover:bg-[#3c3c3c] text-[#858585] hover:text-white transition"
+                    title="Close Side Bar (⌘B)"
+                    aria-label="Close Side Bar"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
 
                 <form onSubmit={handleCommitChanges} className="space-y-2">
@@ -3786,8 +3839,16 @@ export function CollaborativeEditor({
               <div className="flex flex-col h-full overflow-y-auto divide-y divide-[#1e1e1e] text-xs">
                 {/* Launch Header */}
                 <div className="p-3 space-y-2 bg-[#252526]">
-                  <div className="text-[11px] font-bold tracking-wider text-[#bbbbbb] uppercase">
-                    RUN AND DEBUG
+                  <div className="flex items-center justify-between text-[11px] font-bold tracking-wider text-[#bbbbbb] uppercase">
+                    <span>RUN AND DEBUG</span>
+                    <button
+                      onClick={() => setIsSidebarOpen(false)}
+                      className="p-1 rounded hover:bg-[#3c3c3c] text-[#858585] hover:text-white transition"
+                      title="Close Side Bar (⌘B)"
+                      aria-label="Close Side Bar"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                   <div className="flex gap-1.5">
                     <button
@@ -3969,10 +4030,20 @@ export function CollaborativeEditor({
               <div className="flex flex-col h-full overflow-hidden">
                 <div className="p-3 border-b border-[#1e1e1e] space-y-2 shrink-0">
                   <div className="flex items-center justify-between text-[11px] font-bold tracking-wider text-[#bbbbbb] uppercase">
-                    <span>EXTENSIONS MARKETPLACE</span>
-                    <span className="text-[10px] text-[#75beff] font-mono">
-                      {extensions.filter((e) => e.enabled).length}/{extensions.length} Active
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span>EXTENSIONS MARKETPLACE</span>
+                      <span className="text-[10px] text-[#75beff] font-mono">
+                        {extensions.filter((e) => e.enabled).length}/{extensions.length} Active
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setIsSidebarOpen(false)}
+                      className="p-1 rounded hover:bg-[#3c3c3c] text-[#858585] hover:text-white transition"
+                      title="Close Side Bar (⌘B)"
+                      aria-label="Close Side Bar"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   </div>
 
                   {/* Search input */}
@@ -4079,10 +4150,18 @@ export function CollaborativeEditor({
                   <div className="flex items-center gap-1.5">
                     <CheckSquare className="w-3.5 h-3.5 text-[#007acc]" />
                     <span>PROJECT TASKS</span>
+                    <span className="text-[10px] font-mono text-[#858585] ml-1">
+                      ({projectTasks.length})
+                    </span>
                   </div>
-                  <span className="text-[10px] font-mono text-[#858585]">
-                    {projectTasks.length} tasks
-                  </span>
+                  <button
+                    onClick={() => setIsSidebarOpen(false)}
+                    className="p-1 rounded hover:bg-[#3c3c3c] text-[#858585] hover:text-white transition"
+                    title="Close Side Bar (⌘B)"
+                    aria-label="Close Side Bar"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
 
                 {/* Filter Input */}
